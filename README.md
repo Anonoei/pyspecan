@@ -1,2 +1,2 @@
 # pyspecan
-Python Spectrum Analyzer
+ A spectrum analyzer library
