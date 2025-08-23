@@ -1,0 +1,2 @@
+# pyspecan
+Python Spectrum Analyzer
