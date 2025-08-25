@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>pyspecan.plot.plot API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>pyspecan.plot.plot</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="pyspecan.plot.plot.BlitPlot"><code class="flex name class">
+<span>class <span class="ident">BlitPlot</span></span>
+<span>(</span><span>*args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class BlitPlot(Plot):
+    &#34;&#34;&#34;Plot supporting blitting&#34;&#34;&#34;
+    __slots__ = (&#34;_bg&#34;, &#34;_art&#34;, &#34;_cid&#34;)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._bg = None
+        self._art = [{}]
+        self._cid = self._canv.mpl_connect(&#34;draw_event&#34;, self._on_draw)
+
+    def update(self):
+        cv = self._canv
+        if self._bg is None:
+            self._on_draw(None)
+        else:
+            cv.restore_region(self._bg) # type: ignore
+            self._draw_animated()
+            cv.blit(self._fig.bbox)
+        cv.flush_events()
+
+    def art(self, i, j):
+        return self._art[i].get(j, None)
+
+    def add_artist(self, idx, art, name=None):
+        if name is None:
+            name = len(self._art[idx])
+        if not art.figure == self._canv.figure:
+            raise RuntimeError
+        art.set_animated(True)
+        self._art[idx][name] = art
+
+    def add_ax(self, *args, **kwargs):
+        super().add_ax(*args, **kwargs)
+        self._art.append({})
+
+    def plot(self, idx, *args, **kwargs):
+        name = kwargs.get(&#34;name&#34;, None)
+        if name is not None:
+            del kwargs[&#34;name&#34;]
+        if self.art(idx, name) is None:
+            line = super().plot(idx, *args, **kwargs)
+            self.add_artist(idx, line, name)
+        else:
+            line = self.art(idx, name)
+            if len(args) == 2:
+                line.set_data(*args)
+            else:
+                print(f&#34;plot args: {len(args)}&#34;)
+                print(f&#34;plot kwargs: {kwargs}&#34;)
+        return line
+
+    def imshow(self, idx, *args, **kwargs):
+        name = kwargs.get(&#34;name&#34;, None)
+        if name is not None:
+            del kwargs[&#34;name&#34;]
+        if self.art(idx, name) is None:
+            im = super().imshow(idx, *args, **kwargs)
+            self.add_artist(idx, im, name)
+        else:
+            im = self.art(idx, name)
+            im.set_data(*args)
+            if &#34;cmap&#34; in kwargs.keys():
+                im.set(cmap=kwargs[&#34;cmap&#34;])
+        return im
+
+    def set_data(self, i,j, x, y):
+        self.art(i,j).set_data(x,y)
+
+    def set_xdata(self, i, j, x):
+        self.art(i,j).set_xdata(x)
+
+    def set_ydata(self, i, j, y):
+        self.art(i,j).set_ydata(y)
+
+    def set_xlim(self, idx, xmin, xmax):
+        super().set_xlim(idx, xmin, xmax)
+        self.relim(idx)
+    def set_ylim(self, idx, ymin, ymax):
+        super().set_ylim(idx, ymin, ymax)
+        self.relim(idx)
+    def relim(self, idx):
+        super().relim(idx)
+        self.canvas.draw()
+
+    def _on_draw(self, event):
+        cv = self._canv
+        if event is not None:
+            if event.canvas != cv:
+                raise RuntimeError
+        self._bg = cv.copy_from_bbox(cv.figure.bbox) # type: ignore
+        self._draw_animated()
+
+    def _draw_animated(self):
+        for ax in self._art:
+            for art in ax.values():
+                self._fig.draw_artist(art)</code></pre>
+</details>
+<div class="desc"><p>Plot supporting blitting</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pyspecan.plot.plot.Plot" href="#pyspecan.plot.plot.Plot">Plot</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.plot.plot.BlitPlot.art"><code class="name flex">
+<span>def <span class="ident">art</span></span>(<span>self, i, j)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def art(self, i, j):
+    return self._art[i].get(j, None)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.BlitPlot.imshow"><code class="name flex">
+<span>def <span class="ident">imshow</span></span>(<span>self, idx, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def imshow(self, idx, *args, **kwargs):
+    name = kwargs.get(&#34;name&#34;, None)
+    if name is not None:
+        del kwargs[&#34;name&#34;]
+    if self.art(idx, name) is None:
+        im = super().imshow(idx, *args, **kwargs)
+        self.add_artist(idx, im, name)
+    else:
+        im = self.art(idx, name)
+        im.set_data(*args)
+        if &#34;cmap&#34; in kwargs.keys():
+            im.set(cmap=kwargs[&#34;cmap&#34;])
+    return im</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.BlitPlot.plot"><code class="name flex">
+<span>def <span class="ident">plot</span></span>(<span>self, idx, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot(self, idx, *args, **kwargs):
+    name = kwargs.get(&#34;name&#34;, None)
+    if name is not None:
+        del kwargs[&#34;name&#34;]
+    if self.art(idx, name) is None:
+        line = super().plot(idx, *args, **kwargs)
+        self.add_artist(idx, line, name)
+    else:
+        line = self.art(idx, name)
+        if len(args) == 2:
+            line.set_data(*args)
+        else:
+            print(f&#34;plot args: {len(args)}&#34;)
+            print(f&#34;plot kwargs: {kwargs}&#34;)
+    return line</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.BlitPlot.relim"><code class="name flex">
+<span>def <span class="ident">relim</span></span>(<span>self, idx)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def relim(self, idx):
+    super().relim(idx)
+    self.canvas.draw()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.BlitPlot.set_xlim"><code class="name flex">
+<span>def <span class="ident">set_xlim</span></span>(<span>self, idx, xmin, xmax)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_xlim(self, idx, xmin, xmax):
+    super().set_xlim(idx, xmin, xmax)
+    self.relim(idx)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.BlitPlot.set_ylim"><code class="name flex">
+<span>def <span class="ident">set_ylim</span></span>(<span>self, idx, ymin, ymax)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_ylim(self, idx, ymin, ymax):
+    super().set_ylim(idx, ymin, ymax)
+    self.relim(idx)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="pyspecan.plot.plot.Plot" href="#pyspecan.plot.plot.Plot">Plot</a></b></code>:
+<ul class="hlist">
+<li><code><a title="pyspecan.plot.plot.Plot.add_artist" href="#pyspecan.plot.plot.Plot.add_artist">add_artist</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.add_ax" href="#pyspecan.plot.plot.Plot.add_ax">add_ax</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.set_data" href="#pyspecan.plot.plot.Plot.set_data">set_data</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.set_xdata" href="#pyspecan.plot.plot.Plot.set_xdata">set_xdata</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.set_ydata" href="#pyspecan.plot.plot.Plot.set_ydata">set_ydata</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.update" href="#pyspecan.plot.plot.Plot.update">update</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="pyspecan.plot.plot.Plot"><code class="flex name class">
+<span>class <span class="ident">Plot</span></span>
+<span>(</span><span>fig: matplotlib.figure.Figure = &lt;Figure size 640x480 with 0 Axes&gt;)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Plot:
+    &#34;&#34;&#34;Generic plotting parent&#34;&#34;&#34;
+    __slots__ = (&#34;_fig&#34;, &#34;_canv&#34;, &#34;_axs&#34;)
+    def __init__(self, fig: Figure = plt.figure()):
+        if not fig.axes:
+            fig.add_subplot()
+
+        self._fig = fig
+        self._canv = fig.canvas
+        self._axs = fig.axes
+
+    def show(self):
+        print(f&#34;axs: {self._axs}&#34;)
+
+    def update(self):
+        &#34;&#34;&#34;Update plot&#34;&#34;&#34;
+        self._canv.draw()
+
+    @property
+    def fig(self):
+        return self._fig
+
+    @property
+    def canvas(self):
+        return self._canv
+
+    def ax(self, idx) -&gt; Axes:
+        return self._axs[idx]
+
+    def art(self, i, j):
+        raise NotImplementedError()
+
+    def add_ax(self, *args, **kwargs):
+        &#34;&#34;&#34;Add new axes&#34;&#34;&#34;
+        ax = self._fig.add_subplot(*args, **kwargs)
+        self._axs.append(ax)
+
+    def add_artist(self, idx, art):
+        &#34;&#34;&#34;Add artist to axis&#34;&#34;&#34;
+        raise NotImplementedError()
+
+    def plot(self, idx, *args, **kwargs):
+        line, = self.ax(idx).plot(*args, **kwargs)
+        return line
+
+    def imshow(self, idx, *args, **kwargs):
+        im = self.ax(idx).imshow(*args, **kwargs)
+        return im
+
+    def set_data(self, i,j, x, y):
+        &#34;&#34;&#34;Set axis i, artist j data&#34;&#34;&#34;
+        raise NotImplementedError()
+
+    def set_xdata(self, i, j, x):
+        &#34;&#34;&#34;Set axis i, artist j xdata&#34;&#34;&#34;
+        raise NotImplementedError()
+
+    def set_ydata(self, i, j, y):
+        &#34;&#34;&#34;set axis i, artist j ydata&#34;&#34;&#34;
+        raise NotImplementedError()
+
+    def set_xlim(self, idx, xmin, xmax):
+        self.ax(idx).set_xlim(xmin, xmax)
+    def set_ylim(self, idx, ymin, ymax):
+        self.ax(idx).set_ylim(ymin, ymax)
+    def relim(self, idx):
+        self.ax(idx).relim()</code></pre>
+</details>
+<div class="desc"><p>Generic plotting parent</p></div>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="pyspecan.plot.plot.BlitPlot" href="#pyspecan.plot.plot.BlitPlot">BlitPlot</a></li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="pyspecan.plot.plot.Plot.canvas"><code class="name">prop <span class="ident">canvas</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def canvas(self):
+    return self._canv</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.fig"><code class="name">prop <span class="ident">fig</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def fig(self):
+    return self._fig</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.plot.plot.Plot.add_artist"><code class="name flex">
+<span>def <span class="ident">add_artist</span></span>(<span>self, idx, art)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add_artist(self, idx, art):
+    &#34;&#34;&#34;Add artist to axis&#34;&#34;&#34;
+    raise NotImplementedError()</code></pre>
+</details>
+<div class="desc"><p>Add artist to axis</p></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.add_ax"><code class="name flex">
+<span>def <span class="ident">add_ax</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add_ax(self, *args, **kwargs):
+    &#34;&#34;&#34;Add new axes&#34;&#34;&#34;
+    ax = self._fig.add_subplot(*args, **kwargs)
+    self._axs.append(ax)</code></pre>
+</details>
+<div class="desc"><p>Add new axes</p></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.art"><code class="name flex">
+<span>def <span class="ident">art</span></span>(<span>self, i, j)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def art(self, i, j):
+    raise NotImplementedError()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.ax"><code class="name flex">
+<span>def <span class="ident">ax</span></span>(<span>self, idx) ‑> matplotlib.axes._axes.Axes</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ax(self, idx) -&gt; Axes:
+    return self._axs[idx]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.imshow"><code class="name flex">
+<span>def <span class="ident">imshow</span></span>(<span>self, idx, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def imshow(self, idx, *args, **kwargs):
+    im = self.ax(idx).imshow(*args, **kwargs)
+    return im</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.plot"><code class="name flex">
+<span>def <span class="ident">plot</span></span>(<span>self, idx, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot(self, idx, *args, **kwargs):
+    line, = self.ax(idx).plot(*args, **kwargs)
+    return line</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.relim"><code class="name flex">
+<span>def <span class="ident">relim</span></span>(<span>self, idx)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def relim(self, idx):
+    self.ax(idx).relim()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.set_data"><code class="name flex">
+<span>def <span class="ident">set_data</span></span>(<span>self, i, j, x, y)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_data(self, i,j, x, y):
+    &#34;&#34;&#34;Set axis i, artist j data&#34;&#34;&#34;
+    raise NotImplementedError()</code></pre>
+</details>
+<div class="desc"><p>Set axis i, artist j data</p></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.set_xdata"><code class="name flex">
+<span>def <span class="ident">set_xdata</span></span>(<span>self, i, j, x)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_xdata(self, i, j, x):
+    &#34;&#34;&#34;Set axis i, artist j xdata&#34;&#34;&#34;
+    raise NotImplementedError()</code></pre>
+</details>
+<div class="desc"><p>Set axis i, artist j xdata</p></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.set_xlim"><code class="name flex">
+<span>def <span class="ident">set_xlim</span></span>(<span>self, idx, xmin, xmax)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_xlim(self, idx, xmin, xmax):
+    self.ax(idx).set_xlim(xmin, xmax)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.set_ydata"><code class="name flex">
+<span>def <span class="ident">set_ydata</span></span>(<span>self, i, j, y)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_ydata(self, i, j, y):
+    &#34;&#34;&#34;set axis i, artist j ydata&#34;&#34;&#34;
+    raise NotImplementedError()</code></pre>
+</details>
+<div class="desc"><p>set axis i, artist j ydata</p></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.set_ylim"><code class="name flex">
+<span>def <span class="ident">set_ylim</span></span>(<span>self, idx, ymin, ymax)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_ylim(self, idx, ymin, ymax):
+    self.ax(idx).set_ylim(ymin, ymax)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.show"><code class="name flex">
+<span>def <span class="ident">show</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def show(self):
+    print(f&#34;axs: {self._axs}&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.plot.plot.Plot.update"><code class="name flex">
+<span>def <span class="ident">update</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update(self):
+    &#34;&#34;&#34;Update plot&#34;&#34;&#34;
+    self._canv.draw()</code></pre>
+</details>
+<div class="desc"><p>Update plot</p></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pyspecan.plot" href="index.html">pyspecan.plot</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="pyspecan.plot.plot.BlitPlot" href="#pyspecan.plot.plot.BlitPlot">BlitPlot</a></code></h4>
+<ul class="two-column">
+<li><code><a title="pyspecan.plot.plot.BlitPlot.art" href="#pyspecan.plot.plot.BlitPlot.art">art</a></code></li>
+<li><code><a title="pyspecan.plot.plot.BlitPlot.imshow" href="#pyspecan.plot.plot.BlitPlot.imshow">imshow</a></code></li>
+<li><code><a title="pyspecan.plot.plot.BlitPlot.plot" href="#pyspecan.plot.plot.BlitPlot.plot">plot</a></code></li>
+<li><code><a title="pyspecan.plot.plot.BlitPlot.relim" href="#pyspecan.plot.plot.BlitPlot.relim">relim</a></code></li>
+<li><code><a title="pyspecan.plot.plot.BlitPlot.set_xlim" href="#pyspecan.plot.plot.BlitPlot.set_xlim">set_xlim</a></code></li>
+<li><code><a title="pyspecan.plot.plot.BlitPlot.set_ylim" href="#pyspecan.plot.plot.BlitPlot.set_ylim">set_ylim</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pyspecan.plot.plot.Plot" href="#pyspecan.plot.plot.Plot">Plot</a></code></h4>
+<ul class="two-column">
+<li><code><a title="pyspecan.plot.plot.Plot.add_artist" href="#pyspecan.plot.plot.Plot.add_artist">add_artist</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.add_ax" href="#pyspecan.plot.plot.Plot.add_ax">add_ax</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.art" href="#pyspecan.plot.plot.Plot.art">art</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.ax" href="#pyspecan.plot.plot.Plot.ax">ax</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.canvas" href="#pyspecan.plot.plot.Plot.canvas">canvas</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.fig" href="#pyspecan.plot.plot.Plot.fig">fig</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.imshow" href="#pyspecan.plot.plot.Plot.imshow">imshow</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.plot" href="#pyspecan.plot.plot.Plot.plot">plot</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.relim" href="#pyspecan.plot.plot.Plot.relim">relim</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.set_data" href="#pyspecan.plot.plot.Plot.set_data">set_data</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.set_xdata" href="#pyspecan.plot.plot.Plot.set_xdata">set_xdata</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.set_xlim" href="#pyspecan.plot.plot.Plot.set_xlim">set_xlim</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.set_ydata" href="#pyspecan.plot.plot.Plot.set_ydata">set_ydata</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.set_ylim" href="#pyspecan.plot.plot.Plot.set_ylim">set_ylim</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.show" href="#pyspecan.plot.plot.Plot.show">show</a></code></li>
+<li><code><a title="pyspecan.plot.plot.Plot.update" href="#pyspecan.plot.plot.Plot.update">update</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>
