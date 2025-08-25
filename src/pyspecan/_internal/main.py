@@ -16,7 +16,7 @@ def define_args():
 
 def main():
     parser = define_args()
-    parser.add_argument("-u", "--ui", choices=["c", "g"], default="c")
+    parser.add_argument("-u", "--ui", choices=["c", "g"], default="g")
     args = parser.parse_args()
     SpecAn(args.ui, args.file, args.dtype, args.nfft, args.Fs, args.cf)
 
