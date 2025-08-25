@@ -88,6 +88,6 @@ def vec(x, y, psds, yt=0.05, yb=0.05, interp=32):
         y_int[:,i] = np.interp(t_int, t, psds[:,i])
     return dot(x, y, y_int, yt, yb)
 
-def cvec(x, y, psds, yt=0.05, yb=0.05, interp=10):
+def cvec(x, y, psds, yt=0.05, yb=0.05, interp=16):
     hist = vec(x, y, psds, yt, yb, interp)
     return _fill(hist)

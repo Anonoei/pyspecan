@@ -1,7 +1,6 @@
 
 class CUI:
-    def __init__(self, mode, view):
-        self.mode = mode
+    def __init__(self, view):
         self.view = view
         self.running = True
 

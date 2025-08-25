@@ -59,14 +59,14 @@ el.replaceWith(d);
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.utils.matrix.cvec"><code class="name flex">
-<span>def <span class="ident">cvec</span></span>(<span>x, y, psds, yt=0.05, yb=0.05, interp=10)</span>
+<span>def <span class="ident">cvec</span></span>(<span>x, y, psds, yt=0.05, yb=0.05, interp=16)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def cvec(x, y, psds, yt=0.05, yb=0.05, interp=10):
+<pre><code class="python">def cvec(x, y, psds, yt=0.05, yb=0.05, interp=16):
     hist = vec(x, y, psds, yt, yb, interp)
     return _fill(hist)</code></pre>
 </details>

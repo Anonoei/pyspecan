@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.specan API documentation</title>
+<title>pyspecan.controller.GUI API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,162 +33,24 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.specan</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.GUI</code></h1>
 </header>
 <section id="section-intro">
 </section>
 <section>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
-<h2 class="section-title" id="header-classes">Classes</h2>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt id="pyspecan.specan.SpecAn"><code class="flex name class">
-<span>class <span class="ident">SpecAn</span></span>
-<span>(</span><span>ui, mode='psd', path=None, fmt=None, nfft=1024, Fs=1, cf=0)</span>
-</code></dt>
+<dt><code class="name"><a title="pyspecan.controller.GUI.plot" href="plot/index.html">pyspecan.controller.GUI.plot</a></code></dt>
 <dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class SpecAn:
-    __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self, ui, mode=&#34;psd&#34;, path=None, fmt=None, nfft=1024, Fs=1, cf=0):
-        if not mode in [mode.name for mode in Mode]:
-            raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
-        config.MODE = Mode[mode] # set global mode
-        self.model = Model(path, fmt, nfft, Fs, cf)
-
-        if ui in (&#34;c&#34;, &#34;cui&#34;, &#34;CUI&#34;):
-            print(f&#34;WARN: CUI isn&#39;t implemented&#34;)
-            from .view.cui import CUI
-            tk.Tk().withdraw()
-            self.view = CUI(self)
-            from .controller.cui import Controller
-            self.controller = Controller(self.model, self.view)
-        elif ui in(&#34;g&#34;, &#34;gui&#34;, &#34;GUI&#34;):
-            from .view.gui import GUI
-            self.view = GUI(self)
-            from .controller.gui import Controller
-            self.controller = Controller(self.model, self.view)
-        else:
-            raise err.UnknownOption(f&#34;Unknown UI {ui}&#34;)
-
-        self.model.show()
-        self.view.mainloop()</code></pre>
-</details>
-<div class="desc"></div>
-<h3>Instance variables</h3>
-<dl>
-<dt id="pyspecan.specan.SpecAn.controller"><code class="name">var <span class="ident">controller</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class SpecAn:
-    __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self, ui, mode=&#34;psd&#34;, path=None, fmt=None, nfft=1024, Fs=1, cf=0):
-        if not mode in [mode.name for mode in Mode]:
-            raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
-        config.MODE = Mode[mode] # set global mode
-        self.model = Model(path, fmt, nfft, Fs, cf)
-
-        if ui in (&#34;c&#34;, &#34;cui&#34;, &#34;CUI&#34;):
-            print(f&#34;WARN: CUI isn&#39;t implemented&#34;)
-            from .view.cui import CUI
-            tk.Tk().withdraw()
-            self.view = CUI(self)
-            from .controller.cui import Controller
-            self.controller = Controller(self.model, self.view)
-        elif ui in(&#34;g&#34;, &#34;gui&#34;, &#34;GUI&#34;):
-            from .view.gui import GUI
-            self.view = GUI(self)
-            from .controller.gui import Controller
-            self.controller = Controller(self.model, self.view)
-        else:
-            raise err.UnknownOption(f&#34;Unknown UI {ui}&#34;)
-
-        self.model.show()
-        self.view.mainloop()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.specan.SpecAn.model"><code class="name">var <span class="ident">model</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class SpecAn:
-    __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self, ui, mode=&#34;psd&#34;, path=None, fmt=None, nfft=1024, Fs=1, cf=0):
-        if not mode in [mode.name for mode in Mode]:
-            raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
-        config.MODE = Mode[mode] # set global mode
-        self.model = Model(path, fmt, nfft, Fs, cf)
-
-        if ui in (&#34;c&#34;, &#34;cui&#34;, &#34;CUI&#34;):
-            print(f&#34;WARN: CUI isn&#39;t implemented&#34;)
-            from .view.cui import CUI
-            tk.Tk().withdraw()
-            self.view = CUI(self)
-            from .controller.cui import Controller
-            self.controller = Controller(self.model, self.view)
-        elif ui in(&#34;g&#34;, &#34;gui&#34;, &#34;GUI&#34;):
-            from .view.gui import GUI
-            self.view = GUI(self)
-            from .controller.gui import Controller
-            self.controller = Controller(self.model, self.view)
-        else:
-            raise err.UnknownOption(f&#34;Unknown UI {ui}&#34;)
-
-        self.model.show()
-        self.view.mainloop()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.specan.SpecAn.view"><code class="name">var <span class="ident">view</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class SpecAn:
-    __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self, ui, mode=&#34;psd&#34;, path=None, fmt=None, nfft=1024, Fs=1, cf=0):
-        if not mode in [mode.name for mode in Mode]:
-            raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
-        config.MODE = Mode[mode] # set global mode
-        self.model = Model(path, fmt, nfft, Fs, cf)
-
-        if ui in (&#34;c&#34;, &#34;cui&#34;, &#34;CUI&#34;):
-            print(f&#34;WARN: CUI isn&#39;t implemented&#34;)
-            from .view.cui import CUI
-            tk.Tk().withdraw()
-            self.view = CUI(self)
-            from .controller.cui import Controller
-            self.controller = Controller(self.model, self.view)
-        elif ui in(&#34;g&#34;, &#34;gui&#34;, &#34;GUI&#34;):
-            from .view.gui import GUI
-            self.view = GUI(self)
-            from .controller.gui import Controller
-            self.controller = Controller(self.model, self.view)
-        else:
-            raise err.UnknownOption(f&#34;Unknown UI {ui}&#34;)
-
-        self.model.show()
-        self.view.mainloop()</code></pre>
-</details>
 <div class="desc"></div>
 </dd>
 </dl>
-</dd>
-</dl>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
 </section>
 </article>
 <nav id="sidebar">
@@ -198,19 +60,12 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan" href="index.html">pyspecan</a></code></li>
+<li><code><a title="pyspecan.controller" href="../index.html">pyspecan.controller</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-classes">Classes</a></h3>
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li>
-<h4><code><a title="pyspecan.specan.SpecAn" href="#pyspecan.specan.SpecAn">SpecAn</a></code></h4>
-<ul class="">
-<li><code><a title="pyspecan.specan.SpecAn.controller" href="#pyspecan.specan.SpecAn.controller">controller</a></code></li>
-<li><code><a title="pyspecan.specan.SpecAn.model" href="#pyspecan.specan.SpecAn.model">model</a></code></li>
-<li><code><a title="pyspecan.specan.SpecAn.view" href="#pyspecan.specan.SpecAn.view">view</a></code></li>
-</ul>
-</li>
+<li><code><a title="pyspecan.controller.GUI.plot" href="plot/index.html">pyspecan.controller.GUI.plot</a></code></li>
 </ul>
 </li>
 </ul>

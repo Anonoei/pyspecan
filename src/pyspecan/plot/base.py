@@ -41,7 +41,7 @@ class Plot:
         ax = self._fig.add_subplot(*args, **kwargs)
         self._axs.append(ax)
 
-    def add_artist(self, idx, art):
+    def add_artist(self, idx, art, name):
         """Add artist to axis"""
         raise NotImplementedError()
 
@@ -133,8 +133,9 @@ class BlitPlot(Plot):
         else:
             im = self.art(idx, name)
             im.set_data(*args)
-            if "cmap" in kwargs.keys():
-                im.set(cmap=kwargs["cmap"])
+            for k, v in kwargs.items():
+                if k in ("cmap", "interpolation", "resample", "rasterized"):
+                    im.set(**{k: v})
         return im
 
     def set_data(self, i,j, x, y):

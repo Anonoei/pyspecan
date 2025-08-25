@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.plot.plot API documentation</title>
+<title>pyspecan.plot.base API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.plot.plot</code></h1>
+<h1 class="title">Module <code>pyspecan.plot.base</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -46,7 +46,7 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.plot.plot.BlitPlot"><code class="flex name class">
+<dt id="pyspecan.plot.base.BlitPlot"><code class="flex name class">
 <span>class <span class="ident">BlitPlot</span></span>
 <span>(</span><span>*args, **kwargs)</span>
 </code></dt>
@@ -115,8 +115,9 @@ el.replaceWith(d);
         else:
             im = self.art(idx, name)
             im.set_data(*args)
-            if &#34;cmap&#34; in kwargs.keys():
-                im.set(cmap=kwargs[&#34;cmap&#34;])
+            for k, v in kwargs.items():
+                if k in (&#34;cmap&#34;, &#34;interpolation&#34;, &#34;resample&#34;, &#34;rasterized&#34;):
+                    im.set(**{k: v})
         return im
 
     def set_data(self, i,j, x, y):
@@ -154,11 +155,11 @@ el.replaceWith(d);
 <div class="desc"><p>Plot supporting blitting</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.plot.plot.Plot" href="#pyspecan.plot.plot.Plot">Plot</a></li>
+<li><a title="pyspecan.plot.base.Plot" href="#pyspecan.plot.base.Plot">Plot</a></li>
 </ul>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.plot.plot.BlitPlot.art"><code class="name flex">
+<dt id="pyspecan.plot.base.BlitPlot.art"><code class="name flex">
 <span>def <span class="ident">art</span></span>(<span>self, i, j)</span>
 </code></dt>
 <dd>
@@ -171,7 +172,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.BlitPlot.imshow"><code class="name flex">
+<dt id="pyspecan.plot.base.BlitPlot.imshow"><code class="name flex">
 <span>def <span class="ident">imshow</span></span>(<span>self, idx, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -189,13 +190,14 @@ el.replaceWith(d);
     else:
         im = self.art(idx, name)
         im.set_data(*args)
-        if &#34;cmap&#34; in kwargs.keys():
-            im.set(cmap=kwargs[&#34;cmap&#34;])
+        for k, v in kwargs.items():
+            if k in (&#34;cmap&#34;, &#34;interpolation&#34;, &#34;resample&#34;, &#34;rasterized&#34;):
+                im.set(**{k: v})
     return im</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.BlitPlot.plot"><code class="name flex">
+<dt id="pyspecan.plot.base.BlitPlot.plot"><code class="name flex">
 <span>def <span class="ident">plot</span></span>(<span>self, idx, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -221,7 +223,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.BlitPlot.relim"><code class="name flex">
+<dt id="pyspecan.plot.base.BlitPlot.relim"><code class="name flex">
 <span>def <span class="ident">relim</span></span>(<span>self, idx)</span>
 </code></dt>
 <dd>
@@ -235,7 +237,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.BlitPlot.set_xlim"><code class="name flex">
+<dt id="pyspecan.plot.base.BlitPlot.set_xlim"><code class="name flex">
 <span>def <span class="ident">set_xlim</span></span>(<span>self, idx, xmin, xmax)</span>
 </code></dt>
 <dd>
@@ -249,7 +251,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.BlitPlot.set_ylim"><code class="name flex">
+<dt id="pyspecan.plot.base.BlitPlot.set_ylim"><code class="name flex">
 <span>def <span class="ident">set_ylim</span></span>(<span>self, idx, ymin, ymax)</span>
 </code></dt>
 <dd>
@@ -266,19 +268,19 @@ el.replaceWith(d);
 </dl>
 <h3>Inherited members</h3>
 <ul class="hlist">
-<li><code><b><a title="pyspecan.plot.plot.Plot" href="#pyspecan.plot.plot.Plot">Plot</a></b></code>:
+<li><code><b><a title="pyspecan.plot.base.Plot" href="#pyspecan.plot.base.Plot">Plot</a></b></code>:
 <ul class="hlist">
-<li><code><a title="pyspecan.plot.plot.Plot.add_artist" href="#pyspecan.plot.plot.Plot.add_artist">add_artist</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.add_ax" href="#pyspecan.plot.plot.Plot.add_ax">add_ax</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.set_data" href="#pyspecan.plot.plot.Plot.set_data">set_data</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.set_xdata" href="#pyspecan.plot.plot.Plot.set_xdata">set_xdata</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.set_ydata" href="#pyspecan.plot.plot.Plot.set_ydata">set_ydata</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.update" href="#pyspecan.plot.plot.Plot.update">update</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.add_artist" href="#pyspecan.plot.base.Plot.add_artist">add_artist</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.add_ax" href="#pyspecan.plot.base.Plot.add_ax">add_ax</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.set_data" href="#pyspecan.plot.base.Plot.set_data">set_data</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.set_xdata" href="#pyspecan.plot.base.Plot.set_xdata">set_xdata</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.set_ydata" href="#pyspecan.plot.base.Plot.set_ydata">set_ydata</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.update" href="#pyspecan.plot.base.Plot.update">update</a></code></li>
 </ul>
 </li>
 </ul>
 </dd>
-<dt id="pyspecan.plot.plot.Plot"><code class="flex name class">
+<dt id="pyspecan.plot.base.Plot"><code class="flex name class">
 <span>class <span class="ident">Plot</span></span>
 <span>(</span><span>fig: matplotlib.figure.Figure = &lt;Figure size 640x480 with 0 Axes&gt;)</span>
 </code></dt>
@@ -324,7 +326,7 @@ el.replaceWith(d);
         ax = self._fig.add_subplot(*args, **kwargs)
         self._axs.append(ax)
 
-    def add_artist(self, idx, art):
+    def add_artist(self, idx, art, name):
         &#34;&#34;&#34;Add artist to axis&#34;&#34;&#34;
         raise NotImplementedError()
 
@@ -358,11 +360,11 @@ el.replaceWith(d);
 <div class="desc"><p>Generic plotting parent</p></div>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.plot.plot.BlitPlot" href="#pyspecan.plot.plot.BlitPlot">BlitPlot</a></li>
+<li><a title="pyspecan.plot.base.BlitPlot" href="#pyspecan.plot.base.BlitPlot">BlitPlot</a></li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.plot.plot.Plot.canvas"><code class="name">prop <span class="ident">canvas</span></code></dt>
+<dt id="pyspecan.plot.base.Plot.canvas"><code class="name">prop <span class="ident">canvas</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -374,7 +376,7 @@ def canvas(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.fig"><code class="name">prop <span class="ident">fig</span></code></dt>
+<dt id="pyspecan.plot.base.Plot.fig"><code class="name">prop <span class="ident">fig</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -389,21 +391,21 @@ def fig(self):
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.plot.plot.Plot.add_artist"><code class="name flex">
-<span>def <span class="ident">add_artist</span></span>(<span>self, idx, art)</span>
+<dt id="pyspecan.plot.base.Plot.add_artist"><code class="name flex">
+<span>def <span class="ident">add_artist</span></span>(<span>self, idx, art, name)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def add_artist(self, idx, art):
+<pre><code class="python">def add_artist(self, idx, art, name):
     &#34;&#34;&#34;Add artist to axis&#34;&#34;&#34;
     raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"><p>Add artist to axis</p></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.add_ax"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.add_ax"><code class="name flex">
 <span>def <span class="ident">add_ax</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -418,7 +420,7 @@ def fig(self):
 </details>
 <div class="desc"><p>Add new axes</p></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.art"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.art"><code class="name flex">
 <span>def <span class="ident">art</span></span>(<span>self, i, j)</span>
 </code></dt>
 <dd>
@@ -431,7 +433,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.ax"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.ax"><code class="name flex">
 <span>def <span class="ident">ax</span></span>(<span>self, idx) ‑> matplotlib.axes._axes.Axes</span>
 </code></dt>
 <dd>
@@ -444,7 +446,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.imshow"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.imshow"><code class="name flex">
 <span>def <span class="ident">imshow</span></span>(<span>self, idx, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -458,7 +460,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.plot"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.plot"><code class="name flex">
 <span>def <span class="ident">plot</span></span>(<span>self, idx, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -472,7 +474,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.relim"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.relim"><code class="name flex">
 <span>def <span class="ident">relim</span></span>(<span>self, idx)</span>
 </code></dt>
 <dd>
@@ -485,7 +487,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.set_data"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.set_data"><code class="name flex">
 <span>def <span class="ident">set_data</span></span>(<span>self, i, j, x, y)</span>
 </code></dt>
 <dd>
@@ -499,7 +501,7 @@ def fig(self):
 </details>
 <div class="desc"><p>Set axis i, artist j data</p></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.set_xdata"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.set_xdata"><code class="name flex">
 <span>def <span class="ident">set_xdata</span></span>(<span>self, i, j, x)</span>
 </code></dt>
 <dd>
@@ -513,7 +515,7 @@ def fig(self):
 </details>
 <div class="desc"><p>Set axis i, artist j xdata</p></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.set_xlim"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.set_xlim"><code class="name flex">
 <span>def <span class="ident">set_xlim</span></span>(<span>self, idx, xmin, xmax)</span>
 </code></dt>
 <dd>
@@ -526,7 +528,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.set_ydata"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.set_ydata"><code class="name flex">
 <span>def <span class="ident">set_ydata</span></span>(<span>self, i, j, y)</span>
 </code></dt>
 <dd>
@@ -540,7 +542,7 @@ def fig(self):
 </details>
 <div class="desc"><p>set axis i, artist j ydata</p></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.set_ylim"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.set_ylim"><code class="name flex">
 <span>def <span class="ident">set_ylim</span></span>(<span>self, idx, ymin, ymax)</span>
 </code></dt>
 <dd>
@@ -553,7 +555,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.show"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.show"><code class="name flex">
 <span>def <span class="ident">show</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -566,7 +568,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.plot.plot.Plot.update"><code class="name flex">
+<dt id="pyspecan.plot.base.Plot.update"><code class="name flex">
 <span>def <span class="ident">update</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -598,35 +600,35 @@ def fig(self):
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.plot.plot.BlitPlot" href="#pyspecan.plot.plot.BlitPlot">BlitPlot</a></code></h4>
+<h4><code><a title="pyspecan.plot.base.BlitPlot" href="#pyspecan.plot.base.BlitPlot">BlitPlot</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.plot.plot.BlitPlot.art" href="#pyspecan.plot.plot.BlitPlot.art">art</a></code></li>
-<li><code><a title="pyspecan.plot.plot.BlitPlot.imshow" href="#pyspecan.plot.plot.BlitPlot.imshow">imshow</a></code></li>
-<li><code><a title="pyspecan.plot.plot.BlitPlot.plot" href="#pyspecan.plot.plot.BlitPlot.plot">plot</a></code></li>
-<li><code><a title="pyspecan.plot.plot.BlitPlot.relim" href="#pyspecan.plot.plot.BlitPlot.relim">relim</a></code></li>
-<li><code><a title="pyspecan.plot.plot.BlitPlot.set_xlim" href="#pyspecan.plot.plot.BlitPlot.set_xlim">set_xlim</a></code></li>
-<li><code><a title="pyspecan.plot.plot.BlitPlot.set_ylim" href="#pyspecan.plot.plot.BlitPlot.set_ylim">set_ylim</a></code></li>
+<li><code><a title="pyspecan.plot.base.BlitPlot.art" href="#pyspecan.plot.base.BlitPlot.art">art</a></code></li>
+<li><code><a title="pyspecan.plot.base.BlitPlot.imshow" href="#pyspecan.plot.base.BlitPlot.imshow">imshow</a></code></li>
+<li><code><a title="pyspecan.plot.base.BlitPlot.plot" href="#pyspecan.plot.base.BlitPlot.plot">plot</a></code></li>
+<li><code><a title="pyspecan.plot.base.BlitPlot.relim" href="#pyspecan.plot.base.BlitPlot.relim">relim</a></code></li>
+<li><code><a title="pyspecan.plot.base.BlitPlot.set_xlim" href="#pyspecan.plot.base.BlitPlot.set_xlim">set_xlim</a></code></li>
+<li><code><a title="pyspecan.plot.base.BlitPlot.set_ylim" href="#pyspecan.plot.base.BlitPlot.set_ylim">set_ylim</a></code></li>
 </ul>
 </li>
 <li>
-<h4><code><a title="pyspecan.plot.plot.Plot" href="#pyspecan.plot.plot.Plot">Plot</a></code></h4>
+<h4><code><a title="pyspecan.plot.base.Plot" href="#pyspecan.plot.base.Plot">Plot</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.plot.plot.Plot.add_artist" href="#pyspecan.plot.plot.Plot.add_artist">add_artist</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.add_ax" href="#pyspecan.plot.plot.Plot.add_ax">add_ax</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.art" href="#pyspecan.plot.plot.Plot.art">art</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.ax" href="#pyspecan.plot.plot.Plot.ax">ax</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.canvas" href="#pyspecan.plot.plot.Plot.canvas">canvas</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.fig" href="#pyspecan.plot.plot.Plot.fig">fig</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.imshow" href="#pyspecan.plot.plot.Plot.imshow">imshow</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.plot" href="#pyspecan.plot.plot.Plot.plot">plot</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.relim" href="#pyspecan.plot.plot.Plot.relim">relim</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.set_data" href="#pyspecan.plot.plot.Plot.set_data">set_data</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.set_xdata" href="#pyspecan.plot.plot.Plot.set_xdata">set_xdata</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.set_xlim" href="#pyspecan.plot.plot.Plot.set_xlim">set_xlim</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.set_ydata" href="#pyspecan.plot.plot.Plot.set_ydata">set_ydata</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.set_ylim" href="#pyspecan.plot.plot.Plot.set_ylim">set_ylim</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.show" href="#pyspecan.plot.plot.Plot.show">show</a></code></li>
-<li><code><a title="pyspecan.plot.plot.Plot.update" href="#pyspecan.plot.plot.Plot.update">update</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.add_artist" href="#pyspecan.plot.base.Plot.add_artist">add_artist</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.add_ax" href="#pyspecan.plot.base.Plot.add_ax">add_ax</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.art" href="#pyspecan.plot.base.Plot.art">art</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.ax" href="#pyspecan.plot.base.Plot.ax">ax</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.canvas" href="#pyspecan.plot.base.Plot.canvas">canvas</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.fig" href="#pyspecan.plot.base.Plot.fig">fig</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.imshow" href="#pyspecan.plot.base.Plot.imshow">imshow</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.plot" href="#pyspecan.plot.base.Plot.plot">plot</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.relim" href="#pyspecan.plot.base.Plot.relim">relim</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.set_data" href="#pyspecan.plot.base.Plot.set_data">set_data</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.set_xdata" href="#pyspecan.plot.base.Plot.set_xdata">set_xdata</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.set_xlim" href="#pyspecan.plot.base.Plot.set_xlim">set_xlim</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.set_ydata" href="#pyspecan.plot.base.Plot.set_ydata">set_ydata</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.set_ylim" href="#pyspecan.plot.base.Plot.set_ylim">set_ylim</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.show" href="#pyspecan.plot.base.Plot.show">show</a></code></li>
+<li><code><a title="pyspecan.plot.base.Plot.update" href="#pyspecan.plot.base.Plot.update">update</a></code></li>
 </ul>
 </li>
 </ul>

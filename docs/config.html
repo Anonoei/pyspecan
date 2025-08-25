@@ -46,6 +46,90 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
+<dt id="pyspecan.config.Mode"><code class="flex name class">
+<span>class <span class="ident">Mode</span></span>
+<span>(</span><span>*args, **kwds)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Mode(Enum):
+    NONE = &#34;none&#34;
+    SWEPT = &#34;swept&#34;
+    RT = &#34;rt&#34;</code></pre>
+</details>
+<div class="desc"><p>Create a collection of name/value pairs.</p>
+<p>Example enumeration:</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; class Color(Enum):
+...     RED = 1
+...     BLUE = 2
+...     GREEN = 3
+</code></pre>
+<p>Access them by:</p>
+<ul>
+<li>attribute access:</li>
+</ul>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Color.RED
+<Color.RED: 1></p>
+</blockquote>
+</blockquote>
+</blockquote>
+<ul>
+<li>value lookup:</li>
+</ul>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Color(1)
+<Color.RED: 1></p>
+</blockquote>
+</blockquote>
+</blockquote>
+<ul>
+<li>name lookup:</li>
+</ul>
+<blockquote>
+<blockquote>
+<blockquote>
+<p>Color['RED']
+<Color.RED: 1></p>
+</blockquote>
+</blockquote>
+</blockquote>
+<p>Enumerations can be iterated over, and know how many members they have:</p>
+<pre><code class="language-python-repl">&gt;&gt;&gt; len(Color)
+3
+</code></pre>
+<pre><code class="language-python-repl">&gt;&gt;&gt; list(Color)
+[&lt;Color.RED: 1&gt;, &lt;Color.BLUE: 2&gt;, &lt;Color.GREEN: 3&gt;]
+</code></pre>
+<p>Methods can be added to enumerations, and members can have their own
+attributes &ndash; see the documentation for details.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>enum.Enum</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="pyspecan.config.Mode.NONE"><code class="name">var <span class="ident">NONE</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.config.Mode.RT"><code class="name">var <span class="ident">RT</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.config.Mode.SWEPT"><code class="name">var <span class="ident">SWEPT</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
 <dt id="pyspecan.config.config"><code class="flex name class">
 <span>class <span class="ident">config</span></span>
 </code></dt>
@@ -58,6 +142,7 @@ el.replaceWith(d);
     __instance = None
 
     SENTINEL = object()
+    MODE = Mode.NONE
 
     def __new__(cls):
         if cls.__instance is None:
@@ -71,6 +156,10 @@ el.replaceWith(d);
 <div class="desc"></div>
 <h3>Class variables</h3>
 <dl>
+<dt id="pyspecan.config.config.MODE"><code class="name">var <span class="ident">MODE</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.config.config.SENTINEL"><code class="name">var <span class="ident">SENTINEL</span></code></dt>
 <dd>
 <div class="desc"></div>
@@ -93,8 +182,17 @@ el.replaceWith(d);
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
+<h4><code><a title="pyspecan.config.Mode" href="#pyspecan.config.Mode">Mode</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.config.Mode.NONE" href="#pyspecan.config.Mode.NONE">NONE</a></code></li>
+<li><code><a title="pyspecan.config.Mode.RT" href="#pyspecan.config.Mode.RT">RT</a></code></li>
+<li><code><a title="pyspecan.config.Mode.SWEPT" href="#pyspecan.config.Mode.SWEPT">SWEPT</a></code></li>
+</ul>
+</li>
+<li>
 <h4><code><a title="pyspecan.config.config" href="#pyspecan.config.config">config</a></code></h4>
 <ul class="">
+<li><code><a title="pyspecan.config.config.MODE" href="#pyspecan.config.config.MODE">MODE</a></code></li>
 <li><code><a title="pyspecan.config.config.SENTINEL" href="#pyspecan.config.config.SENTINEL">SENTINEL</a></code></li>
 </ul>
 </li>

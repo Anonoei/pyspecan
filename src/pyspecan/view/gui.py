@@ -1,15 +1,16 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
-from .GUI.psd import PSD
-from .GUI.persistent import Persistent
+from ..config import config, Mode
+
+from .GUI.plot.base import GUIPlot, GUIBlitPlot
+from .GUI.plot import s as plots
 
 class GUI:
-    def __init__(self, mode, view, root=tk.Tk()):
-        self.mode = mode
+    def __init__(self, view, root=tk.Tk()):
         self.view = view
         self.root = root
-        self.root.title(f"pyspecan | {self.mode}")
+        self.root.title(f"pyspecan | {config.MODE.value}")
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
 
         self._main = tk.Frame(self.root)
@@ -27,7 +28,8 @@ class GUI:
         self.main.add(self.fr_ctrl)
 
         self.fr_view = tk.Frame(self.main, highlightbackground="black",highlightthickness=1)
-        self.draw_view(self.fr_view)
+        self.plot: GUIPlot | GUIBlitPlot = None # type: ignore
+        # self.draw_view(self.fr_view)
         self.main.add(self.fr_view)
 
     def draw_tb(self, parent):
@@ -74,8 +76,16 @@ class GUI:
         col += 1
         ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
 
+        col += 1
+        self.var_draw_time = tk.StringVar(parent)
+        self.lbl_draw_time = tk.Label(parent, textvariable=self.var_draw_time)
+        tk.Label(parent, text="Draw").grid(row=0,column=col, sticky=tk.E)
+        self.lbl_draw_time.grid(row=1,column=col, sticky=tk.E)
+        parent.grid_columnconfigure(col, weight=1)
+
+
     def draw_ctrl(self, parent):
-        root = tk.Frame(parent) # File
+        root = tk.Frame(parent) # File reader
         root.columnconfigure(2, weight=1)
         row = 0
         self.var_file = tk.StringVar(root)
@@ -90,7 +100,7 @@ class GUI:
         self.cb_file_fmt.grid(row=row,column=1, sticky=tk.W)
         root.pack(padx=2,pady=2, fill=tk.X)
 
-        root = tk.Frame(parent) # PSD
+        root = tk.Frame(parent) # File params
         row = 0
         self.var_fs = tk.StringVar(root)
         tk.Label(root, text="Sample rate:").grid(row=row,column=0, sticky=tk.W)
@@ -103,19 +113,14 @@ class GUI:
         self.ent_cf.grid(row=row,column=1, sticky=tk.W)
         root.pack(padx=2,pady=2, fill=tk.X)
 
-    def draw_view(self, parent):
-        print(f"GUI using {self.mode}")
-        if self.mode == "psd":
-            self.plot = PSD(self, parent)
-        elif self.mode == "rt":
-            self.plot = Persistent(self, parent)
-        # tk.Label(parent, text="View").pack()
+    # def draw_view(self, parent):
+    #     if config.MODE == Mode.SWEPT:
+    #         self.plot = plots["PSD"](self, parent)
+    #     elif config.MODE == Mode.RT:
+    #         self.plot = plots["Persistent"](self, parent)
 
     def mainloop(self):
         self.root.mainloop()
-
-    def reset(self):
-        self.plot.reset()
 
     def quit(self):
         self.root.quit()

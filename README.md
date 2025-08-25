@@ -1,6 +1,27 @@
 # pyspecan
  A spectrum analyzer library
 
-
  - [Documentation](https://anonoei.github.io/pyspecan/)
  - [PyPI](https://pypi.org/project/pyspecan/)
+
+# Usage
+## Module
+- `python3 -m pyspecan --help`
+- GUI, swept: `python3 -m pyspecan`
+- GUI, RT: `python3 -m pyspecan -m RT`
+
+## Scripts
+- `pyspecan`: GUI, swept
+- `pyspecan-rt`: GUI, RT
+- `pyspecan-cui`: CUI, swept
+- `pyspecan-cui-rt`: CUI, RT
+
+# Install
+1. Run `python3 -m pip install pyspecan`
+2. Run `python3 -m pyspecan`
+
+# Contributing
+1. `git clone https://github.com/Anonoei/pyspecan`
+2. `cd pyspecan`
+3. `git branch -c feature/<your feature>`
+4. `python3 builder.py -b -l` build and install locally

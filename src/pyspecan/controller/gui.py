@@ -5,16 +5,19 @@ import datetime as dt
 import tkinter as tk
 import matplotlib.pyplot as plt
 
+from ..config import config, Mode
+
 from ..utils import dialog
 from ..utils.time import strfmt_td
 
 from ..model.model import Model
-from ..model.model import WindowLUT
 from ..model.reader import Format
 from ..view.gui import GUI
 
-from ..view.GUI.psd import PSD as viewPSD
-from ..view.GUI.persistent import Persistent as viewPersistent
+from .GUI.plot import s as ctrlPlots
+from ..view.GUI.plot import s as viewPlots
+
+from ..view.GUI.plot.base import GUIPlot, GUIBlitPlot
 
 class Controller:
     def __init__(self, model: Model, view: GUI):
@@ -31,6 +34,7 @@ class Controller:
         self.view.btn_start.config(command=self.start)
         self.view.btn_stop.config(command=self.stop)
         self.view.btn_reset.config(command=self.reset)
+        self.view.var_draw_time.set(f"{0.0:06.3f}s")
 
         self.view.btn_file.config(command=self.set_path)
         self.view.cb_file_fmt.config(values=list([v.name for v in Format]))
@@ -40,6 +44,12 @@ class Controller:
 
         self.thread: threading.Thread = None # type: ignore
 
+        if config.MODE == Mode.SWEPT:
+            self.view.plot = viewPlots["PSD"](self.view, self.view.fr_view)
+            self.plot = ctrlPlots["PSD"](self.view.plot)
+        elif config.MODE == Mode.RT:
+            self.view.plot = viewPlots["Persistent"](self.view, self.view.fr_view)
+            self.plot = ctrlPlots["Persistent"](self.view.plot)
         self.draw()
 
     def start(self):
@@ -62,7 +72,7 @@ class Controller:
     def reset(self):
         self.stop()
         self.model.reset()
-        self.view.reset()
+        self.plot.reset()
         self.draw_tb()
 
     def prev(self):
@@ -74,42 +84,46 @@ class Controller:
         return self._next()
 
     def loop(self):
+        time_show = self.time_show/1000 # convert ms to s
         while self.running:
-            ltime = time.perf_counter()
-            if not self._next():
+            valid, ptime = self._next()
+            if not valid or ptime is None:
                 break
-            ltime = (time.perf_counter() - ltime)
-            wait = (self.time_show/1000)+ltime
-            # print(f"loop waiting for {wait:.4f}s")
-            time.sleep(wait)
+            wait = time_show-ptime
+            if wait > 0:
+                # print(f"Loop waiting for {wait*1000:.1f}ms")
+                time.sleep(wait)
 
     def _plot(self):
-        # PSD
-        vbw = self.view.plot.vbw
-        window = self.view.plot.window
-        self.view.plot.plot(0, self.model.f, self.model.psd(vbw, window))
-        self.view.plot.update()
+        ptime = time.perf_counter()
+        vbw = self.plot.vbw
+        window = self.plot.window
+        if not isinstance(self.view.plot, GUIBlitPlot):
+            self.view.plot.plotter.ax(0).cla()
+            print(f"Cleared plot!")
+
+        self.plot.plot(0, self.model.f, self.model.psd(vbw, window))
+        self.plot.update()
+
+        ptime = (time.perf_counter() - ptime)
+        self.view.var_draw_time.set(f"{ptime:06.3f}s")
         self.draw_tb()
+        # print(f"Plotted in {ptime*1000:.1f}ms")
+        return ptime
 
     def _prev(self):
-        reading = self.model.prev()
-        if reading:
-            # self.view.plot.ax(0).cla()
-            self._plot()
-            # self.view.plot.plot(0, self.model.f, self.model.psd)
-            # self.view.plot.update()
-            # self.draw_tb()
-        return reading
+        valid = self.model.prev()
+        tplot = None
+        if valid:
+            tplot = self._plot()
+        return (valid, tplot)
 
     def _next(self):
-        reading = self.model.next()
-        if reading:
-            # self.view.plot.ax(0).cla()
-            self._plot()
-            # self.view.plot.plot(0, self.model.f, self.model.psd)
-            # self.view.plot.update()
-            # self.draw_tb()
-        return reading
+        valid = self.model.next()
+        tplot = None
+        if valid:
+            tplot = self._plot()
+        return (valid, tplot)
 
     def draw(self):
         self.draw_tb()

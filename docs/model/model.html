@@ -48,7 +48,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.model.model.Model"><code class="flex name class">
 <span>class <span class="ident">Model</span></span>
-<span>(</span><span>mode, path, fmt, nfft, Fs, cf)</span>
+<span>(</span><span>path, fmt, nfft, Fs, cf)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -61,8 +61,7 @@ el.replaceWith(d);
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
         &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -71,11 +70,10 @@ el.replaceWith(d);
 
         self.overlap = 0.8 # rt
 
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -96,10 +94,10 @@ el.replaceWith(d);
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == &#34;psd&#34;:
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == &#34;rt&#34;:
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd
@@ -146,8 +144,7 @@ el.replaceWith(d);
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
         &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -156,11 +153,10 @@ el.replaceWith(d);
 
         self.overlap = 0.8 # rt
 
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -181,10 +177,10 @@ el.replaceWith(d);
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == &#34;psd&#34;:
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == &#34;rt&#34;:
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd
@@ -230,8 +226,7 @@ el.replaceWith(d);
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
         &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -240,11 +235,10 @@ el.replaceWith(d);
 
         self.overlap = 0.8 # rt
 
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -265,10 +259,10 @@ el.replaceWith(d);
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == &#34;psd&#34;:
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == &#34;rt&#34;:
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd
@@ -314,8 +308,7 @@ el.replaceWith(d);
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
         &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -324,11 +317,10 @@ el.replaceWith(d);
 
         self.overlap = 0.8 # rt
 
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -349,10 +341,10 @@ el.replaceWith(d);
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == &#34;psd&#34;:
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == &#34;rt&#34;:
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd
@@ -398,8 +390,7 @@ el.replaceWith(d);
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
         &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -408,11 +399,10 @@ el.replaceWith(d);
 
         self.overlap = 0.8 # rt
 
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -433,10 +423,10 @@ el.replaceWith(d);
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == &#34;psd&#34;:
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == &#34;rt&#34;:
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd
@@ -482,8 +472,7 @@ el.replaceWith(d);
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
         &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -492,11 +481,10 @@ el.replaceWith(d);
 
         self.overlap = 0.8 # rt
 
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -517,10 +505,10 @@ el.replaceWith(d);
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == &#34;psd&#34;:
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == &#34;rt&#34;:
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd
@@ -566,8 +554,7 @@ el.replaceWith(d);
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
         &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -576,11 +563,10 @@ el.replaceWith(d);
 
         self.overlap = 0.8 # rt
 
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -601,10 +587,10 @@ el.replaceWith(d);
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == &#34;psd&#34;:
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == &#34;rt&#34;:
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd
@@ -650,8 +636,7 @@ el.replaceWith(d);
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
         &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -660,11 +645,10 @@ el.replaceWith(d);
 
         self.overlap = 0.8 # rt
 
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -685,10 +669,10 @@ el.replaceWith(d);
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == &#34;psd&#34;:
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == &#34;rt&#34;:
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd
@@ -734,8 +718,7 @@ el.replaceWith(d);
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
         &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -744,11 +727,10 @@ el.replaceWith(d);
 
         self.overlap = 0.8 # rt
 
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -769,10 +751,10 @@ el.replaceWith(d);
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == &#34;psd&#34;:
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == &#34;rt&#34;:
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd
@@ -884,10 +866,10 @@ def samples(self):
     if self._samples is None:
         return None
     if self._psd is None:
-        if self.mode == &#34;psd&#34;:
+        if config.MODE == Mode.SWEPT:
             psd = _psd.psd(self._samples, self.Fs, vbw, win)
             self._psd = psd
-        elif self.mode == &#34;rt&#34;:
+        elif config.MODE == Mode.RT:
             psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
             self._psd = psd
     return self._psd</code></pre>

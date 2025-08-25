@@ -2,6 +2,7 @@ import typing
 import numpy as np
 
 from .. import err
+from ..config import config, Mode
 from ..utils.window import WindowLUT
 from ..utils import psd as _psd
 from ..utils import stft
@@ -14,8 +15,7 @@ class Model:
         "f", "_samples", "_psd", "_forward", "_reverse",
         "Fs", "cf", "nfft", "overlap"
     )
-    def __init__(self, mode, path, fmt, nfft, Fs, cf):
-        self.mode = mode
+    def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
@@ -24,11 +24,10 @@ class Model:
 
         self.overlap = 0.8 # rt
 
-        if self.mode == "psd":
+        if config.MODE == Mode.SWEPT:
             self.block_size = self.nfft
-        elif self.mode == "rt":
+        elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
-
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -49,10 +48,10 @@ class Model:
         if self._samples is None:
             return None
         if self._psd is None:
-            if self.mode == "psd":
+            if config.MODE == Mode.SWEPT:
                 psd = _psd.psd(self._samples, self.Fs, vbw, win)
                 self._psd = psd
-            elif self.mode == "rt":
+            elif config.MODE == Mode.RT:
                 psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
                 self._psd = psd
         return self._psd

@@ -1,7 +1,15 @@
+from enum import Enum
+
+class Mode(Enum):
+    NONE = "none"
+    SWEPT = "swept"
+    RT = "rt"
+
 class config:
     __instance = None
 
     SENTINEL = object()
+    MODE = Mode.NONE
 
     def __new__(cls):
         if cls.__instance is None:

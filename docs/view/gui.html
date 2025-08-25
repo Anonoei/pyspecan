@@ -48,7 +48,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.view.gui.GUI"><code class="flex name class">
 <span>class <span class="ident">GUI</span></span>
-<span>(</span><span>mode, view, root=&lt;tkinter.Tk object .&gt;)</span>
+<span>(</span><span>view, root=&lt;tkinter.Tk object .&gt;)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -56,11 +56,10 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUI:
-    def __init__(self, mode, view, root=tk.Tk()):
-        self.mode = mode
+    def __init__(self, view, root=tk.Tk()):
         self.view = view
         self.root = root
-        self.root.title(f&#34;pyspecan | {self.mode}&#34;)
+        self.root.title(f&#34;pyspecan | {config.MODE.value}&#34;)
         self.root.protocol(&#34;WM_DELETE_WINDOW&#34;, self.quit)
 
         self._main = tk.Frame(self.root)
@@ -78,7 +77,8 @@ el.replaceWith(d);
         self.main.add(self.fr_ctrl)
 
         self.fr_view = tk.Frame(self.main, highlightbackground=&#34;black&#34;,highlightthickness=1)
-        self.draw_view(self.fr_view)
+        self.plot: GUIPlot | GUIBlitPlot = None # type: ignore
+        # self.draw_view(self.fr_view)
         self.main.add(self.fr_view)
 
     def draw_tb(self, parent):
@@ -125,8 +125,16 @@ el.replaceWith(d);
         col += 1
         ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
 
+        col += 1
+        self.var_draw_time = tk.StringVar(parent)
+        self.lbl_draw_time = tk.Label(parent, textvariable=self.var_draw_time)
+        tk.Label(parent, text=&#34;Draw&#34;).grid(row=0,column=col, sticky=tk.E)
+        self.lbl_draw_time.grid(row=1,column=col, sticky=tk.E)
+        parent.grid_columnconfigure(col, weight=1)
+
+
     def draw_ctrl(self, parent):
-        root = tk.Frame(parent) # File
+        root = tk.Frame(parent) # File reader
         root.columnconfigure(2, weight=1)
         row = 0
         self.var_file = tk.StringVar(root)
@@ -141,7 +149,7 @@ el.replaceWith(d);
         self.cb_file_fmt.grid(row=row,column=1, sticky=tk.W)
         root.pack(padx=2,pady=2, fill=tk.X)
 
-        root = tk.Frame(parent) # PSD
+        root = tk.Frame(parent) # File params
         row = 0
         self.var_fs = tk.StringVar(root)
         tk.Label(root, text=&#34;Sample rate:&#34;).grid(row=row,column=0, sticky=tk.W)
@@ -154,19 +162,14 @@ el.replaceWith(d);
         self.ent_cf.grid(row=row,column=1, sticky=tk.W)
         root.pack(padx=2,pady=2, fill=tk.X)
 
-    def draw_view(self, parent):
-        print(f&#34;GUI using {self.mode}&#34;)
-        if self.mode == &#34;psd&#34;:
-            self.plot = PSD(self, parent)
-        elif self.mode == &#34;rt&#34;:
-            self.plot = Persistent(self, parent)
-        # tk.Label(parent, text=&#34;View&#34;).pack()
+    # def draw_view(self, parent):
+    #     if config.MODE == Mode.SWEPT:
+    #         self.plot = plots[&#34;PSD&#34;](self, parent)
+    #     elif config.MODE == Mode.RT:
+    #         self.plot = plots[&#34;Persistent&#34;](self, parent)
 
     def mainloop(self):
         self.root.mainloop()
-
-    def reset(self):
-        self.plot.reset()
 
     def quit(self):
         self.root.quit()
@@ -184,7 +187,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def draw_ctrl(self, parent):
-    root = tk.Frame(parent) # File
+    root = tk.Frame(parent) # File reader
     root.columnconfigure(2, weight=1)
     row = 0
     self.var_file = tk.StringVar(root)
@@ -199,7 +202,7 @@ el.replaceWith(d);
     self.cb_file_fmt.grid(row=row,column=1, sticky=tk.W)
     root.pack(padx=2,pady=2, fill=tk.X)
 
-    root = tk.Frame(parent) # PSD
+    root = tk.Frame(parent) # File params
     row = 0
     self.var_fs = tk.StringVar(root)
     tk.Label(root, text=&#34;Sample rate:&#34;).grid(row=row,column=0, sticky=tk.W)
@@ -264,25 +267,14 @@ el.replaceWith(d);
     self.btn_reset = tk.Button(parent, text=&#34;Reset&#34;)
     self.btn_reset.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
     col += 1
-    ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.gui.GUI.draw_view"><code class="name flex">
-<span>def <span class="ident">draw_view</span></span>(<span>self, parent)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def draw_view(self, parent):
-    print(f&#34;GUI using {self.mode}&#34;)
-    if self.mode == &#34;psd&#34;:
-        self.plot = PSD(self, parent)
-    elif self.mode == &#34;rt&#34;:
-        self.plot = Persistent(self, parent)
-    # tk.Label(parent, text=&#34;View&#34;).pack()</code></pre>
+    ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
+
+    col += 1
+    self.var_draw_time = tk.StringVar(parent)
+    self.lbl_draw_time = tk.Label(parent, textvariable=self.var_draw_time)
+    tk.Label(parent, text=&#34;Draw&#34;).grid(row=0,column=col, sticky=tk.E)
+    self.lbl_draw_time.grid(row=1,column=col, sticky=tk.E)
+    parent.grid_columnconfigure(col, weight=1)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -313,19 +305,6 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.gui.GUI.reset"><code class="name flex">
-<span>def <span class="ident">reset</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def reset(self):
-    self.plot.reset()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 </dl>
 </dd>
 </dl>
@@ -345,13 +324,11 @@ el.replaceWith(d);
 <ul>
 <li>
 <h4><code><a title="pyspecan.view.gui.GUI" href="#pyspecan.view.gui.GUI">GUI</a></code></h4>
-<ul class="two-column">
+<ul class="">
 <li><code><a title="pyspecan.view.gui.GUI.draw_ctrl" href="#pyspecan.view.gui.GUI.draw_ctrl">draw_ctrl</a></code></li>
 <li><code><a title="pyspecan.view.gui.GUI.draw_tb" href="#pyspecan.view.gui.GUI.draw_tb">draw_tb</a></code></li>
-<li><code><a title="pyspecan.view.gui.GUI.draw_view" href="#pyspecan.view.gui.GUI.draw_view">draw_view</a></code></li>
 <li><code><a title="pyspecan.view.gui.GUI.mainloop" href="#pyspecan.view.gui.GUI.mainloop">mainloop</a></code></li>
 <li><code><a title="pyspecan.view.gui.GUI.quit" href="#pyspecan.view.gui.GUI.quit">quit</a></code></li>
-<li><code><a title="pyspecan.view.gui.GUI.reset" href="#pyspecan.view.gui.GUI.reset">reset</a></code></li>
 </ul>
 </li>
 </ul>
