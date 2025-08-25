@@ -5,10 +5,11 @@ from .GUI.psd import PSD
 from .GUI.persistent import Persistent
 
 class GUI:
-    def __init__(self, view, root=tk.Tk()):
+    def __init__(self, mode, view, root=tk.Tk()):
+        self.mode = mode
         self.view = view
         self.root = root
-        self.root.title("pyspecan")
+        self.root.title(f"pyspecan | {self.mode}")
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
 
         self._main = tk.Frame(self.root)
@@ -103,9 +104,12 @@ class GUI:
         root.pack(padx=2,pady=2, fill=tk.X)
 
     def draw_view(self, parent):
-        self.plot = PSD(self, parent)
-        # self.plot = Persistent(self, parent)
-        tk.Label(parent, text="View").pack()
+        print(f"GUI using {self.mode}")
+        if self.mode == "psd":
+            self.plot = PSD(self, parent)
+        elif self.mode == "rt":
+            self.plot = Persistent(self, parent)
+        # tk.Label(parent, text="View").pack()
 
     def mainloop(self):
         self.root.mainloop()

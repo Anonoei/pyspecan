@@ -85,10 +85,9 @@ class Controller:
 
     def _plot(self):
         # PSD
-        if isinstance(self.view.plot, viewPSD):
-            vbw = self.view.plot.vbw
-            window = self.view.plot.window
-            self.view.plot.plot(0, self.model.f, self.model.psd(vbw, window))
+        vbw = self.view.plot.vbw
+        window = self.view.plot.window
+        self.view.plot.plot(0, self.model.f, self.model.psd(vbw, window))
         self.view.plot.update()
         self.draw_tb()
 

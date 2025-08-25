@@ -49,6 +49,11 @@ def dot(x, y, psds, yt, yb):
     """
     hist = np.zeros((y, x), dtype=np.int8)
 
+    if np.all(psds < yb):
+        return hist
+    elif np.all(psds > yt):
+        return hist
+
     y_rng = abs(abs(yt) - abs(yb))
     y_off = yb if yb > 0 else -yb
 
@@ -58,13 +63,17 @@ def dot(x, y, psds, yt, yb):
     x_idx = np.floor(np.arange(0, psds.shape[0])*x_ratio).astype(int)
     y_idx = np.floor((psds+y_off)*y_ratio).astype(int)
 
+    y_val = np.ones_like(y_idx)
+    y_val[y_idx > y] = 0
+    y_val[y_idx < 0] = 0
+
     for i in range(psds.shape[1]):
-        hist[y_idx[:,i], x_idx] += 1
+        hist[y_idx[:,i], x_idx] += y_val[:,i]
     return hist
 
 def cdot(x, y, psds, yt=0.05, yb=0.05):
-    hist, (amp_min, amp_max) = dot(x, y, psds, yt, yb)
-    return _fill(hist), (amp_min, amp_max)
+    hist = dot(x, y, psds, yt, yb)
+    return _fill(hist)
 
 def vec(x, y, psds, yt=0.05, yb=0.05, interp=32):
     """Vector Matrix
@@ -78,5 +87,5 @@ def vec(x, y, psds, yt=0.05, yb=0.05, interp=32):
     return dot(x, y, y_int, yt, yb)
 
 def cvec(x, y, psds, yt=0.05, yb=0.05, interp=10):
-    hist, (amp_min, amp_max) = vec(x, y, psds, yt, yb, interp)
-    return _fill(hist), (amp_min, amp_max)
+    hist = vec(x, y, psds, yt, yb, interp)
+    return _fill(hist)

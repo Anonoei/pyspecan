@@ -7,18 +7,20 @@ from .utils import dialog
 
 class SpecAn:
     __slots__ = ("model", "view", "controller")
-    def __init__(self, ui, path=None, fmt=None, nfft=1024, Fs=1, cf=0):
-        self.model = Model(path, fmt, nfft, Fs, cf)
+    def __init__(self, ui, mode="psd", path=None, fmt=None, nfft=1024, Fs=1, cf=0):
+        if not mode in ("psd", "rt"):
+            raise err.UnknownOption(f"Unknown mode {mode}")
+        self.model = Model(mode, path, fmt, nfft, Fs, cf)
 
         if ui in ("c", "cui", "CUI"):
             from .view.cui import CUI
             tk.Tk().withdraw()
-            self.view = CUI(self)
+            self.view = CUI(mode, self)
             from .controller.cui import Controller
             self.controller = Controller(self.model, self.view)
         elif ui in("g", "gui", "GUI"):
             from .view.gui import GUI
-            self.view = GUI(self)
+            self.view = GUI(mode, self)
             from .controller.gui import Controller
             self.controller = Controller(self.model, self.view)
         else:

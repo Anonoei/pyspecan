@@ -10,16 +10,25 @@ from .reader import Reader
 
 class Model:
     __slots__ = (
-        "reader",
+        "mode", "reader", "block_size",
         "f", "_samples", "_psd", "_forward", "_reverse",
-        "Fs", "cf", "nfft", "win"
+        "Fs", "cf", "nfft", "overlap"
     )
-    def __init__(self, path, fmt, nfft, Fs, cf):
+    def __init__(self, mode, path, fmt, nfft, Fs, cf):
+        self.mode = mode
         self.reader = Reader(fmt, path)
         self.Fs = float(Fs)
         self.cf = float(cf)
+
         self.nfft = int(nfft)
-        self.win = "blackman"
+
+        self.overlap = 0.8 # rt
+
+        if self.mode == "psd":
+            self.block_size = self.nfft
+        elif self.mode == "rt":
+            self.block_size = self.nfft*4
+
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
@@ -40,13 +49,17 @@ class Model:
         if self._samples is None:
             return None
         if self._psd is None:
-            psd = _psd.psd(self._samples, self.Fs, vbw, win)
-            self._psd = psd
+            if self.mode == "psd":
+                psd = _psd.psd(self._samples, self.Fs, vbw, win)
+                self._psd = psd
+            elif self.mode == "rt":
+                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
+                self._psd = psd
         return self._psd
 
     def next(self):
         try:
-            samples = self.reader.next(self.nfft)
+            samples = self.reader.next(self.block_size)
         except err.Overflow:
             return False
         self._samples = samples
@@ -55,7 +68,7 @@ class Model:
 
     def prev(self):
         try:
-            samples = self.reader.prev(self.nfft)
+            samples = self.reader.prev(self.block_size)
         except err.Overflow:
             return False
         self._samples = samples

@@ -8,7 +8,7 @@ def psd(samples, nfft=1024, overlap=0.8, Fs=1.0, vbw=None, win="blackman"):
     overlap = 1-overlap
     n_samp = len(samples)
     n_frames = int(n_samp/(nfft*overlap))
-    out = np.zeros((nfft, n_frames), dtype=samples.dtype)
+    out = np.zeros((nfft, n_frames))
 
     # print(f"stft for {n_samp} samples / {out.shape[1]}*{nfft} FFT @ overlap {overlap}")
 
@@ -25,7 +25,7 @@ def psd(samples, nfft=1024, overlap=0.8, Fs=1.0, vbw=None, win="blackman"):
             segment = samples[s_idx:e_idx]
 
         _psd = np.fft.fft(segment*win_func(nfft))
-        _psd = np.abs(samples[:,i])
+        _psd = np.abs(_psd)
         _psd = _psd**2 / (nfft*Fs)
         _psd = 10.0*np.log10(_psd)
         _psd = np.fft.fftshift(_psd)

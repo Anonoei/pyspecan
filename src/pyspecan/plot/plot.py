@@ -133,6 +133,8 @@ class BlitPlot(Plot):
         else:
             im = self.art(idx, name)
             im.set_data(*args)
+            if "cmap" in kwargs.keys():
+                im.set(cmap=kwargs["cmap"])
         return im
 
     def set_data(self, i,j, x, y):
