@@ -49,6 +49,10 @@ class Plot:
         line, = self.ax(idx).plot(*args, **kwargs)
         return line
 
+    def imshow(self, idx, *args, **kwargs):
+        im = self.ax(idx).imshow(*args, **kwargs)
+        return im
+
     def set_data(self, i,j, x, y):
         """Set axis i, artist j data"""
         raise NotImplementedError()
@@ -105,7 +109,7 @@ class BlitPlot(Plot):
 
     def plot(self, idx, *args, **kwargs):
         name = kwargs.get("name", None)
-        if not name is None:
+        if name is not None:
             del kwargs["name"]
         if self.art(idx, name) is None:
             line = super().plot(idx, *args, **kwargs)
@@ -118,6 +122,18 @@ class BlitPlot(Plot):
                 print(f"plot args: {len(args)}")
                 print(f"plot kwargs: {kwargs}")
         return line
+
+    def imshow(self, idx, *args, **kwargs):
+        name = kwargs.get("name", None)
+        if name is not None:
+            del kwargs["name"]
+        if self.art(idx, name) is None:
+            im = super().imshow(idx, *args, **kwargs)
+            self.add_artist(idx, im, name)
+        else:
+            im = self.art(idx, name)
+            im.set_data(*args)
+        return im
 
     def set_data(self, i,j, x, y):
         self.art(i,j).set_data(x,y)

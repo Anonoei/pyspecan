@@ -2,6 +2,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from .GUI.psd import PSD
+from .GUI.persistent import Persistent
 
 class GUI:
     def __init__(self, view, root=tk.Tk()):
@@ -99,15 +100,11 @@ class GUI:
         tk.Label(root, text="Center freq:").grid(row=row,column=0, sticky=tk.W)
         self.ent_cf = tk.Entry(root, textvariable=self.var_cf, width=10)
         self.ent_cf.grid(row=row,column=1, sticky=tk.W)
-        row += 1
-        self.var_window = tk.StringVar(root)
-        tk.Label(root, text="Window:").grid(row=row,column=0, sticky=tk.W)
-        self.cb_window = ttk.Combobox(root, textvariable=self.var_window, width=9)
-        self.cb_window.grid(row=row,column=1, sticky=tk.W)
         root.pack(padx=2,pady=2, fill=tk.X)
 
     def draw_view(self, parent):
         self.plot = PSD(self, parent)
+        # self.plot = Persistent(self, parent)
         tk.Label(parent, text="View").pack()
 
     def mainloop(self):

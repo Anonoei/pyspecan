@@ -2,14 +2,11 @@ import typing
 import numpy as np
 
 from .. import err
-from .reader import Reader
+from ..utils.window import WindowLUT
+from ..utils import psd as _psd
+from ..utils import stft
 
-WindowLUT = {
-    "rect": np.ones,
-    "blackman": np.blackman,
-    "hanning": np.hanning,
-    "hamming": np.hamming,
-}
+from .reader import Reader
 
 class Model:
     __slots__ = (
@@ -39,14 +36,11 @@ class Model:
     def samples(self):
         return self._samples
 
-    @property
-    def psd(self):
+    def psd(self, vbw=None, win="blackman"):
         if self._samples is None:
             return None
         if self._psd is None:
-            psd = np.abs(np.fft.fft(self._samples * WindowLUT[self.win](len(self._samples)))) # type: ignore
-            psd = psd**2 / (len(self._samples)*self.Fs)
-            psd = np.fft.fftshift(10.0*np.log10(psd))
+            psd = _psd.psd(self._samples, self.Fs, vbw, win)
             self._psd = psd
         return self._psd
 

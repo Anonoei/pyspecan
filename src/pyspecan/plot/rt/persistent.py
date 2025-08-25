@@ -4,7 +4,7 @@ import matplotlib as mpl
 
 from ... import err
 
-from . import matrix
+from ...utils import matrix
 
 from ..color import Map
 

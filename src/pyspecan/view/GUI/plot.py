@@ -40,6 +40,9 @@ class GUIPlot:
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+    def reset(self):
+        pass
+
     def draw_settings(self, parent):
         pass
 
@@ -72,6 +75,9 @@ class GUIPlot:
 
     def plot(self, idx, *args, **kwargs):
         self._plot.plot(idx, *args, **kwargs)
+
+    def imshow(self, idx, *args, **kwargs):
+        self._plot.imshow(idx, *args, **kwargs)
 
     def set_data(self, i, j, x, y):
         self._plot.set_data(i, j, x, y)

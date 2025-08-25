@@ -43,28 +43,24 @@ def _fill(matrix):
     # matrix[np.min(matrix[:,None]):np.max(matrix[:,None]),None] += 1
     return matrix
 
-def dot(x, y, psds, yt=0.05, yb=0.05):
+def dot(x, y, psds, yt, yb):
     """Dot Matrix
     Each PSD's x/y mapped to histogram x/y
     """
     hist = np.zeros((y, x), dtype=np.int8)
 
-    amp_min, amp_max = np.min(psds), np.max(psds)
-    amp_min = amp_min*(1+yb) if amp_min < 0 else amp_min*(1-yb)
-    amp_max = amp_max*(1-yt) if amp_max < 0 else amp_max*(1+yt)
-
-    amp_rng = abs(abs(amp_max) - abs(amp_min))
-    amp_off = amp_min if amp_min > 0 else -amp_min
+    y_rng = abs(abs(yt) - abs(yb))
+    y_off = yb if yb > 0 else -yb
 
     x_ratio = x/psds.shape[0]
-    y_ratio = y/amp_rng
+    y_ratio = y/y_rng
 
     x_idx = np.floor(np.arange(0, psds.shape[0])*x_ratio).astype(int)
-    y_idx = np.floor((psds+amp_off)*y_ratio).astype(int)
+    y_idx = np.floor((psds+y_off)*y_ratio).astype(int)
 
     for i in range(psds.shape[1]):
         hist[y_idx[:,i], x_idx] += 1
-    return hist, (amp_min, amp_max)
+    return hist
 
 def cdot(x, y, psds, yt=0.05, yb=0.05):
     hist, (amp_min, amp_max) = dot(x, y, psds, yt, yb)

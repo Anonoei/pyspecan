@@ -1,15 +1,20 @@
 import threading
 import time
+import datetime as dt
 
 import tkinter as tk
 import matplotlib.pyplot as plt
 
 from ..utils import dialog
+from ..utils.time import strfmt_td
 
 from ..model.model import Model
 from ..model.model import WindowLUT
 from ..model.reader import Format
 from ..view.gui import GUI
+
+from ..view.GUI.psd import PSD as viewPSD
+from ..view.GUI.persistent import Persistent as viewPersistent
 
 class Controller:
     def __init__(self, model: Model, view: GUI):
@@ -30,8 +35,6 @@ class Controller:
         self.view.btn_file.config(command=self.set_path)
         self.view.cb_file_fmt.config(values=list([v.name for v in Format]))
         self.view.cb_file_fmt.bind("<<ComboboxSelected>>", self.set_dtype)
-        self.view.cb_window.config(values=list([k for k in WindowLUT.keys()]))
-        self.view.cb_window.bind("<<ComboboxSelected>>", self.set_window)
         self.view.ent_fs.bind("<Return>", self.set_fs)
         self.view.ent_cf.bind("<Return>", self.set_cf)
 
@@ -80,22 +83,33 @@ class Controller:
             # print(f"loop waiting for {wait:.4f}s")
             time.sleep(wait)
 
+    def _plot(self):
+        # PSD
+        if isinstance(self.view.plot, viewPSD):
+            vbw = self.view.plot.vbw
+            window = self.view.plot.window
+            self.view.plot.plot(0, self.model.f, self.model.psd(vbw, window))
+        self.view.plot.update()
+        self.draw_tb()
+
     def _prev(self):
         reading = self.model.prev()
         if reading:
             # self.view.plot.ax(0).cla()
-            self.view.plot.plot(0, self.model.f, self.model.psd)
-            self.view.plot.update()
-            self.draw_tb()
+            self._plot()
+            # self.view.plot.plot(0, self.model.f, self.model.psd)
+            # self.view.plot.update()
+            # self.draw_tb()
         return reading
 
     def _next(self):
         reading = self.model.next()
         if reading:
             # self.view.plot.ax(0).cla()
-            self.view.plot.plot(0, self.model.f, self.model.psd)
-            self.view.plot.update()
-            self.draw_tb()
+            self._plot()
+            # self.view.plot.plot(0, self.model.f, self.model.psd)
+            # self.view.plot.update()
+            # self.draw_tb()
         return reading
 
     def draw(self):
@@ -106,14 +120,16 @@ class Controller:
     def draw_tb(self):
         self.view.var_progress.set(f"{self.model.reader.cur_samp}/{self.model.reader.max_samp}")
         self.view.var_percent.set(float(self.model.reader.percent()))
-        self.view.var_time_cur.set(f"{self.model.cur_time():08.4f}s")
-        self.view.var_time_tot.set(f"{self.model.tot_time():08.4f}s")
+
+        # cur_time = f"{cur_time:07.3f}" if cur_time < 1000 else f"{cur_time:.2e}"
+        # tot_time = f"{tot_time:07.3f}" if tot_time < 1000 else f"{tot_time:.2e}"
+        self.view.var_time_cur.set(strfmt_td(dt.timedelta(seconds=self.model.cur_time())))
+        self.view.var_time_tot.set(strfmt_td(dt.timedelta(seconds=self.model.tot_time())))
 
     def draw_ctrl(self):
         self.view.var_file.set(str(self.model.reader.path))
         self.view.var_file_fmt.set(str(self.model.reader.fmt.name))
 
-        self.view.var_window.set(self.model.win)
         self.view.var_fs.set(str(self.model.Fs))
         self.view.var_cf.set(str(self.model.cf))
 
@@ -131,20 +147,19 @@ class Controller:
 
     def set_path(self, *args, **kwargs):
         path = dialog.get_file(False)
-        if path == "":
+        if path is None:
             path = self.model.reader.path
         fmt = self.view.var_file_fmt.get()
         self.model.set_path(path, fmt)
         self.draw_tb()
+        self.draw_ctrl()
 
     def set_dtype(self, *args, **kwargs):
         dtype = self.view.var_file_fmt.get()
         path = self.view.var_file.get()
         self.model.set_path(path, dtype)
         self.draw_tb()
-
-    def set_window(self, *args, **kwargs):
-        self.model.win = self.view.var_window.get()
+        self.draw_ctrl()
 
     def set_fs(self, *args, **kwargs):
         fs = self.view.var_fs.get()

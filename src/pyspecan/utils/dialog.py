@@ -17,3 +17,4 @@ def get_file(strict=True, title: str="", filetypes=None):
         else:
             if file == "":
                 return None
+            return file
