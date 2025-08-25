@@ -8,10 +8,10 @@ Github: https://github.com/Anonoei/pyspecan
 PyPI: https://pypi.org/project/pyspecan/
 """
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __author__ = "Anonoei <to+dev@an0.cx>"
 
-from .config import config
+from .config import config, Mode
 from . import err
 from . import obj
 from . import utils
