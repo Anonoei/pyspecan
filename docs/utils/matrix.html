@@ -100,9 +100,11 @@ el.replaceWith(d);
     x_idx = np.floor(np.arange(0, psds.shape[0])*x_ratio).astype(int)
     y_idx = np.floor((psds+y_off)*y_ratio).astype(int)
 
+    y_idx = np.clip(y_idx, -1, y)
+
     y_val = np.ones_like(y_idx)
-    y_val[y_idx &gt; y] = 0
-    y_val[y_idx &lt; 0] = 0
+    y_val[y_idx == -1] = 0
+    y_val[y_idx == y] = 0
 
     for i in range(psds.shape[1]):
         hist[y_idx[:,i], x_idx] += y_val[:,i]
