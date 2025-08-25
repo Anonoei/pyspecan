@@ -21,7 +21,14 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 keywords = ["anonoei", "sdr", "speca", "specan"]
-dependencies = ["numpy", "matplotlib", "tkinter"]
+dependencies = ["numpy", "matplotlib"]
+
+[project.scripts]
+pyspecan = "pyspecan._internal.main:main"
+pyspecan-cui = "pyspecan._internal.main:main_cli"
+
+[project.gui-scripts]
+pyspecan-gui = "pyspecan._internal.main:main_gui"
 
 [project.urls]
 Homepage = "https://github.com/anonoei/pyspecan"
