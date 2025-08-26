@@ -1,9 +1,15 @@
 import tkinter as tk
 from tkinter import ttk
 
+from ...plot.base import BlitPlot
 from .base import GUIFreqPlot
 
-class Persistent(GUIFreqPlot):
+class ViewRT(GUIFreqPlot):
+    def __init__(self, view, root):
+        super().__init__(view, root, BlitPlot,
+            figsize=(10,10), dpi=100,
+            nrows=1,ncols=1, layout="tight"
+        )
     def draw_settings(self, parent, row=0):
         row = super().draw_settings(parent, row)
 

@@ -1,8 +1,8 @@
 import tkinter as tk
 
-from ....utils.window import WindowLUT
+from ...utils.window import WindowLUT
 
-from ....view.GUI.plot.base import GUIPlot, GUIBlitPlot, GUIFreqPlot
+from ...view.GUI.base import GUIPlot, GUIBlitPlot, GUIFreqPlot
 
 class PlotController:
     __slots__ = ("view",)
@@ -54,8 +54,6 @@ class FreqPlotController(PlotController):
         try:
             scale = float(scale)
             self.scale = scale
-            ref = float(self.view.settings["ref_level"].get())
-            self.view.plotter.set_ylim(0, ref - (10*scale), ref)
         except ValueError:
             scale = self.scale
         self.view.settings["scale"].set(str(self.scale))
@@ -65,8 +63,6 @@ class FreqPlotController(PlotController):
         try:
             ref = float(ref)
             self.ref_level = ref
-            scale = float(self.view.settings["scale"].get())
-            self.view.plotter.set_ylim(0, ref - (10*scale), ref)
         except ValueError:
             ref = self.ref_level
         self.view.settings["ref_level"].set(str(self.ref_level))

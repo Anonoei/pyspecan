@@ -6,7 +6,7 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationTool
 
 import numpy as np
 
-from ....plot.base import Plot, BlitPlot
+from ...plot.base import Plot, BlitPlot
 
 class GUIPlot:
     __slots__ = (
@@ -14,8 +14,8 @@ class GUIPlot:
         "fr_main", "fr_canv", "fr_sets", "btn_toggle",
         "wg_sets",
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout="tight")
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -37,7 +37,7 @@ class GUIPlot:
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text="Settings",
                 font=("Arial", 8), bg="white", fg="black")
@@ -80,14 +80,14 @@ class GUIPlot:
         self.plotter.set_ydata(i, j, y)
 
 class GUIBlitPlot(GUIPlot):
-    def __init__(self, view, root, plotter=BlitPlot):
-        super().__init__(view, root, plotter)
+    def __init__(self, view, root, plotter=BlitPlot, *args, **kwargs):
+        super().__init__(view, root, plotter, *args, **kwargs)
 
 
 class GUIFreqPlot(GUIBlitPlot):
     __slots__ = ("lbl_lo", "lbl_hi")
-    def __init__(self, view, root, plotter=BlitPlot):
-        super().__init__(view, root, plotter)
+    def __init__(self, view, root, plotter=BlitPlot, *args, **kwargs):
+        super().__init__(view, root, plotter, *args, **kwargs)
 
         self.lbl_lo = tk.Label(self.fr_canv, text="V")
         self.lbl_hi = tk.Label(self.fr_canv, text="^")

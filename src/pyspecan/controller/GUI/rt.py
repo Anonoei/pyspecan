@@ -2,14 +2,13 @@ import numpy as np
 import tkinter as tk
 from tkinter import ttk
 
+from .base import GUIFreqPlot
 from .base import FreqPlotController
-from ....view.GUI.plot import PSD as viewPSD
 
-from ....utils.window import WindowLUT
-from ....utils import matrix
-from ....plot.color import cmap
+from ...utils import matrix
+from ...plot.color import cmap
 
-class Persistent(FreqPlotController):
+class ControllerRT(FreqPlotController):
     __slots__ = (
         "x", "y", "cmap",
         "_cmap_set", "_cb_drawn"
@@ -36,15 +35,15 @@ class Persistent(FreqPlotController):
     def reset(self):
         pass
 
-    def set_x(self, idx=0):
+    def set_x(self):
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f"{m-self.x/2:.1f}" for m in x_tick]
-        self.view.plotter.ax(idx).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(idx, 0, self.x)
+        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
+        self.view.plotter.set_xlim(0, 0, self.x)
 
-    def set_y(self, idx=0):
+    def set_y(self):
         y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
         y_max = self.y_top
         y_min = self.y_btm
@@ -53,8 +52,8 @@ class Persistent(FreqPlotController):
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f"{(y_rng*m)+y_off:.1f}" for m in y_mul]
-        self.view.plotter.ax(idx).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(idx, 0, self.y)
+        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
+        self.view.plotter.set_ylim(0, 0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -72,22 +71,22 @@ class Persistent(FreqPlotController):
         self.cmap = self.view.settings["cmap"].get()
         self._cmap_set = True
 
-    def plot(self, idx, freq, psds):
-        self.view.plotter.ax(idx).set_title("Persistent")
+    def plot(self, freq, psds):
+        self.view.plotter.ax(0).set_title("Persistent")
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
         im = self.view.imshow(
-                idx, mat, name="mat", cmap=cmap[self.cmap],
+                0, mat, name="mat", cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect="auto",
                 interpolation="nearest", resample=False, rasterized=True
         )
 
         if not self._cb_drawn:
-            print("Adding colorbar")
+            # print("Adding colorbar")
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(idx),
+                im, ax=self.view.plotter.ax(0),
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()

@@ -3,8 +3,11 @@ import tkinter.ttk as ttk
 
 from ..config import config, Mode
 
-from .GUI.plot.base import GUIPlot, GUIBlitPlot
-from .GUI.plot import s as plots
+from .GUI.base import GUIPlot, GUIBlitPlot
+# from .GUI.manager import Manager
+# from .GUI.plot import s as plots
+from .GUI.swept import ViewSwept
+from .GUI.rt import ViewRT
 
 class GUI:
     def __init__(self, view, root=tk.Tk()):
@@ -18,17 +21,23 @@ class GUI:
 
         self.fr_tb = tk.Frame(self._main, height=20, highlightbackground="black",highlightthickness=1)
         self.draw_tb(self.fr_tb)
-        self.fr_tb.pack(side=tk.TOP, fill=tk.X, )
+        self.fr_tb.pack(side=tk.TOP, fill=tk.X)
 
         self.main = tk.PanedWindow(self._main, orient=tk.HORIZONTAL)
         self.main.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        self.fr_view = tk.Frame(self.main, highlightbackground="black",highlightthickness=1)
+        if config.MODE == Mode.SWEPT:
+            self.plot = ViewSwept(self, self.fr_view)
+        elif config.MODE == Mode.RT:
+            self.plot = ViewRT(self, self.fr_view)
 
         self.fr_ctrl = tk.Frame(self.main, width=100, highlightbackground="black",highlightthickness=1)
         self.draw_ctrl(self.fr_ctrl)
         self.main.add(self.fr_ctrl)
 
-        self.fr_view = tk.Frame(self.main, highlightbackground="black",highlightthickness=1)
-        self.plot: GUIPlot | GUIBlitPlot = None # type: ignore
+
+        # self.plot: GUIPlot | GUIBlitPlot = None # type: ignore
         # self.draw_view(self.fr_view)
         self.main.add(self.fr_view)
 
@@ -82,7 +91,6 @@ class GUI:
         tk.Label(parent, text="Draw").grid(row=0,column=col, sticky=tk.E)
         self.lbl_draw_time.grid(row=1,column=col, sticky=tk.E)
         parent.grid_columnconfigure(col, weight=1)
-
 
     def draw_ctrl(self, parent):
         root = tk.Frame(parent) # File reader

@@ -79,7 +79,9 @@ class BlitPlot(Plot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._bg = None
-        self._art = [{}]
+        self._art = []
+        for _ in self._axs:
+            self._art.append({})
         self._cid = self._canv.mpl_connect("draw_event", self._on_draw)
 
     def update(self):

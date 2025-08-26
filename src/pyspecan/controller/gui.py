@@ -14,10 +14,13 @@ from ..model.model import Model
 from ..model.reader import Format
 from ..view.gui import GUI
 
-from .GUI.plot import s as ctrlPlots
-from ..view.GUI.plot import s as viewPlots
+# from .GUI.manager import Manager
+from ..plot.base import BlitPlot
+from ..view.GUI.base import GUIFreqPlot
 
-from ..view.GUI.plot.base import GUIPlot, GUIBlitPlot
+from .GUI.base import FreqPlotController
+from .GUI.swept import ControllerSwept
+from .GUI.rt import ControllerRT
 
 class Controller:
     def __init__(self, model: Model, view: GUI):
@@ -45,11 +48,9 @@ class Controller:
         self.thread: threading.Thread = None # type: ignore
 
         if config.MODE == Mode.SWEPT:
-            self.view.plot = viewPlots["PSD"](self.view, self.view.fr_view)
-            self.plot = ctrlPlots["PSD"](self.view.plot)
+            self.plot = ControllerSwept(self.view.plot)
         elif config.MODE == Mode.RT:
-            self.view.plot = viewPlots["Persistent"](self.view, self.view.fr_view)
-            self.plot = ctrlPlots["Persistent"](self.view.plot)
+            self.plot = ControllerRT(self.view.plot)
         self.draw()
 
     def start(self):
@@ -96,14 +97,14 @@ class Controller:
 
     def _plot(self):
         ptime = time.perf_counter()
-        vbw = self.plot.vbw
-        window = self.plot.window
-        if not isinstance(self.view.plot, GUIBlitPlot):
-            self.view.plot.plotter.ax(0).cla()
-            print(f"Cleared plot!")
-
-        self.plot.plot(0, self.model.f, self.model.psd(vbw, window))
-        self.plot.update()
+        if isinstance(self.plot, FreqPlotController):
+            vbw = self.plot.vbw
+            window = self.plot.window
+            if not isinstance(self.view.plot.plotter, BlitPlot):
+                self.view.plot.plotter.ax(0).cla()
+                print("Cleared plot!")
+            self.plot.plot(self.model.f, self.model.psd(vbw, window))
+            self.plot.update()
 
         ptime = (time.perf_counter() - ptime)
         self.view.var_draw_time.set(f"{ptime:06.3f}s")
