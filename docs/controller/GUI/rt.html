@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.GUI.plot.persistent API documentation</title>
+<title>pyspecan.controller.GUI.rt API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.GUI.plot.persistent</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.GUI.rt</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -46,8 +46,8 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent"><code class="flex name class">
-<span>class <span class="ident">Persistent</span></span>
+<dt id="pyspecan.controller.GUI.rt.ControllerRT"><code class="flex name class">
+<span>class <span class="ident">ControllerRT</span></span>
 <span>(</span><span>view)</span>
 </code></dt>
 <dd>
@@ -55,7 +55,7 @@ el.replaceWith(d);
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Persistent(FreqPlotController):
+<pre><code class="python">class ControllerRT(FreqPlotController):
     __slots__ = (
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
@@ -82,15 +82,15 @@ el.replaceWith(d);
     def reset(self):
         pass
 
-    def set_x(self, idx=0):
+    def set_x(self):
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.plotter.ax(idx).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(idx, 0, self.x)
+        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
+        self.view.plotter.set_xlim(0, 0, self.x)
 
-    def set_y(self, idx=0):
+    def set_y(self):
         y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
         y_max = self.y_top
         y_min = self.y_btm
@@ -99,8 +99,8 @@ el.replaceWith(d);
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.plotter.ax(idx).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(idx, 0, self.y)
+        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
+        self.view.plotter.set_ylim(0, 0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -118,22 +118,22 @@ el.replaceWith(d);
         self.cmap = self.view.settings[&#34;cmap&#34;].get()
         self._cmap_set = True
 
-    def plot(self, idx, freq, psds):
-        self.view.plotter.ax(idx).set_title(&#34;Persistent&#34;)
+    def plot(self, freq, psds):
+        self.view.plotter.ax(0).set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
         im = self.view.imshow(
-                idx, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
+                0, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect=&#34;auto&#34;,
                 interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
 
         if not self._cb_drawn:
-            print(&#34;Adding colorbar&#34;)
+            # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(idx),
+                im, ax=self.view.plotter.ax(0),
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
@@ -160,18 +160,18 @@ el.replaceWith(d);
 <div class="desc"></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.GUI.plot.base.FreqPlotController" href="base.html#pyspecan.controller.GUI.plot.base.FreqPlotController">FreqPlotController</a></li>
-<li><a title="pyspecan.controller.GUI.plot.base.PlotController" href="base.html#pyspecan.controller.GUI.plot.base.PlotController">PlotController</a></li>
+<li><a title="pyspecan.controller.GUI.base.FreqPlotController" href="base.html#pyspecan.controller.GUI.base.FreqPlotController">FreqPlotController</a></li>
+<li><a title="pyspecan.controller.GUI.base.PlotController" href="base.html#pyspecan.controller.GUI.base.PlotController">PlotController</a></li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Persistent(FreqPlotController):
+<pre><code class="python">class ControllerRT(FreqPlotController):
     __slots__ = (
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
@@ -198,15 +198,15 @@ el.replaceWith(d);
     def reset(self):
         pass
 
-    def set_x(self, idx=0):
+    def set_x(self):
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.plotter.ax(idx).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(idx, 0, self.x)
+        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
+        self.view.plotter.set_xlim(0, 0, self.x)
 
-    def set_y(self, idx=0):
+    def set_y(self):
         y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
         y_max = self.y_top
         y_min = self.y_btm
@@ -215,8 +215,8 @@ el.replaceWith(d);
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.plotter.ax(idx).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(idx, 0, self.y)
+        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
+        self.view.plotter.set_ylim(0, 0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -234,22 +234,22 @@ el.replaceWith(d);
         self.cmap = self.view.settings[&#34;cmap&#34;].get()
         self._cmap_set = True
 
-    def plot(self, idx, freq, psds):
-        self.view.plotter.ax(idx).set_title(&#34;Persistent&#34;)
+    def plot(self, freq, psds):
+        self.view.plotter.ax(0).set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
         im = self.view.imshow(
-                idx, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
+                0, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect=&#34;auto&#34;,
                 interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
 
         if not self._cb_drawn:
-            print(&#34;Adding colorbar&#34;)
+            # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(idx),
+                im, ax=self.view.plotter.ax(0),
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
@@ -275,13 +275,13 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.x"><code class="name">var <span class="ident">x</span></code></dt>
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.x"><code class="name">var <span class="ident">x</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Persistent(FreqPlotController):
+<pre><code class="python">class ControllerRT(FreqPlotController):
     __slots__ = (
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
@@ -308,15 +308,15 @@ el.replaceWith(d);
     def reset(self):
         pass
 
-    def set_x(self, idx=0):
+    def set_x(self):
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.plotter.ax(idx).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(idx, 0, self.x)
+        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
+        self.view.plotter.set_xlim(0, 0, self.x)
 
-    def set_y(self, idx=0):
+    def set_y(self):
         y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
         y_max = self.y_top
         y_min = self.y_btm
@@ -325,8 +325,8 @@ el.replaceWith(d);
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.plotter.ax(idx).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(idx, 0, self.y)
+        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
+        self.view.plotter.set_ylim(0, 0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -344,22 +344,22 @@ el.replaceWith(d);
         self.cmap = self.view.settings[&#34;cmap&#34;].get()
         self._cmap_set = True
 
-    def plot(self, idx, freq, psds):
-        self.view.plotter.ax(idx).set_title(&#34;Persistent&#34;)
+    def plot(self, freq, psds):
+        self.view.plotter.ax(0).set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
         im = self.view.imshow(
-                idx, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
+                0, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect=&#34;auto&#34;,
                 interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
 
         if not self._cb_drawn:
-            print(&#34;Adding colorbar&#34;)
+            # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(idx),
+                im, ax=self.view.plotter.ax(0),
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
@@ -385,13 +385,13 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.y"><code class="name">var <span class="ident">y</span></code></dt>
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.y"><code class="name">var <span class="ident">y</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Persistent(FreqPlotController):
+<pre><code class="python">class ControllerRT(FreqPlotController):
     __slots__ = (
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
@@ -418,15 +418,15 @@ el.replaceWith(d);
     def reset(self):
         pass
 
-    def set_x(self, idx=0):
+    def set_x(self):
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.plotter.ax(idx).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(idx, 0, self.x)
+        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
+        self.view.plotter.set_xlim(0, 0, self.x)
 
-    def set_y(self, idx=0):
+    def set_y(self):
         y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
         y_max = self.y_top
         y_min = self.y_btm
@@ -435,8 +435,8 @@ el.replaceWith(d);
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.plotter.ax(idx).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(idx, 0, self.y)
+        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
+        self.view.plotter.set_ylim(0, 0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -454,22 +454,22 @@ el.replaceWith(d);
         self.cmap = self.view.settings[&#34;cmap&#34;].get()
         self._cmap_set = True
 
-    def plot(self, idx, freq, psds):
-        self.view.plotter.ax(idx).set_title(&#34;Persistent&#34;)
+    def plot(self, freq, psds):
+        self.view.plotter.ax(0).set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
         im = self.view.imshow(
-                idx, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
+                0, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect=&#34;auto&#34;,
                 interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
 
         if not self._cb_drawn:
-            print(&#34;Adding colorbar&#34;)
+            # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(idx),
+                im, ax=self.view.plotter.ax(0),
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
@@ -498,30 +498,30 @@ el.replaceWith(d);
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.plot"><code class="name flex">
-<span>def <span class="ident">plot</span></span>(<span>self, idx, freq, psds)</span>
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.plot"><code class="name flex">
+<span>def <span class="ident">plot</span></span>(<span>self, freq, psds)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def plot(self, idx, freq, psds):
-    self.view.plotter.ax(idx).set_title(&#34;Persistent&#34;)
+<pre><code class="python">def plot(self, freq, psds):
+    self.view.plotter.ax(0).set_title(&#34;Persistent&#34;)
     mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
     mat = mat / np.max(mat)
 
     im = self.view.imshow(
-            idx, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
+            0, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
             vmin=0, vmax=1,
             aspect=&#34;auto&#34;,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
     )
 
     if not self._cb_drawn:
-        print(&#34;Adding colorbar&#34;)
+        # print(&#34;Adding colorbar&#34;)
         cb = self.view.plotter.fig.colorbar(
-            im, ax=self.view.plotter.ax(idx),
+            im, ax=self.view.plotter.ax(0),
             pad=0.005, fraction=0.05
         )
         self.view.plotter.canvas.draw()
@@ -547,7 +547,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.reset"><code class="name flex">
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.reset"><code class="name flex">
 <span>def <span class="ident">reset</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -560,7 +560,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.set_cmap"><code class="name flex">
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.set_cmap"><code class="name flex">
 <span>def <span class="ident">set_cmap</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -574,7 +574,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.set_ref_level"><code class="name flex">
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.set_ref_level"><code class="name flex">
 <span>def <span class="ident">set_ref_level</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -590,7 +590,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.set_scale"><code class="name flex">
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.set_scale"><code class="name flex">
 <span>def <span class="ident">set_scale</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -606,33 +606,33 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.set_x"><code class="name flex">
-<span>def <span class="ident">set_x</span></span>(<span>self, idx=0)</span>
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.set_x"><code class="name flex">
+<span>def <span class="ident">set_x</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_x(self, idx=0):
+<pre><code class="python">def set_x(self):
     x_mul = [0.0,0.25,0.5,0.75,1.0]
 
     x_tick = [self.x*m for m in x_mul]
     x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-    self.view.plotter.ax(idx).set_xticks(x_tick, x_text)
-    self.view.plotter.set_xlim(idx, 0, self.x)</code></pre>
+    self.view.plotter.ax(0).set_xticks(x_tick, x_text)
+    self.view.plotter.set_xlim(0, 0, self.x)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.plot.persistent.Persistent.set_y"><code class="name flex">
-<span>def <span class="ident">set_y</span></span>(<span>self, idx=0)</span>
+<dt id="pyspecan.controller.GUI.rt.ControllerRT.set_y"><code class="name flex">
+<span>def <span class="ident">set_y</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_y(self, idx=0):
+<pre><code class="python">def set_y(self):
     y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
     y_max = self.y_top
     y_min = self.y_btm
@@ -641,8 +641,8 @@ el.replaceWith(d);
 
     y_tick = [self.y*m for m in y_mul]
     y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-    self.view.plotter.ax(idx).set_yticks(y_tick, y_text)
-    self.view.plotter.set_ylim(idx, 0, self.y)</code></pre>
+    self.view.plotter.ax(0).set_yticks(y_tick, y_text)
+    self.view.plotter.set_ylim(0, 0, self.y)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -658,24 +658,24 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.controller.GUI.plot" href="index.html">pyspecan.controller.GUI.plot</a></code></li>
+<li><code><a title="pyspecan.controller.GUI" href="index.html">pyspecan.controller.GUI</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent" href="#pyspecan.controller.GUI.plot.persistent.Persistent">Persistent</a></code></h4>
+<h4><code><a title="pyspecan.controller.GUI.rt.ControllerRT" href="#pyspecan.controller.GUI.rt.ControllerRT">ControllerRT</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.cmap" href="#pyspecan.controller.GUI.plot.persistent.Persistent.cmap">cmap</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.plot" href="#pyspecan.controller.GUI.plot.persistent.Persistent.plot">plot</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.reset" href="#pyspecan.controller.GUI.plot.persistent.Persistent.reset">reset</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.set_cmap" href="#pyspecan.controller.GUI.plot.persistent.Persistent.set_cmap">set_cmap</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.set_ref_level" href="#pyspecan.controller.GUI.plot.persistent.Persistent.set_ref_level">set_ref_level</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.set_scale" href="#pyspecan.controller.GUI.plot.persistent.Persistent.set_scale">set_scale</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.set_x" href="#pyspecan.controller.GUI.plot.persistent.Persistent.set_x">set_x</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.set_y" href="#pyspecan.controller.GUI.plot.persistent.Persistent.set_y">set_y</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.x" href="#pyspecan.controller.GUI.plot.persistent.Persistent.x">x</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.plot.persistent.Persistent.y" href="#pyspecan.controller.GUI.plot.persistent.Persistent.y">y</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.cmap" href="#pyspecan.controller.GUI.rt.ControllerRT.cmap">cmap</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.plot" href="#pyspecan.controller.GUI.rt.ControllerRT.plot">plot</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.reset" href="#pyspecan.controller.GUI.rt.ControllerRT.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.set_cmap" href="#pyspecan.controller.GUI.rt.ControllerRT.set_cmap">set_cmap</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.set_ref_level" href="#pyspecan.controller.GUI.rt.ControllerRT.set_ref_level">set_ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.set_scale" href="#pyspecan.controller.GUI.rt.ControllerRT.set_scale">set_scale</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.set_x" href="#pyspecan.controller.GUI.rt.ControllerRT.set_x">set_x</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.set_y" href="#pyspecan.controller.GUI.rt.ControllerRT.set_y">set_y</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.x" href="#pyspecan.controller.GUI.rt.ControllerRT.x">x</a></code></li>
+<li><code><a title="pyspecan.controller.GUI.rt.ControllerRT.y" href="#pyspecan.controller.GUI.rt.ControllerRT.y">y</a></code></li>
 </ul>
 </li>
 </ul>

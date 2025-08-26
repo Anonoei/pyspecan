@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.view.GUI.plot.base API documentation</title>
+<title>pyspecan.view.GUI.base API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.view.GUI.plot.base</code></h1>
+<h1 class="title">Module <code>pyspecan.view.GUI.base</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -46,9 +46,9 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.view.GUI.plot.base.GUIBlitPlot"><code class="flex name class">
+<dt id="pyspecan.view.GUI.base.GUIBlitPlot"><code class="flex name class">
 <span>class <span class="ident">GUIBlitPlot</span></span>
-<span>(</span><span>view, root, plotter=pyspecan.plot.base.BlitPlot)</span>
+<span>(</span><span>view, root, plotter=pyspecan.plot.base.BlitPlot, *args, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -56,22 +56,22 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIBlitPlot(GUIPlot):
-    def __init__(self, view, root, plotter=BlitPlot):
-        super().__init__(view, root, plotter)</code></pre>
+    def __init__(self, view, root, plotter=BlitPlot, *args, **kwargs):
+        super().__init__(view, root, plotter, *args, **kwargs)</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.view.GUI.plot.base.GUIPlot" href="#pyspecan.view.GUI.plot.base.GUIPlot">GUIPlot</a></li>
+<li><a title="pyspecan.view.GUI.base.GUIPlot" href="#pyspecan.view.GUI.base.GUIPlot">GUIPlot</a></li>
 </ul>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.view.GUI.plot.base.GUIFreqPlot" href="#pyspecan.view.GUI.plot.base.GUIFreqPlot">GUIFreqPlot</a></li>
+<li><a title="pyspecan.view.GUI.base.GUIFreqPlot" href="#pyspecan.view.GUI.base.GUIFreqPlot">GUIFreqPlot</a></li>
 </ul>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIFreqPlot"><code class="flex name class">
+<dt id="pyspecan.view.GUI.base.GUIFreqPlot"><code class="flex name class">
 <span>class <span class="ident">GUIFreqPlot</span></span>
-<span>(</span><span>view, root, plotter=pyspecan.plot.base.BlitPlot)</span>
+<span>(</span><span>view, root, plotter=pyspecan.plot.base.BlitPlot, *args, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -80,8 +80,8 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class GUIFreqPlot(GUIBlitPlot):
     __slots__ = (&#34;lbl_lo&#34;, &#34;lbl_hi&#34;)
-    def __init__(self, view, root, plotter=BlitPlot):
-        super().__init__(view, root, plotter)
+    def __init__(self, view, root, plotter=BlitPlot, *args, **kwargs):
+        super().__init__(view, root, plotter, *args, **kwargs)
 
         self.lbl_lo = tk.Label(self.fr_canv, text=&#34;V&#34;)
         self.lbl_hi = tk.Label(self.fr_canv, text=&#34;^&#34;)
@@ -129,17 +129,17 @@ el.replaceWith(d);
 <div class="desc"></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.view.GUI.plot.base.GUIBlitPlot" href="#pyspecan.view.GUI.plot.base.GUIBlitPlot">GUIBlitPlot</a></li>
-<li><a title="pyspecan.view.GUI.plot.base.GUIPlot" href="#pyspecan.view.GUI.plot.base.GUIPlot">GUIPlot</a></li>
+<li><a title="pyspecan.view.GUI.base.GUIBlitPlot" href="#pyspecan.view.GUI.base.GUIBlitPlot">GUIBlitPlot</a></li>
+<li><a title="pyspecan.view.GUI.base.GUIPlot" href="#pyspecan.view.GUI.base.GUIPlot">GUIPlot</a></li>
 </ul>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.view.GUI.plot.persistent.Persistent" href="persistent.html#pyspecan.view.GUI.plot.persistent.Persistent">Persistent</a></li>
-<li><a title="pyspecan.view.GUI.plot.psd.PSD" href="psd.html#pyspecan.view.GUI.plot.psd.PSD">PSD</a></li>
+<li><a title="pyspecan.view.GUI.rt.ViewRT" href="rt.html#pyspecan.view.GUI.rt.ViewRT">ViewRT</a></li>
+<li><a title="pyspecan.view.GUI.swept.ViewSwept" href="swept.html#pyspecan.view.GUI.swept.ViewSwept">ViewSwept</a></li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.view.GUI.plot.base.GUIFreqPlot.lbl_hi"><code class="name">var <span class="ident">lbl_hi</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIFreqPlot.lbl_hi"><code class="name">var <span class="ident">lbl_hi</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -147,8 +147,8 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class GUIFreqPlot(GUIBlitPlot):
     __slots__ = (&#34;lbl_lo&#34;, &#34;lbl_hi&#34;)
-    def __init__(self, view, root, plotter=BlitPlot):
-        super().__init__(view, root, plotter)
+    def __init__(self, view, root, plotter=BlitPlot, *args, **kwargs):
+        super().__init__(view, root, plotter, *args, **kwargs)
 
         self.lbl_lo = tk.Label(self.fr_canv, text=&#34;V&#34;)
         self.lbl_hi = tk.Label(self.fr_canv, text=&#34;^&#34;)
@@ -195,7 +195,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIFreqPlot.lbl_lo"><code class="name">var <span class="ident">lbl_lo</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIFreqPlot.lbl_lo"><code class="name">var <span class="ident">lbl_lo</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -203,8 +203,8 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class GUIFreqPlot(GUIBlitPlot):
     __slots__ = (&#34;lbl_lo&#34;, &#34;lbl_hi&#34;)
-    def __init__(self, view, root, plotter=BlitPlot):
-        super().__init__(view, root, plotter)
+    def __init__(self, view, root, plotter=BlitPlot, *args, **kwargs):
+        super().__init__(view, root, plotter, *args, **kwargs)
 
         self.lbl_lo = tk.Label(self.fr_canv, text=&#34;V&#34;)
         self.lbl_hi = tk.Label(self.fr_canv, text=&#34;^&#34;)
@@ -254,7 +254,7 @@ el.replaceWith(d);
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.view.GUI.plot.base.GUIFreqPlot.draw_settings"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIFreqPlot.draw_settings"><code class="name flex">
 <span>def <span class="ident">draw_settings</span></span>(<span>self, parent, row=0)</span>
 </code></dt>
 <dd>
@@ -306,9 +306,9 @@ el.replaceWith(d);
 </dd>
 </dl>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot"><code class="flex name class">
+<dt id="pyspecan.view.GUI.base.GUIPlot"><code class="flex name class">
 <span>class <span class="ident">GUIPlot</span></span>
-<span>(</span><span>view, root, plotter=pyspecan.plot.base.Plot)</span>
+<span>(</span><span>view, root, plotter=pyspecan.plot.base.Plot, *args, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -321,8 +321,8 @@ el.replaceWith(d);
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -344,7 +344,7 @@ el.replaceWith(d);
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -389,11 +389,11 @@ el.replaceWith(d);
 <div class="desc"></div>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.view.GUI.plot.base.GUIBlitPlot" href="#pyspecan.view.GUI.plot.base.GUIBlitPlot">GUIBlitPlot</a></li>
+<li><a title="pyspecan.view.GUI.base.GUIBlitPlot" href="#pyspecan.view.GUI.base.GUIBlitPlot">GUIBlitPlot</a></li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.btn_toggle"><code class="name">var <span class="ident">btn_toggle</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.btn_toggle"><code class="name">var <span class="ident">btn_toggle</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -405,8 +405,8 @@ el.replaceWith(d);
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -428,7 +428,7 @@ el.replaceWith(d);
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -472,7 +472,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.fig"><code class="name">prop <span class="ident">fig</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.fig"><code class="name">prop <span class="ident">fig</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -484,7 +484,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.fr_canv"><code class="name">var <span class="ident">fr_canv</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.fr_canv"><code class="name">var <span class="ident">fr_canv</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -496,8 +496,8 @@ def fig(self):
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -519,7 +519,7 @@ def fig(self):
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -563,7 +563,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.fr_main"><code class="name">var <span class="ident">fr_main</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.fr_main"><code class="name">var <span class="ident">fr_main</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -575,8 +575,8 @@ def fig(self):
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -598,7 +598,7 @@ def fig(self):
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -642,7 +642,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.fr_sets"><code class="name">var <span class="ident">fr_sets</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.fr_sets"><code class="name">var <span class="ident">fr_sets</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -654,8 +654,8 @@ def fig(self):
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -677,7 +677,7 @@ def fig(self):
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -721,7 +721,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.plotter"><code class="name">var <span class="ident">plotter</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.plotter"><code class="name">var <span class="ident">plotter</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -733,8 +733,8 @@ def fig(self):
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -756,7 +756,7 @@ def fig(self):
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -800,7 +800,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.ready"><code class="name">var <span class="ident">ready</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.ready"><code class="name">var <span class="ident">ready</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -812,8 +812,8 @@ def fig(self):
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -835,7 +835,7 @@ def fig(self):
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -879,7 +879,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.settings"><code class="name">var <span class="ident">settings</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.settings"><code class="name">var <span class="ident">settings</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -891,8 +891,8 @@ def fig(self):
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -914,7 +914,7 @@ def fig(self):
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -958,7 +958,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.view"><code class="name">var <span class="ident">view</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.view"><code class="name">var <span class="ident">view</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -970,8 +970,8 @@ def fig(self):
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -993,7 +993,7 @@ def fig(self):
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -1037,7 +1037,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.wg_sets"><code class="name">var <span class="ident">wg_sets</span></code></dt>
+<dt id="pyspecan.view.GUI.base.GUIPlot.wg_sets"><code class="name">var <span class="ident">wg_sets</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -1049,8 +1049,8 @@ def fig(self):
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot):
-        fig, ax = plt.subplots(figsize=(10,10), dpi=100.0, layout=&#34;tight&#34;)
+    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
+        fig, ax = plt.subplots(*args, **kwargs)
 
         self.view = view
         self._root = root
@@ -1072,7 +1072,7 @@ def fig(self):
         # toolbar = NavigationToolbar2Tk(canvas, root)
         # toolbar.update()
         self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
         self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
                 font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
@@ -1119,7 +1119,7 @@ def fig(self):
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.add_artist"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.add_artist"><code class="name flex">
 <span>def <span class="ident">add_artist</span></span>(<span>self, idx, art)</span>
 </code></dt>
 <dd>
@@ -1132,7 +1132,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.add_ax"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.add_ax"><code class="name flex">
 <span>def <span class="ident">add_ax</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -1145,7 +1145,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.art"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.art"><code class="name flex">
 <span>def <span class="ident">art</span></span>(<span>self, i, j)</span>
 </code></dt>
 <dd>
@@ -1158,7 +1158,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.ax"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.ax"><code class="name flex">
 <span>def <span class="ident">ax</span></span>(<span>self, idx)</span>
 </code></dt>
 <dd>
@@ -1171,7 +1171,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.draw_settings"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.draw_settings"><code class="name flex">
 <span>def <span class="ident">draw_settings</span></span>(<span>self, parent, row=0)</span>
 </code></dt>
 <dd>
@@ -1184,7 +1184,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.imshow"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.imshow"><code class="name flex">
 <span>def <span class="ident">imshow</span></span>(<span>self, idx, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -1197,7 +1197,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.plot"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.plot"><code class="name flex">
 <span>def <span class="ident">plot</span></span>(<span>self, idx, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -1210,7 +1210,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.set_data"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.set_data"><code class="name flex">
 <span>def <span class="ident">set_data</span></span>(<span>self, i, j, x, y)</span>
 </code></dt>
 <dd>
@@ -1223,7 +1223,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.set_xdata"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.set_xdata"><code class="name flex">
 <span>def <span class="ident">set_xdata</span></span>(<span>self, i, j, x)</span>
 </code></dt>
 <dd>
@@ -1236,7 +1236,7 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.GUI.plot.base.GUIPlot.set_ydata"><code class="name flex">
+<dt id="pyspecan.view.GUI.base.GUIPlot.set_ydata"><code class="name flex">
 <span>def <span class="ident">set_ydata</span></span>(<span>self, i, j, y)</span>
 </code></dt>
 <dd>
@@ -1261,45 +1261,45 @@ def fig(self):
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.view.GUI.plot" href="index.html">pyspecan.view.GUI.plot</a></code></li>
+<li><code><a title="pyspecan.view.GUI" href="index.html">pyspecan.view.GUI</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.view.GUI.plot.base.GUIBlitPlot" href="#pyspecan.view.GUI.plot.base.GUIBlitPlot">GUIBlitPlot</a></code></h4>
+<h4><code><a title="pyspecan.view.GUI.base.GUIBlitPlot" href="#pyspecan.view.GUI.base.GUIBlitPlot">GUIBlitPlot</a></code></h4>
 </li>
 <li>
-<h4><code><a title="pyspecan.view.GUI.plot.base.GUIFreqPlot" href="#pyspecan.view.GUI.plot.base.GUIFreqPlot">GUIFreqPlot</a></code></h4>
+<h4><code><a title="pyspecan.view.GUI.base.GUIFreqPlot" href="#pyspecan.view.GUI.base.GUIFreqPlot">GUIFreqPlot</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIFreqPlot.draw_settings" href="#pyspecan.view.GUI.plot.base.GUIFreqPlot.draw_settings">draw_settings</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIFreqPlot.lbl_hi" href="#pyspecan.view.GUI.plot.base.GUIFreqPlot.lbl_hi">lbl_hi</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIFreqPlot.lbl_lo" href="#pyspecan.view.GUI.plot.base.GUIFreqPlot.lbl_lo">lbl_lo</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIFreqPlot.draw_settings" href="#pyspecan.view.GUI.base.GUIFreqPlot.draw_settings">draw_settings</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIFreqPlot.lbl_hi" href="#pyspecan.view.GUI.base.GUIFreqPlot.lbl_hi">lbl_hi</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIFreqPlot.lbl_lo" href="#pyspecan.view.GUI.base.GUIFreqPlot.lbl_lo">lbl_lo</a></code></li>
 </ul>
 </li>
 <li>
-<h4><code><a title="pyspecan.view.GUI.plot.base.GUIPlot" href="#pyspecan.view.GUI.plot.base.GUIPlot">GUIPlot</a></code></h4>
+<h4><code><a title="pyspecan.view.GUI.base.GUIPlot" href="#pyspecan.view.GUI.base.GUIPlot">GUIPlot</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.add_artist" href="#pyspecan.view.GUI.plot.base.GUIPlot.add_artist">add_artist</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.add_ax" href="#pyspecan.view.GUI.plot.base.GUIPlot.add_ax">add_ax</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.art" href="#pyspecan.view.GUI.plot.base.GUIPlot.art">art</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.ax" href="#pyspecan.view.GUI.plot.base.GUIPlot.ax">ax</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.btn_toggle" href="#pyspecan.view.GUI.plot.base.GUIPlot.btn_toggle">btn_toggle</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.draw_settings" href="#pyspecan.view.GUI.plot.base.GUIPlot.draw_settings">draw_settings</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.fig" href="#pyspecan.view.GUI.plot.base.GUIPlot.fig">fig</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.fr_canv" href="#pyspecan.view.GUI.plot.base.GUIPlot.fr_canv">fr_canv</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.fr_main" href="#pyspecan.view.GUI.plot.base.GUIPlot.fr_main">fr_main</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.fr_sets" href="#pyspecan.view.GUI.plot.base.GUIPlot.fr_sets">fr_sets</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.imshow" href="#pyspecan.view.GUI.plot.base.GUIPlot.imshow">imshow</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.plot" href="#pyspecan.view.GUI.plot.base.GUIPlot.plot">plot</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.plotter" href="#pyspecan.view.GUI.plot.base.GUIPlot.plotter">plotter</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.ready" href="#pyspecan.view.GUI.plot.base.GUIPlot.ready">ready</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.set_data" href="#pyspecan.view.GUI.plot.base.GUIPlot.set_data">set_data</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.set_xdata" href="#pyspecan.view.GUI.plot.base.GUIPlot.set_xdata">set_xdata</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.set_ydata" href="#pyspecan.view.GUI.plot.base.GUIPlot.set_ydata">set_ydata</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.settings" href="#pyspecan.view.GUI.plot.base.GUIPlot.settings">settings</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.view" href="#pyspecan.view.GUI.plot.base.GUIPlot.view">view</a></code></li>
-<li><code><a title="pyspecan.view.GUI.plot.base.GUIPlot.wg_sets" href="#pyspecan.view.GUI.plot.base.GUIPlot.wg_sets">wg_sets</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.add_artist" href="#pyspecan.view.GUI.base.GUIPlot.add_artist">add_artist</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.add_ax" href="#pyspecan.view.GUI.base.GUIPlot.add_ax">add_ax</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.art" href="#pyspecan.view.GUI.base.GUIPlot.art">art</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.ax" href="#pyspecan.view.GUI.base.GUIPlot.ax">ax</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.btn_toggle" href="#pyspecan.view.GUI.base.GUIPlot.btn_toggle">btn_toggle</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.draw_settings" href="#pyspecan.view.GUI.base.GUIPlot.draw_settings">draw_settings</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.fig" href="#pyspecan.view.GUI.base.GUIPlot.fig">fig</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.fr_canv" href="#pyspecan.view.GUI.base.GUIPlot.fr_canv">fr_canv</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.fr_main" href="#pyspecan.view.GUI.base.GUIPlot.fr_main">fr_main</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.fr_sets" href="#pyspecan.view.GUI.base.GUIPlot.fr_sets">fr_sets</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.imshow" href="#pyspecan.view.GUI.base.GUIPlot.imshow">imshow</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.plot" href="#pyspecan.view.GUI.base.GUIPlot.plot">plot</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.plotter" href="#pyspecan.view.GUI.base.GUIPlot.plotter">plotter</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.ready" href="#pyspecan.view.GUI.base.GUIPlot.ready">ready</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.set_data" href="#pyspecan.view.GUI.base.GUIPlot.set_data">set_data</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.set_xdata" href="#pyspecan.view.GUI.base.GUIPlot.set_xdata">set_xdata</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.set_ydata" href="#pyspecan.view.GUI.base.GUIPlot.set_ydata">set_ydata</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.settings" href="#pyspecan.view.GUI.base.GUIPlot.settings">settings</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.view" href="#pyspecan.view.GUI.base.GUIPlot.view">view</a></code></li>
+<li><code><a title="pyspecan.view.GUI.base.GUIPlot.wg_sets" href="#pyspecan.view.GUI.base.GUIPlot.wg_sets">wg_sets</a></code></li>
 </ul>
 </li>
 </ul>

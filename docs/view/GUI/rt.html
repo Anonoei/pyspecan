@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.view.GUI.plot.psd API documentation</title>
+<title>pyspecan.view.GUI.rt API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.view.GUI.plot.psd</code></h1>
+<h1 class="title">Module <code>pyspecan.view.GUI.rt</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -46,49 +46,47 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.view.GUI.plot.psd.PSD"><code class="flex name class">
-<span>class <span class="ident">PSD</span></span>
-<span>(</span><span>view, root, plotter=pyspecan.plot.base.BlitPlot)</span>
+<dt id="pyspecan.view.GUI.rt.ViewRT"><code class="flex name class">
+<span>class <span class="ident">ViewRT</span></span>
+<span>(</span><span>view, root)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class PSD(GUIFreqPlot):
+<pre><code class="python">class ViewRT(GUIFreqPlot):
+    def __init__(self, view, root):
+        super().__init__(view, root, BlitPlot,
+            figsize=(10,10), dpi=100,
+            nrows=1,ncols=1, layout=&#34;tight&#34;
+        )
     def draw_settings(self, parent, row=0):
         row = super().draw_settings(parent, row)
-        var_psd_min = tk.IntVar(self.fr_sets)
-        chk_show_min = tk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_psd_min)
 
-        var_psd_max = tk.IntVar(self.fr_sets)
-        chk_show_max = tk.Checkbutton(parent, onvalue=1, offvalue=0, variable=var_psd_max)
+        var_cmap = tk.StringVar(self.fr_sets)
+        cb_cmap = ttk.Combobox(self.fr_sets, textvariable=var_cmap, width=9)
 
-        self.wg_sets[&#34;show_min&#34;] = chk_show_min
-        self.settings[&#34;show_min&#34;] = var_psd_min
-        self.wg_sets[&#34;show_max&#34;] = chk_show_max
-        self.settings[&#34;show_max&#34;] = var_psd_max
+        self.wg_sets[&#34;cmap&#34;] = cb_cmap
+        self.settings[&#34;cmap&#34;] = var_cmap
 
         ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
         row += 1
-        tk.Label(parent, text=&#34;Max Hold&#34;).grid(row=row, column=0)
-        chk_show_max.grid(row=row, column=1)
-        row += 1
-        tk.Label(parent, text=&#34;Min Hold&#34;).grid(row=row, column=0)
-        chk_show_min.grid(row=row, column=1)
+        tk.Label(parent, text=&#34;Colors&#34;).grid(row=row, column=0)
+        cb_cmap.grid(row=row, column=1)
         row += 1
         return row</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.view.GUI.plot.base.GUIFreqPlot" href="base.html#pyspecan.view.GUI.plot.base.GUIFreqPlot">GUIFreqPlot</a></li>
-<li><a title="pyspecan.view.GUI.plot.base.GUIBlitPlot" href="base.html#pyspecan.view.GUI.plot.base.GUIBlitPlot">GUIBlitPlot</a></li>
-<li><a title="pyspecan.view.GUI.plot.base.GUIPlot" href="base.html#pyspecan.view.GUI.plot.base.GUIPlot">GUIPlot</a></li>
+<li><a title="pyspecan.view.GUI.base.GUIFreqPlot" href="base.html#pyspecan.view.GUI.base.GUIFreqPlot">GUIFreqPlot</a></li>
+<li><a title="pyspecan.view.GUI.base.GUIBlitPlot" href="base.html#pyspecan.view.GUI.base.GUIBlitPlot">GUIBlitPlot</a></li>
+<li><a title="pyspecan.view.GUI.base.GUIPlot" href="base.html#pyspecan.view.GUI.base.GUIPlot">GUIPlot</a></li>
 </ul>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.view.GUI.plot.psd.PSD.draw_settings"><code class="name flex">
+<dt id="pyspecan.view.GUI.rt.ViewRT.draw_settings"><code class="name flex">
 <span>def <span class="ident">draw_settings</span></span>(<span>self, parent, row=0)</span>
 </code></dt>
 <dd>
@@ -98,24 +96,17 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def draw_settings(self, parent, row=0):
     row = super().draw_settings(parent, row)
-    var_psd_min = tk.IntVar(self.fr_sets)
-    chk_show_min = tk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_psd_min)
 
-    var_psd_max = tk.IntVar(self.fr_sets)
-    chk_show_max = tk.Checkbutton(parent, onvalue=1, offvalue=0, variable=var_psd_max)
+    var_cmap = tk.StringVar(self.fr_sets)
+    cb_cmap = ttk.Combobox(self.fr_sets, textvariable=var_cmap, width=9)
 
-    self.wg_sets[&#34;show_min&#34;] = chk_show_min
-    self.settings[&#34;show_min&#34;] = var_psd_min
-    self.wg_sets[&#34;show_max&#34;] = chk_show_max
-    self.settings[&#34;show_max&#34;] = var_psd_max
+    self.wg_sets[&#34;cmap&#34;] = cb_cmap
+    self.settings[&#34;cmap&#34;] = var_cmap
 
     ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
     row += 1
-    tk.Label(parent, text=&#34;Max Hold&#34;).grid(row=row, column=0)
-    chk_show_max.grid(row=row, column=1)
-    row += 1
-    tk.Label(parent, text=&#34;Min Hold&#34;).grid(row=row, column=0)
-    chk_show_min.grid(row=row, column=1)
+    tk.Label(parent, text=&#34;Colors&#34;).grid(row=row, column=0)
+    cb_cmap.grid(row=row, column=1)
     row += 1
     return row</code></pre>
 </details>
@@ -133,15 +124,15 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.view.GUI.plot" href="index.html">pyspecan.view.GUI.plot</a></code></li>
+<li><code><a title="pyspecan.view.GUI" href="index.html">pyspecan.view.GUI</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.view.GUI.plot.psd.PSD" href="#pyspecan.view.GUI.plot.psd.PSD">PSD</a></code></h4>
+<h4><code><a title="pyspecan.view.GUI.rt.ViewRT" href="#pyspecan.view.GUI.rt.ViewRT">ViewRT</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.view.GUI.plot.psd.PSD.draw_settings" href="#pyspecan.view.GUI.plot.psd.PSD.draw_settings">draw_settings</a></code></li>
+<li><code><a title="pyspecan.view.GUI.rt.ViewRT.draw_settings" href="#pyspecan.view.GUI.rt.ViewRT.draw_settings">draw_settings</a></code></li>
 </ul>
 </li>
 </ul>

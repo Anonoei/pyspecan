@@ -81,11 +81,9 @@ el.replaceWith(d);
         self.thread: threading.Thread = None # type: ignore
 
         if config.MODE == Mode.SWEPT:
-            self.view.plot = viewPlots[&#34;PSD&#34;](self.view, self.view.fr_view)
-            self.plot = ctrlPlots[&#34;PSD&#34;](self.view.plot)
+            self.plot = ControllerSwept(self.view.plot)
         elif config.MODE == Mode.RT:
-            self.view.plot = viewPlots[&#34;Persistent&#34;](self.view, self.view.fr_view)
-            self.plot = ctrlPlots[&#34;Persistent&#34;](self.view.plot)
+            self.plot = ControllerRT(self.view.plot)
         self.draw()
 
     def start(self):
@@ -132,14 +130,14 @@ el.replaceWith(d);
 
     def _plot(self):
         ptime = time.perf_counter()
-        vbw = self.plot.vbw
-        window = self.plot.window
-        if not isinstance(self.view.plot, GUIBlitPlot):
-            self.view.plot.plotter.ax(0).cla()
-            print(f&#34;Cleared plot!&#34;)
-
-        self.plot.plot(0, self.model.f, self.model.psd(vbw, window))
-        self.plot.update()
+        if isinstance(self.plot, FreqPlotController):
+            vbw = self.plot.vbw
+            window = self.plot.window
+            if not isinstance(self.view.plot.plotter, BlitPlot):
+                self.view.plot.plotter.ax(0).cla()
+                print(&#34;Cleared plot!&#34;)
+            self.plot.plot(self.model.f, self.model.psd(vbw, window))
+            self.plot.update()
 
         ptime = (time.perf_counter() - ptime)
         self.view.var_draw_time.set(f&#34;{ptime:06.3f}s&#34;)
