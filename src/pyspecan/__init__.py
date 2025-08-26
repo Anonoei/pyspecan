@@ -8,7 +8,7 @@ Github: https://github.com/Anonoei/pyspecan
 PyPI: https://pypi.org/project/pyspecan/
 """
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __author__ = "Anonoei <to+dev@an0.cx>"
 
 from .config import config, Mode
