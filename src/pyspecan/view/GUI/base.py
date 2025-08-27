@@ -114,10 +114,6 @@ class GUIFreqPlot(GUIBlitPlot):
         self.wg_sets["window"] = cb_window
         self.settings["window"] = var_window
 
-        if not row == 0:
-            ttk.Separator(parent, orient=tk.VERTICAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-            row += 1
-
         tk.Label(parent, text="Scale/Div").grid(row=row, column=0)
         ent_scale.grid(row=row, column=1)
         row += 1

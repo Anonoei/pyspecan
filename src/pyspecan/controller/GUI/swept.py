@@ -8,14 +8,21 @@ from ...utils import vbw
 
 class ControllerSwept(FreqPlotController):
     __slots__ = (
+        "show_psd", "show_spg",
         "psd_min", "psd_max",
         "max_count", "psds"
     )
     def __init__(self, view):
         super().__init__(view, 10.0, 10.0, 0.0)
         self.view: GUIFreqPlot = self.view # type: ignore
+        self.show_psd = 1
+        self.show_spg = 0
+        self.view.settings["show_psd"].set(self.show_psd)
+        self.view.wg_sets["show_psd"].configure(command=self.toggle_show_psd)
+        self.view.settings["show_spg"].set(self.show_spg)
+        self.view.wg_sets["show_spg"].configure(command=self.toggle_show_spg)
+
         # PSD
-        # self.view.plotter.ax(0)
         self.psd_min = None
         self.psd_max = None
         self.__init_psd()
@@ -24,7 +31,6 @@ class ControllerSwept(FreqPlotController):
         self.view.plotter.ax(0).locator_params(axis="y", nbins=10)
         self.view.plotter.ax(0).grid(True, alpha=0.2)
         # Spectrogram
-        # self.view.fig.subplots_adjust(hspace=1.0)
         self.max_count = 100
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
@@ -34,6 +40,7 @@ class ControllerSwept(FreqPlotController):
         self.view.plotter.ax(1).locator_params(axis="y", nbins=10)
 
         self.set_y()
+        self._toggle_show()
         self.view.plotter.canvas.draw()
 
     def reset(self):
@@ -44,6 +51,36 @@ class ControllerSwept(FreqPlotController):
 
     def update(self):
         self.view.plotter.update()
+
+    def _toggle_show(self):
+        if self.show_psd == 1 and self.show_spg == 1:
+            self.view.plotter.ax(0).set_visible(True)
+            self.view.plotter.ax(0).set_in_layout(True)
+            self.view.plotter.ax(1).set_visible(True)
+            self.view.plotter.ax(1).set_in_layout(True)
+        elif self.show_psd == 1:
+            self.view.plotter.ax(0).set_visible(True)
+            self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.plotter.ax(1).set_visible(False)
+            self.view.plotter.ax(1).set_position((0,0,0,0))
+        elif self.show_spg == 1:
+            self.view.plotter.ax(0).set_visible(False)
+            self.view.plotter.ax(0).set_position((0,0,0,0))
+            self.view.plotter.ax(1).set_visible(True)
+            self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
+        print(f"_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}")
+        self.view.plotter.fig.canvas.draw()
+        self.view.plotter.fig.canvas.flush_events()
+
+    def toggle_show_psd(self, *args, **kwargs):
+        self.show_psd = 0 if self.show_psd == 1 else 1
+        self.view.settings["show_psd"].set(self.show_psd)
+        self._toggle_show()
+
+    def toggle_show_spg(self, *args, **kwargs):
+        self.show_spg = 0 if self.show_spg == 1 else 1
+        self.view.settings["show_spg"].set(self.show_spg)
+        self._toggle_show()
 
     def set_y(self):
         self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
@@ -80,8 +117,10 @@ class ControllerSwept(FreqPlotController):
 
     def plot(self, freq, psd):
         psd = vbw.vbw(psd, self.vbw)
-        self._plot_psd(freq, psd)
-        self._plot_spectrogram(freq, psd)
+        if self.show_psd:
+            self._plot_psd(freq, psd)
+        if self.show_spg:
+            self._plot_spectrogram(freq, psd)
 
         if np.all(psd < self.y_btm):
             self.view.lbl_lo.place(relx=0.2, rely=0.9, width=20, height=20)
