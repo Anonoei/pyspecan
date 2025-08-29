@@ -43,12 +43,11 @@ class GUI:
 
     def draw_tb(self, parent):
         col = 0
-        self.var_progress = tk.StringVar(parent)
-        self.lbl_progress = tk.Label(parent, textvariable=self.var_progress)
-        self.lbl_progress.grid(row=0, column=col, sticky=tk.NSEW)
-        self.var_percent = tk.DoubleVar(parent)
-        self.pb_percent = ttk.Progressbar(parent, variable=self.var_percent, length=150)
-        self.pb_percent.grid(row=1,column=col, ipadx=2,ipady=2, sticky=tk.NSEW)
+        self.var_samp = tk.IntVar(parent)
+        self.sld_samp = tk.Scale(
+            parent, variable=self.var_samp,
+            orient=tk.HORIZONTAL, length=150, sliderlength=10)
+        self.sld_samp.grid(row=0,rowspan=2,column=col, sticky=tk.NSEW)
         col += 1
         self.var_time_cur = tk.StringVar(parent)
         self.var_time_tot = tk.StringVar(parent)

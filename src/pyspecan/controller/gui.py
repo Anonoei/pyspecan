@@ -30,6 +30,9 @@ class Controller:
         self._stop = False
         self.time_show = 50.0
 
+        self.view.sld_samp.config(from_=0, to=self.model.reader.max_samp, resolution=self.model.block_size)
+        self.view.sld_samp.config(command=self.set_samp)
+
         self.view.ent_time.bind("<Return>", self.set_time)
         self.view.var_time.set(str(self.time_show))
         self.view.btn_prev.config(command=self.prev)
@@ -132,11 +135,8 @@ class Controller:
         self.draw_view()
 
     def draw_tb(self):
-        self.view.var_progress.set(f"{self.model.reader.cur_samp}/{self.model.reader.max_samp}")
-        self.view.var_percent.set(float(self.model.reader.percent()))
+        self.view.var_samp.set(self.model.reader.cur_samp)
 
-        # cur_time = f"{cur_time:07.3f}" if cur_time < 1000 else f"{cur_time:.2e}"
-        # tot_time = f"{tot_time:07.3f}" if tot_time < 1000 else f"{tot_time:.2e}"
         self.view.var_time_cur.set(strfmt_td(dt.timedelta(seconds=self.model.cur_time())))
         self.view.var_time_tot.set(strfmt_td(dt.timedelta(seconds=self.model.tot_time())))
 
@@ -149,6 +149,13 @@ class Controller:
 
     def draw_view(self):
         pass
+
+    def set_samp(self, *args, **kwargs):
+        self.stop()
+        samp = self.view.var_samp.get()
+        self.model.reader.cur_samp = samp
+        self.draw_tb()
+        # print(samp)
 
     def set_time(self, *args, **kwargs):
         ts = self.view.var_time.get()
