@@ -4,6 +4,13 @@
  - [Documentation](https://anonoei.github.io/pyspecan/)
  - [PyPI](https://pypi.org/project/pyspecan/)
 
+# Examples
+tkGUI, SWEPT mode
+![tkGUI_Swept](/media/SWEPT_tkGUI.png)
+
+tkGUI, RT mode
+![tkGUI_RT](/media/RT_tkGUI.png)
+
 # Usage
 ## Module
 - `python3 -m pyspecan --help`
