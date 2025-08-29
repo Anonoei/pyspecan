@@ -33,7 +33,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: pyspecan
-          path: dist/pyspecan
+          path: dist/
 
       - name: Build executable Win
         uses: JackMcKew/pyinstaller-action-windows@main
@@ -44,9 +44,16 @@ jobs:
         with:
           name: pyspecan.exe
           path: src/dist/windows
+
+      - name: Upload artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/pyspecan
+            src/dist/windows/pyspecan.exe
+
   release-build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
