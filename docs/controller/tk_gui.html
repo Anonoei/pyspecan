@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.gui API documentation</title>
-<meta name="description" content="">
+<title>pyspecan.controller.tk_gui API documentation</title>
+<meta name="description" content="Initialize tkGUI Controller">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -33,9 +33,10 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.gui</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.tk_gui</code></h1>
 </header>
 <section id="section-intro">
+<p>Initialize tkGUI Controller</p>
 </section>
 <section>
 </section>
@@ -46,22 +47,26 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.gui.Controller"><code class="flex name class">
+<dt id="pyspecan.controller.tk_gui.Controller"><code class="flex name class">
 <span>class <span class="ident">Controller</span></span>
-<span>(</span><span>model: <a title="pyspecan.model.model.Model" href="../model/model.html#pyspecan.model.model.Model">Model</a>,<br>view: <a title="pyspecan.view.gui.GUI" href="../view/gui.html#pyspecan.view.gui.GUI">GUI</a>)</span>
+<span>(</span><span>model: <a title="pyspecan.model.model.Model" href="../model/model.html#pyspecan.model.model.Model">Model</a>,<br>view: <a title="pyspecan.view.tk_gui.View" href="../view/tk_gui.html#pyspecan.view.tk_gui.View">View</a>)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Controller:
+<pre><code class="python">class Controller(_Controller):
+    &#34;&#34;&#34;tkGUI Controller&#34;&#34;&#34;
     def __init__(self, model: Model, view: GUI):
-        self.model = model
-        self.view = view
+        super().__init__(model, view)
+        self.view: GUI = self.view # type hints
         self.running = False
         self._stop = False
         self.time_show = 50.0
+
+        self.view.sld_samp.config(from_=0, to=self.model.reader.max_samp, resolution=self.model.block_size)
+        self.view.sld_samp.config(command=self.set_samp)
 
         self.view.ent_time.bind(&#34;&lt;Return&gt;&#34;, self.set_time)
         self.view.var_time.set(str(self.time_show))
@@ -165,11 +170,8 @@ el.replaceWith(d);
         self.draw_view()
 
     def draw_tb(self):
-        self.view.var_progress.set(f&#34;{self.model.reader.cur_samp}/{self.model.reader.max_samp}&#34;)
-        self.view.var_percent.set(float(self.model.reader.percent()))
+        self.view.var_samp.set(self.model.reader.cur_samp)
 
-        # cur_time = f&#34;{cur_time:07.3f}&#34; if cur_time &lt; 1000 else f&#34;{cur_time:.2e}&#34;
-        # tot_time = f&#34;{tot_time:07.3f}&#34; if tot_time &lt; 1000 else f&#34;{tot_time:.2e}&#34;
         self.view.var_time_cur.set(strfmt_td(dt.timedelta(seconds=self.model.cur_time())))
         self.view.var_time_tot.set(strfmt_td(dt.timedelta(seconds=self.model.tot_time())))
 
@@ -182,6 +184,13 @@ el.replaceWith(d);
 
     def draw_view(self):
         pass
+
+    def set_samp(self, *args, **kwargs):
+        self.stop()
+        samp = self.view.var_samp.get()
+        self.model.reader.cur_samp = samp
+        self.draw_tb()
+        # print(samp)
 
     def set_time(self, *args, **kwargs):
         ts = self.view.var_time.get()
@@ -226,10 +235,14 @@ el.replaceWith(d);
             pass
         self.view.var_cf.set(str(self.model.cf))</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>tkGUI Controller</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.base.Controller" href="base.html#pyspecan.controller.base.Controller">Controller</a></li>
+</ul>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.gui.Controller.draw"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.draw"><code class="name flex">
 <span>def <span class="ident">draw</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -244,7 +257,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.draw_ctrl"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.draw_ctrl"><code class="name flex">
 <span>def <span class="ident">draw_ctrl</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -261,7 +274,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.draw_tb"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.draw_tb"><code class="name flex">
 <span>def <span class="ident">draw_tb</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -270,17 +283,14 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def draw_tb(self):
-    self.view.var_progress.set(f&#34;{self.model.reader.cur_samp}/{self.model.reader.max_samp}&#34;)
-    self.view.var_percent.set(float(self.model.reader.percent()))
+    self.view.var_samp.set(self.model.reader.cur_samp)
 
-    # cur_time = f&#34;{cur_time:07.3f}&#34; if cur_time &lt; 1000 else f&#34;{cur_time:.2e}&#34;
-    # tot_time = f&#34;{tot_time:07.3f}&#34; if tot_time &lt; 1000 else f&#34;{tot_time:.2e}&#34;
     self.view.var_time_cur.set(strfmt_td(dt.timedelta(seconds=self.model.cur_time())))
     self.view.var_time_tot.set(strfmt_td(dt.timedelta(seconds=self.model.tot_time())))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.draw_view"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.draw_view"><code class="name flex">
 <span>def <span class="ident">draw_view</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -293,7 +303,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.loop"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.loop"><code class="name flex">
 <span>def <span class="ident">loop</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -314,7 +324,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.next"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.next"><code class="name flex">
 <span>def <span class="ident">next</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -328,7 +338,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.prev"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.prev"><code class="name flex">
 <span>def <span class="ident">prev</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -342,7 +352,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.reset"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.reset"><code class="name flex">
 <span>def <span class="ident">reset</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -358,7 +368,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.set_cf"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.set_cf"><code class="name flex">
 <span>def <span class="ident">set_cf</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -377,7 +387,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.set_dtype"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.set_dtype"><code class="name flex">
 <span>def <span class="ident">set_dtype</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -394,7 +404,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.set_fs"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.set_fs"><code class="name flex">
 <span>def <span class="ident">set_fs</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -413,7 +423,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.set_path"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.set_path"><code class="name flex">
 <span>def <span class="ident">set_path</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -432,7 +442,24 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.set_time"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.set_samp"><code class="name flex">
+<span>def <span class="ident">set_samp</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_samp(self, *args, **kwargs):
+    self.stop()
+    samp = self.view.var_samp.get()
+    self.model.reader.cur_samp = samp
+    self.draw_tb()
+    # print(samp)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tk_gui.Controller.set_time"><code class="name flex">
 <span>def <span class="ident">set_time</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -451,7 +478,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.start"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.start"><code class="name flex">
 <span>def <span class="ident">start</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -470,7 +497,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.gui.Controller.stop"><code class="name flex">
+<dt id="pyspecan.controller.tk_gui.Controller.stop"><code class="name flex">
 <span>def <span class="ident">stop</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -506,23 +533,24 @@ el.replaceWith(d);
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.gui.Controller" href="#pyspecan.controller.gui.Controller">Controller</a></code></h4>
+<h4><code><a title="pyspecan.controller.tk_gui.Controller" href="#pyspecan.controller.tk_gui.Controller">Controller</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.controller.gui.Controller.draw" href="#pyspecan.controller.gui.Controller.draw">draw</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.draw_ctrl" href="#pyspecan.controller.gui.Controller.draw_ctrl">draw_ctrl</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.draw_tb" href="#pyspecan.controller.gui.Controller.draw_tb">draw_tb</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.draw_view" href="#pyspecan.controller.gui.Controller.draw_view">draw_view</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.loop" href="#pyspecan.controller.gui.Controller.loop">loop</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.next" href="#pyspecan.controller.gui.Controller.next">next</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.prev" href="#pyspecan.controller.gui.Controller.prev">prev</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.reset" href="#pyspecan.controller.gui.Controller.reset">reset</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.set_cf" href="#pyspecan.controller.gui.Controller.set_cf">set_cf</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.set_dtype" href="#pyspecan.controller.gui.Controller.set_dtype">set_dtype</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.set_fs" href="#pyspecan.controller.gui.Controller.set_fs">set_fs</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.set_path" href="#pyspecan.controller.gui.Controller.set_path">set_path</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.set_time" href="#pyspecan.controller.gui.Controller.set_time">set_time</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.start" href="#pyspecan.controller.gui.Controller.start">start</a></code></li>
-<li><code><a title="pyspecan.controller.gui.Controller.stop" href="#pyspecan.controller.gui.Controller.stop">stop</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.draw" href="#pyspecan.controller.tk_gui.Controller.draw">draw</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.draw_ctrl" href="#pyspecan.controller.tk_gui.Controller.draw_ctrl">draw_ctrl</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.draw_tb" href="#pyspecan.controller.tk_gui.Controller.draw_tb">draw_tb</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.draw_view" href="#pyspecan.controller.tk_gui.Controller.draw_view">draw_view</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.loop" href="#pyspecan.controller.tk_gui.Controller.loop">loop</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.next" href="#pyspecan.controller.tk_gui.Controller.next">next</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.prev" href="#pyspecan.controller.tk_gui.Controller.prev">prev</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.reset" href="#pyspecan.controller.tk_gui.Controller.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.set_cf" href="#pyspecan.controller.tk_gui.Controller.set_cf">set_cf</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.set_dtype" href="#pyspecan.controller.tk_gui.Controller.set_dtype">set_dtype</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.set_fs" href="#pyspecan.controller.tk_gui.Controller.set_fs">set_fs</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.set_path" href="#pyspecan.controller.tk_gui.Controller.set_path">set_path</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.set_samp" href="#pyspecan.controller.tk_gui.Controller.set_samp">set_samp</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.set_time" href="#pyspecan.controller.tk_gui.Controller.set_time">set_time</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.start" href="#pyspecan.controller.tk_gui.Controller.start">start</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.stop" href="#pyspecan.controller.tk_gui.Controller.stop">stop</a></code></li>
 </ul>
 </li>
 </ul>

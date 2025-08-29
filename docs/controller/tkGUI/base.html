@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.GUI.base API documentation</title>
-<meta name="description" content="">
+<title>pyspecan.controller.tkGUI.base API documentation</title>
+<meta name="description" content="Base Controllers for tkGUI Controller">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -33,9 +33,10 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.GUI.base</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.tkGUI.base</code></h1>
 </header>
 <section id="section-intro">
+<p>Base Controllers for tkGUI Controller</p>
 </section>
 <section>
 </section>
@@ -46,9 +47,9 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController"><code class="flex name class">
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController"><code class="flex name class">
 <span>class <span class="ident">FreqPlotController</span></span>
-<span>(</span><span>view: <a title="pyspecan.view.GUI.base.GUIFreqPlot" href="../../view/GUI/base.html#pyspecan.view.GUI.base.GUIFreqPlot">GUIFreqPlot</a>,<br>vbw=10.0,<br>scale=10.0,<br>ref_level=0.0)</span>
+<span>(</span><span>view: <a title="pyspecan.view.tkGUI.base.GUIFreqPlot" href="../../view/tkGUI/base.html#pyspecan.view.tkGUI.base.GUIFreqPlot">GUIFreqPlot</a>,<br>vbw=10.0,<br>scale=10.0,<br>ref_level=0.0)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -56,6 +57,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(PlotController):
+    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
     def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
         super().__init__(view)
@@ -78,12 +80,15 @@ el.replaceWith(d);
 
     @property
     def y_top(self):
+        &#34;&#34;&#34;Return plot maximum amplitude&#34;&#34;&#34;
         return self.ref_level
     @property
     def y_btm(self):
+        &#34;&#34;&#34;Return plot minimum amplitude&#34;&#34;&#34;
         return self.ref_level - (10*self.scale)
 
     def set_scale(self, *args, **kwargs):
+        &#34;&#34;&#34;set plot scale&#34;&#34;&#34;
         scale = self.view.settings[&#34;scale&#34;].get()
         try:
             scale = float(scale)
@@ -93,6 +98,7 @@ el.replaceWith(d);
         self.view.settings[&#34;scale&#34;].set(str(self.scale))
 
     def set_ref_level(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot ref level&#34;&#34;&#34;
         ref = self.view.settings[&#34;ref_level&#34;].get()
         try:
             ref = float(ref)
@@ -102,6 +108,7 @@ el.replaceWith(d);
         self.view.settings[&#34;ref_level&#34;].set(str(self.ref_level))
 
     def set_vbw(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot vbw&#34;&#34;&#34;
         smooth = self.view.settings[&#34;vbw&#34;].get()
         try:
             smooth = float(smooth)
@@ -111,27 +118,44 @@ el.replaceWith(d);
         self.view.settings[&#34;vbw&#34;].set(str(self.vbw))
 
     def set_window(self, *args, **kwargs):
-        self.window = self.view.settings[&#34;window&#34;].get()</code></pre>
+        &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
+        self.window = self.view.settings[&#34;window&#34;].get()
+
+    def plot(self, freq, psd):
+        raise NotImplementedError()
+
+    def _show_y_location(self, psd):
+        if np.all(psd &lt; self.y_btm):
+            self.view.lbl_lo.place(relx=0.2, rely=0.9, width=20, height=20)
+        else:
+            if self.view.lbl_lo.winfo_ismapped():
+                self.view.lbl_lo.place_forget()
+        if np.all(psd &gt; self.y_top):
+            self.view.lbl_hi.place(relx=0.2, rely=0.1, width=20, height=20)
+        else:
+            if self.view.lbl_hi.winfo_ismapped():
+                self.view.lbl_hi.place_forget()</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Controller for view.tkGUI.GUIFreqPlot</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.GUI.base.PlotController" href="#pyspecan.controller.GUI.base.PlotController">PlotController</a></li>
+<li><a title="pyspecan.controller.tkGUI.base.PlotController" href="#pyspecan.controller.tkGUI.base.PlotController">PlotController</a></li>
 </ul>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.GUI.rt.ControllerRT" href="rt.html#pyspecan.controller.GUI.rt.ControllerRT">ControllerRT</a></li>
-<li><a title="pyspecan.controller.GUI.swept.ControllerSwept" href="swept.html#pyspecan.controller.GUI.swept.ControllerSwept">ControllerSwept</a></li>
+<li><a title="pyspecan.controller.tkGUI.rt.ControllerRT" href="rt.html#pyspecan.controller.tkGUI.rt.ControllerRT">ControllerRT</a></li>
+<li><a title="pyspecan.controller.tkGUI.swept.ControllerSwept" href="swept.html#pyspecan.controller.tkGUI.swept.ControllerSwept">ControllerSwept</a></li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.ref_level"><code class="name">var <span class="ident">ref_level</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.ref_level"><code class="name">var <span class="ident">ref_level</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(PlotController):
+    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
     def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
         super().__init__(view)
@@ -154,12 +178,15 @@ el.replaceWith(d);
 
     @property
     def y_top(self):
+        &#34;&#34;&#34;Return plot maximum amplitude&#34;&#34;&#34;
         return self.ref_level
     @property
     def y_btm(self):
+        &#34;&#34;&#34;Return plot minimum amplitude&#34;&#34;&#34;
         return self.ref_level - (10*self.scale)
 
     def set_scale(self, *args, **kwargs):
+        &#34;&#34;&#34;set plot scale&#34;&#34;&#34;
         scale = self.view.settings[&#34;scale&#34;].get()
         try:
             scale = float(scale)
@@ -169,6 +196,7 @@ el.replaceWith(d);
         self.view.settings[&#34;scale&#34;].set(str(self.scale))
 
     def set_ref_level(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot ref level&#34;&#34;&#34;
         ref = self.view.settings[&#34;ref_level&#34;].get()
         try:
             ref = float(ref)
@@ -178,6 +206,7 @@ el.replaceWith(d);
         self.view.settings[&#34;ref_level&#34;].set(str(self.ref_level))
 
     def set_vbw(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot vbw&#34;&#34;&#34;
         smooth = self.view.settings[&#34;vbw&#34;].get()
         try:
             smooth = float(smooth)
@@ -187,17 +216,34 @@ el.replaceWith(d);
         self.view.settings[&#34;vbw&#34;].set(str(self.vbw))
 
     def set_window(self, *args, **kwargs):
-        self.window = self.view.settings[&#34;window&#34;].get()</code></pre>
+        &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
+        self.window = self.view.settings[&#34;window&#34;].get()
+
+    def plot(self, freq, psd):
+        raise NotImplementedError()
+
+    def _show_y_location(self, psd):
+        if np.all(psd &lt; self.y_btm):
+            self.view.lbl_lo.place(relx=0.2, rely=0.9, width=20, height=20)
+        else:
+            if self.view.lbl_lo.winfo_ismapped():
+                self.view.lbl_lo.place_forget()
+        if np.all(psd &gt; self.y_top):
+            self.view.lbl_hi.place(relx=0.2, rely=0.1, width=20, height=20)
+        else:
+            if self.view.lbl_hi.winfo_ismapped():
+                self.view.lbl_hi.place_forget()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.scale"><code class="name">var <span class="ident">scale</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.scale"><code class="name">var <span class="ident">scale</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(PlotController):
+    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
     def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
         super().__init__(view)
@@ -220,12 +266,15 @@ el.replaceWith(d);
 
     @property
     def y_top(self):
+        &#34;&#34;&#34;Return plot maximum amplitude&#34;&#34;&#34;
         return self.ref_level
     @property
     def y_btm(self):
+        &#34;&#34;&#34;Return plot minimum amplitude&#34;&#34;&#34;
         return self.ref_level - (10*self.scale)
 
     def set_scale(self, *args, **kwargs):
+        &#34;&#34;&#34;set plot scale&#34;&#34;&#34;
         scale = self.view.settings[&#34;scale&#34;].get()
         try:
             scale = float(scale)
@@ -235,6 +284,7 @@ el.replaceWith(d);
         self.view.settings[&#34;scale&#34;].set(str(self.scale))
 
     def set_ref_level(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot ref level&#34;&#34;&#34;
         ref = self.view.settings[&#34;ref_level&#34;].get()
         try:
             ref = float(ref)
@@ -244,6 +294,7 @@ el.replaceWith(d);
         self.view.settings[&#34;ref_level&#34;].set(str(self.ref_level))
 
     def set_vbw(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot vbw&#34;&#34;&#34;
         smooth = self.view.settings[&#34;vbw&#34;].get()
         try:
             smooth = float(smooth)
@@ -253,17 +304,34 @@ el.replaceWith(d);
         self.view.settings[&#34;vbw&#34;].set(str(self.vbw))
 
     def set_window(self, *args, **kwargs):
-        self.window = self.view.settings[&#34;window&#34;].get()</code></pre>
+        &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
+        self.window = self.view.settings[&#34;window&#34;].get()
+
+    def plot(self, freq, psd):
+        raise NotImplementedError()
+
+    def _show_y_location(self, psd):
+        if np.all(psd &lt; self.y_btm):
+            self.view.lbl_lo.place(relx=0.2, rely=0.9, width=20, height=20)
+        else:
+            if self.view.lbl_lo.winfo_ismapped():
+                self.view.lbl_lo.place_forget()
+        if np.all(psd &gt; self.y_top):
+            self.view.lbl_hi.place(relx=0.2, rely=0.1, width=20, height=20)
+        else:
+            if self.view.lbl_hi.winfo_ismapped():
+                self.view.lbl_hi.place_forget()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.vbw"><code class="name">var <span class="ident">vbw</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.vbw"><code class="name">var <span class="ident">vbw</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(PlotController):
+    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
     def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
         super().__init__(view)
@@ -286,12 +354,15 @@ el.replaceWith(d);
 
     @property
     def y_top(self):
+        &#34;&#34;&#34;Return plot maximum amplitude&#34;&#34;&#34;
         return self.ref_level
     @property
     def y_btm(self):
+        &#34;&#34;&#34;Return plot minimum amplitude&#34;&#34;&#34;
         return self.ref_level - (10*self.scale)
 
     def set_scale(self, *args, **kwargs):
+        &#34;&#34;&#34;set plot scale&#34;&#34;&#34;
         scale = self.view.settings[&#34;scale&#34;].get()
         try:
             scale = float(scale)
@@ -301,6 +372,7 @@ el.replaceWith(d);
         self.view.settings[&#34;scale&#34;].set(str(self.scale))
 
     def set_ref_level(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot ref level&#34;&#34;&#34;
         ref = self.view.settings[&#34;ref_level&#34;].get()
         try:
             ref = float(ref)
@@ -310,6 +382,7 @@ el.replaceWith(d);
         self.view.settings[&#34;ref_level&#34;].set(str(self.ref_level))
 
     def set_vbw(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot vbw&#34;&#34;&#34;
         smooth = self.view.settings[&#34;vbw&#34;].get()
         try:
             smooth = float(smooth)
@@ -319,17 +392,34 @@ el.replaceWith(d);
         self.view.settings[&#34;vbw&#34;].set(str(self.vbw))
 
     def set_window(self, *args, **kwargs):
-        self.window = self.view.settings[&#34;window&#34;].get()</code></pre>
+        &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
+        self.window = self.view.settings[&#34;window&#34;].get()
+
+    def plot(self, freq, psd):
+        raise NotImplementedError()
+
+    def _show_y_location(self, psd):
+        if np.all(psd &lt; self.y_btm):
+            self.view.lbl_lo.place(relx=0.2, rely=0.9, width=20, height=20)
+        else:
+            if self.view.lbl_lo.winfo_ismapped():
+                self.view.lbl_lo.place_forget()
+        if np.all(psd &gt; self.y_top):
+            self.view.lbl_hi.place(relx=0.2, rely=0.1, width=20, height=20)
+        else:
+            if self.view.lbl_hi.winfo_ismapped():
+                self.view.lbl_hi.place_forget()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.window"><code class="name">var <span class="ident">window</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.window"><code class="name">var <span class="ident">window</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(PlotController):
+    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
     def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
         super().__init__(view)
@@ -352,12 +442,15 @@ el.replaceWith(d);
 
     @property
     def y_top(self):
+        &#34;&#34;&#34;Return plot maximum amplitude&#34;&#34;&#34;
         return self.ref_level
     @property
     def y_btm(self):
+        &#34;&#34;&#34;Return plot minimum amplitude&#34;&#34;&#34;
         return self.ref_level - (10*self.scale)
 
     def set_scale(self, *args, **kwargs):
+        &#34;&#34;&#34;set plot scale&#34;&#34;&#34;
         scale = self.view.settings[&#34;scale&#34;].get()
         try:
             scale = float(scale)
@@ -367,6 +460,7 @@ el.replaceWith(d);
         self.view.settings[&#34;scale&#34;].set(str(self.scale))
 
     def set_ref_level(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot ref level&#34;&#34;&#34;
         ref = self.view.settings[&#34;ref_level&#34;].get()
         try:
             ref = float(ref)
@@ -376,6 +470,7 @@ el.replaceWith(d);
         self.view.settings[&#34;ref_level&#34;].set(str(self.ref_level))
 
     def set_vbw(self, *args, **kwargs):
+        &#34;&#34;&#34;Set plot vbw&#34;&#34;&#34;
         smooth = self.view.settings[&#34;vbw&#34;].get()
         try:
             smooth = float(smooth)
@@ -385,11 +480,27 @@ el.replaceWith(d);
         self.view.settings[&#34;vbw&#34;].set(str(self.vbw))
 
     def set_window(self, *args, **kwargs):
-        self.window = self.view.settings[&#34;window&#34;].get()</code></pre>
+        &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
+        self.window = self.view.settings[&#34;window&#34;].get()
+
+    def plot(self, freq, psd):
+        raise NotImplementedError()
+
+    def _show_y_location(self, psd):
+        if np.all(psd &lt; self.y_btm):
+            self.view.lbl_lo.place(relx=0.2, rely=0.9, width=20, height=20)
+        else:
+            if self.view.lbl_lo.winfo_ismapped():
+                self.view.lbl_lo.place_forget()
+        if np.all(psd &gt; self.y_top):
+            self.view.lbl_hi.place(relx=0.2, rely=0.1, width=20, height=20)
+        else:
+            if self.view.lbl_hi.winfo_ismapped():
+                self.view.lbl_hi.place_forget()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.y_btm"><code class="name">prop <span class="ident">y_btm</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.y_btm"><code class="name">prop <span class="ident">y_btm</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -397,11 +508,12 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">@property
 def y_btm(self):
+    &#34;&#34;&#34;Return plot minimum amplitude&#34;&#34;&#34;
     return self.ref_level - (10*self.scale)</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Return plot minimum amplitude</p></div>
 </dd>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.y_top"><code class="name">prop <span class="ident">y_top</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.y_top"><code class="name">prop <span class="ident">y_top</span></code></dt>
 <dd>
 <details class="source">
 <summary>
@@ -409,14 +521,15 @@ def y_btm(self):
 </summary>
 <pre><code class="python">@property
 def y_top(self):
+    &#34;&#34;&#34;Return plot maximum amplitude&#34;&#34;&#34;
     return self.ref_level</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Return plot maximum amplitude</p></div>
 </dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.set_ref_level"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.set_ref_level"><code class="name flex">
 <span>def <span class="ident">set_ref_level</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -425,6 +538,7 @@ def y_top(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_ref_level(self, *args, **kwargs):
+    &#34;&#34;&#34;Set plot ref level&#34;&#34;&#34;
     ref = self.view.settings[&#34;ref_level&#34;].get()
     try:
         ref = float(ref)
@@ -433,9 +547,9 @@ def y_top(self):
         ref = self.ref_level
     self.view.settings[&#34;ref_level&#34;].set(str(self.ref_level))</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Set plot ref level</p></div>
 </dd>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.set_scale"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.set_scale"><code class="name flex">
 <span>def <span class="ident">set_scale</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -444,6 +558,7 @@ def y_top(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_scale(self, *args, **kwargs):
+    &#34;&#34;&#34;set plot scale&#34;&#34;&#34;
     scale = self.view.settings[&#34;scale&#34;].get()
     try:
         scale = float(scale)
@@ -452,9 +567,9 @@ def y_top(self):
         scale = self.scale
     self.view.settings[&#34;scale&#34;].set(str(self.scale))</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>set plot scale</p></div>
 </dd>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.set_vbw"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.set_vbw"><code class="name flex">
 <span>def <span class="ident">set_vbw</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -463,6 +578,7 @@ def y_top(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_vbw(self, *args, **kwargs):
+    &#34;&#34;&#34;Set plot vbw&#34;&#34;&#34;
     smooth = self.view.settings[&#34;vbw&#34;].get()
     try:
         smooth = float(smooth)
@@ -471,9 +587,9 @@ def y_top(self):
         smooth = self.vbw
     self.view.settings[&#34;vbw&#34;].set(str(self.vbw))</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Set plot vbw</p></div>
 </dd>
-<dt id="pyspecan.controller.GUI.base.FreqPlotController.set_window"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.base.FreqPlotController.set_window"><code class="name flex">
 <span>def <span class="ident">set_window</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -482,15 +598,27 @@ def y_top(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_window(self, *args, **kwargs):
+    &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
     self.window = self.view.settings[&#34;window&#34;].get()</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Set plot window function</p></div>
 </dd>
 </dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="pyspecan.controller.tkGUI.base.PlotController" href="#pyspecan.controller.tkGUI.base.PlotController">PlotController</a></b></code>:
+<ul class="hlist">
+<li><code><a title="pyspecan.controller.tkGUI.base.PlotController.plot" href="#pyspecan.controller.tkGUI.base.PlotController.plot">plot</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.PlotController.reset" href="#pyspecan.controller.tkGUI.base.PlotController.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.PlotController.toggle_settings" href="#pyspecan.controller.tkGUI.base.PlotController.toggle_settings">toggle_settings</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.PlotController.update" href="#pyspecan.controller.tkGUI.base.PlotController.update">update</a></code></li>
+</ul>
+</li>
+</ul>
 </dd>
-<dt id="pyspecan.controller.GUI.base.PlotController"><code class="flex name class">
+<dt id="pyspecan.controller.tkGUI.base.PlotController"><code class="flex name class">
 <span>class <span class="ident">PlotController</span></span>
-<span>(</span><span>view: <a title="pyspecan.view.GUI.base.GUIPlot" href="../../view/GUI/base.html#pyspecan.view.GUI.base.GUIPlot">GUIPlot</a>)</span>
+<span>(</span><span>view: <a title="pyspecan.view.tkGUI.base.GUIPlot" href="../../view/tkGUI/base.html#pyspecan.view.tkGUI.base.GUIPlot">GUIPlot</a>)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -498,12 +626,14 @@ def y_top(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class PlotController:
+    &#34;&#34;&#34;Controller for view.tkGUI.GUIPlot&#34;&#34;&#34;
     __slots__ = (&#34;view&#34;,)
     def __init__(self, view: GUIPlot):
         self.view = view
         self.view.btn_toggle.configure(command=self.toggle_settings)
 
     def toggle_settings(self, *args, **kwargs):
+        &#34;&#34;&#34;Toggle settings panel visibility&#34;&#34;&#34;
         if self.view.fr_sets.winfo_ismapped():
             self.view.fr_sets.forget()
             # self.btn_toggle.config(text=&#34;Show Settings&#34;)
@@ -512,28 +642,39 @@ def y_top(self):
             # self.btn_toggle.config(text=&#34;Hide Settings&#34;)
 
     def update(self):
-        self.view.plotter.update()</code></pre>
+        &#34;&#34;&#34;Update view plot&#34;&#34;&#34;
+        self.view.plotter.update()
+
+    def reset(self):
+        &#34;&#34;&#34;Reset plot view&#34;&#34;&#34;
+        pass
+
+    def plot(self, *args, **kwargs):
+        &#34;&#34;&#34;Update plot data&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Controller for view.tkGUI.GUIPlot</p></div>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.GUI.base.FreqPlotController" href="#pyspecan.controller.GUI.base.FreqPlotController">FreqPlotController</a></li>
+<li><a title="pyspecan.controller.tkGUI.base.FreqPlotController" href="#pyspecan.controller.tkGUI.base.FreqPlotController">FreqPlotController</a></li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.controller.GUI.base.PlotController.view"><code class="name">var <span class="ident">view</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.base.PlotController.view"><code class="name">var <span class="ident">view</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class PlotController:
+    &#34;&#34;&#34;Controller for view.tkGUI.GUIPlot&#34;&#34;&#34;
     __slots__ = (&#34;view&#34;,)
     def __init__(self, view: GUIPlot):
         self.view = view
         self.view.btn_toggle.configure(command=self.toggle_settings)
 
     def toggle_settings(self, *args, **kwargs):
+        &#34;&#34;&#34;Toggle settings panel visibility&#34;&#34;&#34;
         if self.view.fr_sets.winfo_ismapped():
             self.view.fr_sets.forget()
             # self.btn_toggle.config(text=&#34;Show Settings&#34;)
@@ -542,14 +683,51 @@ def y_top(self):
             # self.btn_toggle.config(text=&#34;Hide Settings&#34;)
 
     def update(self):
-        self.view.plotter.update()</code></pre>
+        &#34;&#34;&#34;Update view plot&#34;&#34;&#34;
+        self.view.plotter.update()
+
+    def reset(self):
+        &#34;&#34;&#34;Reset plot view&#34;&#34;&#34;
+        pass
+
+    def plot(self, *args, **kwargs):
+        &#34;&#34;&#34;Update plot data&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.GUI.base.PlotController.toggle_settings"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.base.PlotController.plot"><code class="name flex">
+<span>def <span class="ident">plot</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot(self, *args, **kwargs):
+    &#34;&#34;&#34;Update plot data&#34;&#34;&#34;
+    raise NotImplementedError()</code></pre>
+</details>
+<div class="desc"><p>Update plot data</p></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.base.PlotController.reset"><code class="name flex">
+<span>def <span class="ident">reset</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def reset(self):
+    &#34;&#34;&#34;Reset plot view&#34;&#34;&#34;
+    pass</code></pre>
+</details>
+<div class="desc"><p>Reset plot view</p></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.base.PlotController.toggle_settings"><code class="name flex">
 <span>def <span class="ident">toggle_settings</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -558,6 +736,7 @@ def y_top(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def toggle_settings(self, *args, **kwargs):
+    &#34;&#34;&#34;Toggle settings panel visibility&#34;&#34;&#34;
     if self.view.fr_sets.winfo_ismapped():
         self.view.fr_sets.forget()
         # self.btn_toggle.config(text=&#34;Show Settings&#34;)
@@ -565,9 +744,9 @@ def y_top(self):
         self.view.fr_sets.pack(side=tk.LEFT, fill=tk.Y, before=self.view.fr_canv)
         # self.btn_toggle.config(text=&#34;Hide Settings&#34;)</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Toggle settings panel visibility</p></div>
 </dd>
-<dt id="pyspecan.controller.GUI.base.PlotController.update"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.base.PlotController.update"><code class="name flex">
 <span>def <span class="ident">update</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -576,9 +755,10 @@ def y_top(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def update(self):
+    &#34;&#34;&#34;Update view plot&#34;&#34;&#34;
     self.view.plotter.update()</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Update view plot</p></div>
 </dd>
 </dl>
 </dd>
@@ -592,32 +772,34 @@ def y_top(self):
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.controller.GUI" href="index.html">pyspecan.controller.GUI</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI" href="index.html">pyspecan.controller.tkGUI</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.GUI.base.FreqPlotController" href="#pyspecan.controller.GUI.base.FreqPlotController">FreqPlotController</a></code></h4>
+<h4><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController" href="#pyspecan.controller.tkGUI.base.FreqPlotController">FreqPlotController</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.ref_level" href="#pyspecan.controller.GUI.base.FreqPlotController.ref_level">ref_level</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.scale" href="#pyspecan.controller.GUI.base.FreqPlotController.scale">scale</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.set_ref_level" href="#pyspecan.controller.GUI.base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.set_scale" href="#pyspecan.controller.GUI.base.FreqPlotController.set_scale">set_scale</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.set_vbw" href="#pyspecan.controller.GUI.base.FreqPlotController.set_vbw">set_vbw</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.set_window" href="#pyspecan.controller.GUI.base.FreqPlotController.set_window">set_window</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.vbw" href="#pyspecan.controller.GUI.base.FreqPlotController.vbw">vbw</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.window" href="#pyspecan.controller.GUI.base.FreqPlotController.window">window</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.y_btm" href="#pyspecan.controller.GUI.base.FreqPlotController.y_btm">y_btm</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.FreqPlotController.y_top" href="#pyspecan.controller.GUI.base.FreqPlotController.y_top">y_top</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.ref_level" href="#pyspecan.controller.tkGUI.base.FreqPlotController.ref_level">ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.scale" href="#pyspecan.controller.tkGUI.base.FreqPlotController.scale">scale</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_ref_level" href="#pyspecan.controller.tkGUI.base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_scale" href="#pyspecan.controller.tkGUI.base.FreqPlotController.set_scale">set_scale</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_vbw" href="#pyspecan.controller.tkGUI.base.FreqPlotController.set_vbw">set_vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_window" href="#pyspecan.controller.tkGUI.base.FreqPlotController.set_window">set_window</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.vbw" href="#pyspecan.controller.tkGUI.base.FreqPlotController.vbw">vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.window" href="#pyspecan.controller.tkGUI.base.FreqPlotController.window">window</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.y_btm" href="#pyspecan.controller.tkGUI.base.FreqPlotController.y_btm">y_btm</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.y_top" href="#pyspecan.controller.tkGUI.base.FreqPlotController.y_top">y_top</a></code></li>
 </ul>
 </li>
 <li>
-<h4><code><a title="pyspecan.controller.GUI.base.PlotController" href="#pyspecan.controller.GUI.base.PlotController">PlotController</a></code></h4>
+<h4><code><a title="pyspecan.controller.tkGUI.base.PlotController" href="#pyspecan.controller.tkGUI.base.PlotController">PlotController</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.controller.GUI.base.PlotController.toggle_settings" href="#pyspecan.controller.GUI.base.PlotController.toggle_settings">toggle_settings</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.PlotController.update" href="#pyspecan.controller.GUI.base.PlotController.update">update</a></code></li>
-<li><code><a title="pyspecan.controller.GUI.base.PlotController.view" href="#pyspecan.controller.GUI.base.PlotController.view">view</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.PlotController.plot" href="#pyspecan.controller.tkGUI.base.PlotController.plot">plot</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.PlotController.reset" href="#pyspecan.controller.tkGUI.base.PlotController.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.PlotController.toggle_settings" href="#pyspecan.controller.tkGUI.base.PlotController.toggle_settings">toggle_settings</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.PlotController.update" href="#pyspecan.controller.tkGUI.base.PlotController.update">update</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.PlotController.view" href="#pyspecan.controller.tkGUI.base.PlotController.view">view</a></code></li>
 </ul>
 </li>
 </ul>

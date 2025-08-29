@@ -140,7 +140,11 @@ el.replaceWith(d);
         return self.value[0]
 
     def read(self, path, count: int, offset: int):
-        return self.value[1](path, count, offset*self.size())</code></pre>
+        return self.value[1](path, count, offset*self.size())
+
+    @classmethod
+    def choices(cls):
+        return [inst.name for inst in cls]</code></pre>
 </details>
 <div class="desc"><p>Create a collection of name/value pairs.</p>
 <p>Example enumeration:</p>
@@ -215,6 +219,15 @@ attributes &ndash; see the documentation for details.</p></div>
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.model.reader.Format.ci8"><code class="name">var <span class="ident">ci8</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Static methods</h3>
+<dl>
+<dt id="pyspecan.model.reader.Format.choices"><code class="name flex">
+<span>def <span class="ident">choices</span></span>(<span>)</span>
+</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -485,6 +498,7 @@ attributes &ndash; see the documentation for details.</p></div>
 <li><code><a title="pyspecan.model.reader.Format.cf16" href="#pyspecan.model.reader.Format.cf16">cf16</a></code></li>
 <li><code><a title="pyspecan.model.reader.Format.cf32" href="#pyspecan.model.reader.Format.cf32">cf32</a></code></li>
 <li><code><a title="pyspecan.model.reader.Format.cf64" href="#pyspecan.model.reader.Format.cf64">cf64</a></code></li>
+<li><code><a title="pyspecan.model.reader.Format.choices" href="#pyspecan.model.reader.Format.choices">choices</a></code></li>
 <li><code><a title="pyspecan.model.reader.Format.ci16" href="#pyspecan.model.reader.Format.ci16">ci16</a></code></li>
 <li><code><a title="pyspecan.model.reader.Format.ci8" href="#pyspecan.model.reader.Format.ci8">ci8</a></code></li>
 <li><code><a title="pyspecan.model.reader.Format.read" href="#pyspecan.model.reader.Format.read">read</a></code></li>

@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.view.GUI.rt API documentation</title>
-<meta name="description" content="">
+<title>pyspecan.controller.base API documentation</title>
+<meta name="description" content="Initialize Controller base class">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -33,9 +33,10 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.view.GUI.rt</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.base</code></h1>
 </header>
 <section id="section-intro">
+<p>Initialize Controller base class</p>
 </section>
 <section>
 </section>
@@ -46,69 +47,57 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.view.GUI.rt.ViewRT"><code class="flex name class">
-<span>class <span class="ident">ViewRT</span></span>
-<span>(</span><span>view, root)</span>
+<dt id="pyspecan.controller.base.Controller"><code class="flex name class">
+<span>class <span class="ident">Controller</span></span>
+<span>(</span><span>model: <a title="pyspecan.model.model.Model" href="../model/model.html#pyspecan.model.model.Model">Model</a>,<br>view: <a title="pyspecan.view.base.View" href="../view/base.html#pyspecan.view.base.View">View</a>)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ViewRT(GUIFreqPlot):
-    def __init__(self, view, root):
-        super().__init__(view, root, BlitPlot,
-            figsize=(10,10), dpi=100,
-            nrows=1,ncols=1, layout=&#34;tight&#34;
-        )
-    def draw_settings(self, parent, row=0):
-        row = super().draw_settings(parent, row)
-
-        var_cmap = tk.StringVar(self.fr_sets)
-        cb_cmap = ttk.Combobox(self.fr_sets, textvariable=var_cmap, width=9)
-
-        self.wg_sets[&#34;cmap&#34;] = cb_cmap
-        self.settings[&#34;cmap&#34;] = var_cmap
-
-        ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-        row += 1
-        tk.Label(parent, text=&#34;Colors&#34;).grid(row=row, column=0)
-        cb_cmap.grid(row=row, column=1)
-        row += 1
-        return row</code></pre>
+<pre><code class="python">class Controller:
+    &#34;&#34;&#34;Parent controller class&#34;&#34;&#34;
+    __slots__ = (&#34;model&#34;, &#34;view&#34;)
+    def __init__(self, model: Model, view: _View):
+        self.model: Model = model
+        self.view = view</code></pre>
+</details>
+<div class="desc"><p>Parent controller class</p></div>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.cui.Controller" href="cui.html#pyspecan.controller.cui.Controller">Controller</a></li>
+<li><a title="pyspecan.controller.tk_gui.Controller" href="tk_gui.html#pyspecan.controller.tk_gui.Controller">Controller</a></li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="pyspecan.controller.base.Controller.model"><code class="name">var <span class="ident">model</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Controller:
+    &#34;&#34;&#34;Parent controller class&#34;&#34;&#34;
+    __slots__ = (&#34;model&#34;, &#34;view&#34;)
+    def __init__(self, model: Model, view: _View):
+        self.model: Model = model
+        self.view = view</code></pre>
 </details>
 <div class="desc"></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.GUI.base.GUIFreqPlot" href="base.html#pyspecan.view.GUI.base.GUIFreqPlot">GUIFreqPlot</a></li>
-<li><a title="pyspecan.view.GUI.base.GUIBlitPlot" href="base.html#pyspecan.view.GUI.base.GUIBlitPlot">GUIBlitPlot</a></li>
-<li><a title="pyspecan.view.GUI.base.GUIPlot" href="base.html#pyspecan.view.GUI.base.GUIPlot">GUIPlot</a></li>
-</ul>
-<h3>Methods</h3>
-<dl>
-<dt id="pyspecan.view.GUI.rt.ViewRT.draw_settings"><code class="name flex">
-<span>def <span class="ident">draw_settings</span></span>(<span>self, parent, row=0)</span>
-</code></dt>
+</dd>
+<dt id="pyspecan.controller.base.Controller.view"><code class="name">var <span class="ident">view</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def draw_settings(self, parent, row=0):
-    row = super().draw_settings(parent, row)
-
-    var_cmap = tk.StringVar(self.fr_sets)
-    cb_cmap = ttk.Combobox(self.fr_sets, textvariable=var_cmap, width=9)
-
-    self.wg_sets[&#34;cmap&#34;] = cb_cmap
-    self.settings[&#34;cmap&#34;] = var_cmap
-
-    ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-    row += 1
-    tk.Label(parent, text=&#34;Colors&#34;).grid(row=row, column=0)
-    cb_cmap.grid(row=row, column=1)
-    row += 1
-    return row</code></pre>
+<pre><code class="python">class Controller:
+    &#34;&#34;&#34;Parent controller class&#34;&#34;&#34;
+    __slots__ = (&#34;model&#34;, &#34;view&#34;)
+    def __init__(self, model: Model, view: _View):
+        self.model: Model = model
+        self.view = view</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -124,15 +113,16 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.view.GUI" href="index.html">pyspecan.view.GUI</a></code></li>
+<li><code><a title="pyspecan.controller" href="index.html">pyspecan.controller</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.view.GUI.rt.ViewRT" href="#pyspecan.view.GUI.rt.ViewRT">ViewRT</a></code></h4>
+<h4><code><a title="pyspecan.controller.base.Controller" href="#pyspecan.controller.base.Controller">Controller</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.view.GUI.rt.ViewRT.draw_settings" href="#pyspecan.view.GUI.rt.ViewRT.draw_settings">draw_settings</a></code></li>
+<li><code><a title="pyspecan.controller.base.Controller.model" href="#pyspecan.controller.base.Controller.model">model</a></code></li>
+<li><code><a title="pyspecan.controller.base.Controller.view" href="#pyspecan.controller.base.Controller.view">view</a></code></li>
 </ul>
 </li>
 </ul>

@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.cui API documentation</title>
-<meta name="description" content="Initialize CUI Controller">
+<title>pyspecan.view.tkGUI.swept API documentation</title>
+<meta name="description" content="GUI view SWEPT mode plots">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -33,10 +33,10 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.cui</code></h1>
+<h1 class="title">Module <code>pyspecan.view.tkGUI.swept</code></h1>
 </header>
 <section id="section-intro">
-<p>Initialize CUI Controller</p>
+<p>GUI view SWEPT mode plots</p>
 </section>
 <section>
 </section>
@@ -47,25 +47,105 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.cui.Controller"><code class="flex name class">
-<span>class <span class="ident">Controller</span></span>
-<span>(</span><span>model: <a title="pyspecan.model.model.Model" href="../model/model.html#pyspecan.model.model.Model">Model</a>,<br>view: <a title="pyspecan.view.cui.View" href="../view/cui.html#pyspecan.view.cui.View">View</a>)</span>
+<dt id="pyspecan.view.tkGUI.swept.ViewSwept"><code class="flex name class">
+<span>class <span class="ident">ViewSwept</span></span>
+<span>(</span><span>view, root)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Controller(_Controller):
-    &#34;&#34;&#34;CUI Controller&#34;&#34;&#34;
-    def __init__(self, model: Model, view: CUI):
-        super().__init__(model, view)
-        self.view: CUI = self.view # type hints</code></pre>
+<pre><code class="python">class ViewSwept(GUIFreqPlot):
+    &#34;&#34;&#34;Manager for SWEPT mode plots&#34;&#34;&#34;
+    def __init__(self, view, root):
+        super().__init__(view, root,
+            figsize=(5,5), dpi=100,
+            nrows=2, ncols=1, layout=&#34;constrained&#34;
+        )
+    def draw_settings(self, parent, row=0):
+        var_show_psd = tk.IntVar(self.fr_sets)
+        chk_show_psd = tk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_show_psd)
+        var_show_spg = tk.IntVar(self.fr_sets)
+        chk_show_spg = tk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_show_spg)
+
+        self.wg_sets[&#34;show_psd&#34;] = chk_show_psd
+        self.settings[&#34;show_psd&#34;] = var_show_psd
+        self.wg_sets[&#34;show_spg&#34;] = chk_show_spg
+        self.settings[&#34;show_spg&#34;] = var_show_spg
+
+        tk.Label(parent, text=&#34;Plots&#34;).grid(row=row, column=0,columnspan=2)
+        row += 1
+        tk.Label(parent, text=&#34;PSD&#34;).grid(row=row, column=0)
+        chk_show_psd.grid(row=row, column=1)
+        row += 1
+        tk.Label(parent, text=&#34;SPG&#34;).grid(row=row, column=0)
+        chk_show_spg.grid(row=row, column=1)
+        row += 1
+        ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
+        row += 1
+
+        row = super().draw_settings(parent, row)
+        # row = self._draw_settings_freq(parent, row)
+
+        row = self._draw_settings_psd(parent, row)
+
+        row = self._draw_settings_spectrogram(parent, row)
+        return row
+
+    def _draw_settings_psd(self, parent, row):
+        var_psd_min = tk.IntVar(self.fr_sets)
+        chk_show_min = tk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_psd_min)
+        var_psd_max = tk.IntVar(self.fr_sets)
+        chk_show_max = tk.Checkbutton(parent, onvalue=1, offvalue=0, variable=var_psd_max)
+
+        self.wg_sets[&#34;show_min&#34;] = chk_show_min
+        self.settings[&#34;show_min&#34;] = var_psd_min
+        self.wg_sets[&#34;show_max&#34;] = chk_show_max
+        self.settings[&#34;show_max&#34;] = var_psd_max
+
+        ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
+        row += 1
+        tk.Label(parent, text=&#34;PSD&#34;).grid(row=row, column=0,columnspan=2)
+        row += 1
+        tk.Label(parent, text=&#34;Max Hold&#34;).grid(row=row, column=0)
+        chk_show_max.grid(row=row, column=1)
+        row += 1
+        tk.Label(parent, text=&#34;Min Hold&#34;).grid(row=row, column=0)
+        chk_show_min.grid(row=row, column=1)
+        row += 1
+        return row
+
+    def _draw_settings_spectrogram(self, parent, row):
+        var_max_count = tk.StringVar(self.fr_sets)
+        ent_max_count = tk.Entry(self.fr_sets, textvariable=var_max_count, width=10)
+
+        self.wg_sets[&#34;max_count&#34;] = ent_max_count
+        self.settings[&#34;max_count&#34;] = var_max_count
+
+        ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
+        row += 1
+        tk.Label(parent, text=&#34;Spectrogram&#34;).grid(row=row, column=0,columnspan=2)
+        row += 1
+        tk.Label(parent, text=&#34;Max Count&#34;).grid(row=row, column=0)
+        ent_max_count.grid(row=row, column=1)
+        row += 1
+        return row</code></pre>
 </details>
-<div class="desc"><p>CUI Controller</p></div>
+<div class="desc"><p>Manager for SWEPT mode plots</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.base.Controller" href="base.html#pyspecan.controller.base.Controller">Controller</a></li>
+<li><a title="pyspecan.view.tkGUI.base.GUIFreqPlot" href="base.html#pyspecan.view.tkGUI.base.GUIFreqPlot">GUIFreqPlot</a></li>
+<li><a title="pyspecan.view.tkGUI.base.GUIBlitPlot" href="base.html#pyspecan.view.tkGUI.base.GUIBlitPlot">GUIBlitPlot</a></li>
+<li><a title="pyspecan.view.tkGUI.base.GUIPlot" href="base.html#pyspecan.view.tkGUI.base.GUIPlot">GUIPlot</a></li>
+</ul>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="pyspecan.view.tkGUI.base.GUIFreqPlot" href="base.html#pyspecan.view.tkGUI.base.GUIFreqPlot">GUIFreqPlot</a></b></code>:
+<ul class="hlist">
+<li><code><a title="pyspecan.view.tkGUI.base.GUIFreqPlot.draw_settings" href="base.html#pyspecan.view.tkGUI.base.GUIPlot.draw_settings">draw_settings</a></code></li>
+</ul>
+</li>
 </ul>
 </dd>
 </dl>
@@ -78,13 +158,13 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.controller" href="index.html">pyspecan.controller</a></code></li>
+<li><code><a title="pyspecan.view.tkGUI" href="index.html">pyspecan.view.tkGUI</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.cui.Controller" href="#pyspecan.controller.cui.Controller">Controller</a></code></h4>
+<h4><code><a title="pyspecan.view.tkGUI.swept.ViewSwept" href="#pyspecan.view.tkGUI.swept.ViewSwept">ViewSwept</a></code></h4>
 </li>
 </ul>
 </li>

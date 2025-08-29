@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
 <title>pyspecan.err API documentation</title>
-<meta name="description" content="">
+<meta name="description" content="Error types">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -36,6 +36,7 @@ el.replaceWith(d);
 <h1 class="title">Module <code>pyspecan.err</code></h1>
 </header>
 <section id="section-intro">
+<p>Error types</p>
 </section>
 <section>
 </section>
@@ -46,30 +47,6 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.err.Error"><code class="flex name class">
-<span>class <span class="ident">Error</span></span>
-<span>(</span><span>*args, **kwargs)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class Error(Exception):
-    pass</code></pre>
-</details>
-<div class="desc"><p>Common base class for all non-exit exceptions.</p></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li>builtins.Exception</li>
-<li>builtins.BaseException</li>
-</ul>
-<h3>Subclasses</h3>
-<ul class="hlist">
-<li><a title="pyspecan.err.Overflow" href="#pyspecan.err.Overflow">Overflow</a></li>
-<li><a title="pyspecan.err.UnknownOption" href="#pyspecan.err.UnknownOption">UnknownOption</a></li>
-</ul>
-</dd>
 <dt id="pyspecan.err.Overflow"><code class="flex name class">
 <span>class <span class="ident">Overflow</span></span>
 <span>(</span><span>*args, **kwargs)</span>
@@ -79,13 +56,13 @@ el.replaceWith(d);
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Overflow(Error):
-    pass</code></pre>
+<pre><code class="python">class Overflow(_Error):
+    &#34;&#34;&#34;Error thrown when an overflow occurs&#34;&#34;&#34;</code></pre>
 </details>
-<div class="desc"><p>Common base class for all non-exit exceptions.</p></div>
+<div class="desc"><p>Error thrown when an overflow occurs</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.err.Error" href="#pyspecan.err.Error">Error</a></li>
+<li>pyspecan.err._Error</li>
 <li>builtins.Exception</li>
 <li>builtins.BaseException</li>
 </ul>
@@ -99,13 +76,13 @@ el.replaceWith(d);
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class UnknownOption(Error):
-    pass</code></pre>
+<pre><code class="python">class UnknownOption(_Error):
+    &#34;&#34;&#34;Error thrown when an unknown option is provided&#34;&#34;&#34;</code></pre>
 </details>
-<div class="desc"><p>Common base class for all non-exit exceptions.</p></div>
+<div class="desc"><p>Error thrown when an unknown option is provided</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.err.Error" href="#pyspecan.err.Error">Error</a></li>
+<li>pyspecan.err._Error</li>
 <li>builtins.Exception</li>
 <li>builtins.BaseException</li>
 </ul>
@@ -125,9 +102,6 @@ el.replaceWith(d);
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
-<li>
-<h4><code><a title="pyspecan.err.Error" href="#pyspecan.err.Error">Error</a></code></h4>
-</li>
 <li>
 <h4><code><a title="pyspecan.err.Overflow" href="#pyspecan.err.Overflow">Overflow</a></code></h4>
 </li>

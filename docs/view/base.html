@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.cui API documentation</title>
-<meta name="description" content="Initialize CUI Controller">
+<title>pyspecan.view.base API documentation</title>
+<meta name="description" content="Initialize View base class">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -33,10 +33,10 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.cui</code></h1>
+<h1 class="title">Module <code>pyspecan.view.base</code></h1>
 </header>
 <section id="section-intro">
-<p>Initialize CUI Controller</p>
+<p>Initialize View base class</p>
 </section>
 <section>
 </section>
@@ -47,26 +47,85 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.cui.Controller"><code class="flex name class">
-<span>class <span class="ident">Controller</span></span>
-<span>(</span><span>model: <a title="pyspecan.model.model.Model" href="../model/model.html#pyspecan.model.model.Model">Model</a>,<br>view: <a title="pyspecan.view.cui.View" href="../view/cui.html#pyspecan.view.cui.View">View</a>)</span>
+<dt id="pyspecan.view.base.View"><code class="flex name class">
+<span>class <span class="ident">View</span></span>
+<span>(</span><span>view)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Controller(_Controller):
-    &#34;&#34;&#34;CUI Controller&#34;&#34;&#34;
-    def __init__(self, model: Model, view: CUI):
-        super().__init__(model, view)
-        self.view: CUI = self.view # type hints</code></pre>
+<pre><code class="python">class View:
+    &#34;&#34;&#34;Parent view class&#34;&#34;&#34;
+    __slots__ = (&#34;view&#34;,)
+    def __init__(self, view):
+        self.view = view
+
+    def mainloop(self):
+        &#34;&#34;&#34;Initialize the view&#34;&#34;&#34;
+
+    def quit(self):
+        &#34;&#34;&#34;Gracefully exit&#34;&#34;&#34;</code></pre>
 </details>
-<div class="desc"><p>CUI Controller</p></div>
-<h3>Ancestors</h3>
+<div class="desc"><p>Parent view class</p></div>
+<h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.base.Controller" href="base.html#pyspecan.controller.base.Controller">Controller</a></li>
+<li><a title="pyspecan.view.cui.View" href="cui.html#pyspecan.view.cui.View">View</a></li>
+<li><a title="pyspecan.view.tk_gui.View" href="tk_gui.html#pyspecan.view.tk_gui.View">View</a></li>
 </ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="pyspecan.view.base.View.view"><code class="name">var <span class="ident">view</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class View:
+    &#34;&#34;&#34;Parent view class&#34;&#34;&#34;
+    __slots__ = (&#34;view&#34;,)
+    def __init__(self, view):
+        self.view = view
+
+    def mainloop(self):
+        &#34;&#34;&#34;Initialize the view&#34;&#34;&#34;
+
+    def quit(self):
+        &#34;&#34;&#34;Gracefully exit&#34;&#34;&#34;</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.view.base.View.mainloop"><code class="name flex">
+<span>def <span class="ident">mainloop</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def mainloop(self):
+    &#34;&#34;&#34;Initialize the view&#34;&#34;&#34;</code></pre>
+</details>
+<div class="desc"><p>Initialize the view</p></div>
+</dd>
+<dt id="pyspecan.view.base.View.quit"><code class="name flex">
+<span>def <span class="ident">quit</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def quit(self):
+    &#34;&#34;&#34;Gracefully exit&#34;&#34;&#34;</code></pre>
+</details>
+<div class="desc"><p>Gracefully exit</p></div>
+</dd>
+</dl>
 </dd>
 </dl>
 </section>
@@ -78,13 +137,18 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.controller" href="index.html">pyspecan.controller</a></code></li>
+<li><code><a title="pyspecan.view" href="index.html">pyspecan.view</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.cui.Controller" href="#pyspecan.controller.cui.Controller">Controller</a></code></h4>
+<h4><code><a title="pyspecan.view.base.View" href="#pyspecan.view.base.View">View</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.view.base.View.mainloop" href="#pyspecan.view.base.View.mainloop">mainloop</a></code></li>
+<li><code><a title="pyspecan.view.base.View.quit" href="#pyspecan.view.base.View.quit">quit</a></code></li>
+<li><code><a title="pyspecan.view.base.View.view" href="#pyspecan.view.base.View.view">view</a></code></li>
+</ul>
 </li>
 </ul>
 </li>
