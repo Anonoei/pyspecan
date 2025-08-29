@@ -6,7 +6,7 @@ options = [
 ]
 
 
-a = Analysis(['build_exec.py'],
+a = Analysis(['main.py'],
     pathex=[],
     binaries=None,
     datas=None,
