@@ -32,3 +32,7 @@ tkGUI, RT mode
 2. `cd pyspecan`
 3. `git branch -c feature/<your feature>`
 4. `python3 builder.py -b -l` build and install locally
+
+## Build executable
+1. `pyinstaller src/pyspecan.spec`
+2. `./dist/pyspecan`
