@@ -1,14 +1,15 @@
+"""Base Views for tkGUI View plots"""
 import tkinter as tk
 from tkinter import ttk
 
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+# from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 
-import numpy as np
-
-from ...plot.base import Plot, BlitPlot
+from ...plot.mpl.base import Plot, BlitPlot
 
 class GUIPlot:
+    """tkinter wrapper for pyspecan.plot.mpl"""
     __slots__ = (
         "view", "_root", "plotter", "settings", "ready",
         "fr_main", "fr_canv", "fr_sets", "btn_toggle",
@@ -46,6 +47,7 @@ class GUIPlot:
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def draw_settings(self, parent, row=0):
+        """Initialize settings panel"""
         raise NotImplementedError()
 
     @property
@@ -61,8 +63,8 @@ class GUIPlot:
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art):
-        return self.plotter.add_artist(idx, art)
+    def add_artist(self, idx, art, name):
+        return self.plotter.add_artist(idx, art, name)
 
     def plot(self, idx, *args, **kwargs):
         return self.plotter.plot(idx, *args, **kwargs)
@@ -80,14 +82,16 @@ class GUIPlot:
         self.plotter.set_ydata(i, j, y)
 
 class GUIBlitPlot(GUIPlot):
-    def __init__(self, view, root, plotter=BlitPlot, *args, **kwargs):
-        super().__init__(view, root, plotter, *args, **kwargs)
+    """tkinter wrapper for pyspecan.plot.mpl BlitPlot"""
+    def __init__(self, view, root, *args, **kwargs):
+        super().__init__(view, root, BlitPlot, *args, **kwargs)
 
 
 class GUIFreqPlot(GUIBlitPlot):
+    """Frequency domain view helpers"""
     __slots__ = ("lbl_lo", "lbl_hi")
-    def __init__(self, view, root, plotter=BlitPlot, *args, **kwargs):
-        super().__init__(view, root, plotter, *args, **kwargs)
+    def __init__(self, view, root, *args, **kwargs):
+        super().__init__(view, root, *args, **kwargs)
 
         self.lbl_lo = tk.Label(self.fr_canv, text="V")
         self.lbl_hi = tk.Label(self.fr_canv, text="^")

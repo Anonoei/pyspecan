@@ -1,17 +1,18 @@
+"""Create a GUI view"""
 import tkinter as tk
 import tkinter.ttk as ttk
 
+from .base import View as _View
 from ..config import config, Mode
 
-from .GUI.base import GUIPlot, GUIBlitPlot
-# from .GUI.manager import Manager
-# from .GUI.plot import s as plots
-from .GUI.swept import ViewSwept
-from .GUI.rt import ViewRT
+# from .tkGUI.base import GUIPlot, GUIBlitPlot
+from .tkGUI.swept import ViewSwept
+from .tkGUI.rt import ViewRT
 
-class GUI:
+class View(_View):
+    """Parent GUI view class"""
     def __init__(self, view, root=tk.Tk()):
-        self.view = view
+        super().__init__(view)
         self.root = root
         self.root.title(f"pyspecan | {config.MODE.value}")
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
@@ -36,12 +37,10 @@ class GUI:
         self.draw_ctrl(self.fr_ctrl)
         self.main.add(self.fr_ctrl)
 
-
-        # self.plot: GUIPlot | GUIBlitPlot = None # type: ignore
-        # self.draw_view(self.fr_view)
         self.main.add(self.fr_view)
 
     def draw_tb(self, parent):
+        """Draw toolbar frame"""
         col = 0
         self.var_samp = tk.IntVar(parent)
         self.sld_samp = tk.Scale(
@@ -92,6 +91,7 @@ class GUI:
         parent.grid_columnconfigure(col, weight=1)
 
     def draw_ctrl(self, parent):
+        """Draw control frame"""
         root = tk.Frame(parent) # File reader
         root.columnconfigure(2, weight=1)
         row = 0
@@ -119,12 +119,6 @@ class GUI:
         self.ent_cf = tk.Entry(root, textvariable=self.var_cf, width=10)
         self.ent_cf.grid(row=row,column=1, sticky=tk.W)
         root.pack(padx=2,pady=2, fill=tk.X)
-
-    # def draw_view(self, parent):
-    #     if config.MODE == Mode.SWEPT:
-    #         self.plot = plots["PSD"](self, parent)
-    #     elif config.MODE == Mode.RT:
-    #         self.plot = plots["Persistent"](self, parent)
 
     def mainloop(self):
         self.root.mainloop()

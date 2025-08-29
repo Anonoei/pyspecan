@@ -36,6 +36,10 @@ class Format(Enum):
     def read(self, path, count: int, offset: int):
         return self.value[1](path, count, offset*self.size())
 
+    @classmethod
+    def choices(cls):
+        return [inst.name for inst in cls]
+
 class Reader:
     def __init__(self, fmt, path):
         if path is None:

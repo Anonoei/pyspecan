@@ -1,8 +1,9 @@
-class Error(Exception):
-    pass
+"""Error types"""
+class _Error(Exception):
+    """pyspecan Error"""
 
-class UnknownOption(Error):
-    pass
+class UnknownOption(_Error):
+    """Error thrown when an unknown option is provided"""
 
-class Overflow(Error):
-    pass
+class Overflow(_Error):
+    """Error thrown when an overflow occurs"""

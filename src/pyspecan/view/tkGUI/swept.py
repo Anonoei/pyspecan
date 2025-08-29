@@ -1,14 +1,16 @@
+"""GUI view SWEPT mode plots"""
 import tkinter as tk
 from tkinter import ttk
 
-from ...plot.base import BlitPlot
+# from ...plot.mpl.base import BlitPlot
 from .base import GUIFreqPlot
 
 class ViewSwept(GUIFreqPlot):
+    """Manager for SWEPT mode plots"""
     def __init__(self, view, root):
-        super().__init__(view, root, BlitPlot,
+        super().__init__(view, root,
             figsize=(5,5), dpi=100,
-            nrows=2,ncols=1, layout="constrained"
+            nrows=2, ncols=1, layout="constrained"
         )
     def draw_settings(self, parent, row=0):
         var_show_psd = tk.IntVar(self.fr_sets)
@@ -21,6 +23,8 @@ class ViewSwept(GUIFreqPlot):
         self.wg_sets["show_spg"] = chk_show_spg
         self.settings["show_spg"] = var_show_spg
 
+        tk.Label(parent, text="Plots").grid(row=row, column=0,columnspan=2)
+        row += 1
         tk.Label(parent, text="PSD").grid(row=row, column=0)
         chk_show_psd.grid(row=row, column=1)
         row += 1
@@ -51,6 +55,8 @@ class ViewSwept(GUIFreqPlot):
 
         ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
         row += 1
+        tk.Label(parent, text="PSD").grid(row=row, column=0,columnspan=2)
+        row += 1
         tk.Label(parent, text="Max Hold").grid(row=row, column=0)
         chk_show_max.grid(row=row, column=1)
         row += 1
@@ -67,6 +73,8 @@ class ViewSwept(GUIFreqPlot):
         self.settings["max_count"] = var_max_count
 
         ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
+        row += 1
+        tk.Label(parent, text="Spectrogram").grid(row=row, column=0,columnspan=2)
         row += 1
         tk.Label(parent, text="Max Count").grid(row=row, column=0)
         ent_max_count.grid(row=row, column=1)

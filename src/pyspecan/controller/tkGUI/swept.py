@@ -7,6 +7,7 @@ from .base import FreqPlotController
 from ...utils import vbw
 
 class ControllerSwept(FreqPlotController):
+    """Controller for ViewSwept"""
     __slots__ = (
         "show_psd", "show_spg",
         "psd_min", "psd_max",
@@ -68,21 +69,24 @@ class ControllerSwept(FreqPlotController):
             self.view.plotter.ax(0).set_position((0,0,0,0))
             self.view.plotter.ax(1).set_visible(True)
             self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
-        print(f"_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}")
+        # print(f"_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}")
         self.view.plotter.fig.canvas.draw()
         self.view.plotter.fig.canvas.flush_events()
 
     def toggle_show_psd(self, *args, **kwargs):
+        """Toggle PSD plot visibility"""
         self.show_psd = 0 if self.show_psd == 1 else 1
         self.view.settings["show_psd"].set(self.show_psd)
         self._toggle_show()
 
     def toggle_show_spg(self, *args, **kwargs):
+        """Toggle spectrogram plot visibility"""
         self.show_spg = 0 if self.show_spg == 1 else 1
         self.view.settings["show_spg"].set(self.show_spg)
         self._toggle_show()
 
     def set_y(self):
+        """Set plot ylimits"""
         self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
         self.view.plotter.set_ylim(1, self.max_count, 0)
 
@@ -106,13 +110,21 @@ class ControllerSwept(FreqPlotController):
             self.psd_max = None
 
     def toggle_psd_min(self):
-        if self.view.settings["show_max"].get() == 0:
+        """Toggle PSD min-hold visibility"""
+        if self.view.settings["show_min"].get() == 0:
             self.psd_max = None
+            self.view.plotter.art(0, "psd_min").set_visible(False)
+        else:
+            self.view.plotter.art(0, "psd_min").set_visible(True)
         self.update()
 
     def toggle_psd_max(self):
-        if self.view.settings["show_min"].get() == 0:
+        """Toggle PSD max-hold visibility"""
+        if self.view.settings["show_max"].get() == 0:
             self.psd_min = None
+            self.view.plotter.art(0, "psd_max").set_visible(False)
+        else:
+            self.view.plotter.art(0, "psd_max").set_visible(True)
         self.update()
 
     def plot(self, freq, psd):
@@ -122,16 +134,7 @@ class ControllerSwept(FreqPlotController):
         if self.show_spg:
             self._plot_spectrogram(freq, psd)
 
-        if np.all(psd < self.y_btm):
-            self.view.lbl_lo.place(relx=0.2, rely=0.9, width=20, height=20)
-        else:
-            if self.view.lbl_lo.winfo_ismapped():
-                self.view.lbl_lo.place_forget()
-        if np.all(psd > self.y_top):
-            self.view.lbl_hi.place(relx=0.2, rely=0.1, width=20, height=20)
-        else:
-            if self.view.lbl_hi.winfo_ismapped():
-                self.view.lbl_hi.place_forget()
+        self._show_y_location(psd)
 
     def _plot_psd(self, freq, psd):
         self.view.plotter.ax(0).set_title("PSD")

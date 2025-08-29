@@ -1,14 +1,16 @@
+"""Controller for RT mode"""
 import numpy as np
-import tkinter as tk
-from tkinter import ttk
+# import tkinter as tk
+# from tkinter import ttk
 
-from .base import GUIFreqPlot
+# from .base import GUIFreqPlot
 from .base import FreqPlotController
 
 from ...utils import matrix
-from ...plot.color import cmap
+from ...plot.mpl.color import cmap
 
 class ControllerRT(FreqPlotController):
+    """Controller for ViewRT"""
     __slots__ = (
         "x", "y", "cmap",
         "_cmap_set", "_cb_drawn"
@@ -32,10 +34,8 @@ class ControllerRT(FreqPlotController):
         self.set_x()
         self.set_y()
 
-    def reset(self):
-        pass
-
     def set_x(self):
+        """Set plot xticks and xlabels"""
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
@@ -44,6 +44,7 @@ class ControllerRT(FreqPlotController):
         self.view.plotter.set_xlim(0, 0, self.x)
 
     def set_y(self):
+        """Set plot yticks and ylabels"""
         y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
         y_max = self.y_top
         y_min = self.y_btm
@@ -68,10 +69,16 @@ class ControllerRT(FreqPlotController):
             self.set_y()
 
     def set_cmap(self, *args, **kwargs):
+        """Set plot color mapping"""
         self.cmap = self.view.settings["cmap"].get()
         self._cmap_set = True
 
-    def plot(self, freq, psds):
+    def plot(self, freq, psd):
+        self._plot_persistent(freq, psd)
+
+        self._show_y_location(psd)
+
+    def _plot_persistent(self, freq, psds):
         self.view.plotter.ax(0).set_title("Persistent")
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
@@ -95,17 +102,3 @@ class ControllerRT(FreqPlotController):
         if self._cmap_set:
             self.view.plotter.set_ylim(0, 0, self.y)
             self._cmap_set = False
-
-        # if not self._plot.ax(idx).get_xlim() == (freq[0], freq[-1]):
-        #     self._plot.set_xlim(idx, freq[0], freq[-1])
-        if np.all(psds < self.y_btm):
-            self.view.lbl_lo.place(relx=0.2, rely=0.9, width=20, height=20)
-        else:
-            if self.view.lbl_lo.winfo_ismapped():
-                self.view.lbl_lo.place_forget()
-        if np.all(psds > self.y_top):
-            self.view.lbl_hi.place(relx=0.2, rely=0.1, width=20, height=20)
-        else:
-            if self.view.lbl_hi.winfo_ismapped():
-                self.view.lbl_hi.place_forget()
-        return im

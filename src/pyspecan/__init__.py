@@ -6,6 +6,8 @@ A spectrum analyzer library
 Github: https://github.com/Anonoei/pyspecan
 
 PyPI: https://pypi.org/project/pyspecan/
+
+This is intended to be used as a callable module (or a script), but can be used as a library
 """
 
 __version__ = "0.1.6"

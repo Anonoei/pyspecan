@@ -1,9 +1,11 @@
+"""Initialize tkGUI Controller"""
 import threading
 import time
 import datetime as dt
 
 import tkinter as tk
-import matplotlib.pyplot as plt
+
+from .base import Controller as _Controller
 
 from ..config import config, Mode
 
@@ -12,20 +14,21 @@ from ..utils.time import strfmt_td
 
 from ..model.model import Model
 from ..model.reader import Format
-from ..view.gui import GUI
+from ..view.tk_gui import View as GUI
 
 # from .GUI.manager import Manager
-from ..plot.base import BlitPlot
-from ..view.GUI.base import GUIFreqPlot
+from ..plot.mpl.base import BlitPlot
+# from ..view.tkGUI.base import GUIFreqPlot
 
-from .GUI.base import FreqPlotController
-from .GUI.swept import ControllerSwept
-from .GUI.rt import ControllerRT
+from .tkGUI.base import FreqPlotController
+from .tkGUI.swept import ControllerSwept
+from .tkGUI.rt import ControllerRT
 
-class Controller:
+class Controller(_Controller):
+    """tkGUI Controller"""
     def __init__(self, model: Model, view: GUI):
-        self.model = model
-        self.view = view
+        super().__init__(model, view)
+        self.view: GUI = self.view # type hints
         self.running = False
         self._stop = False
         self.time_show = 50.0

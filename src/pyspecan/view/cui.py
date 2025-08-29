@@ -1,7 +1,11 @@
+"""Create a CUI view"""
 
-class CUI:
+from .base import View as _View
+
+class View(_View):
+    """Parent CUI view class"""
     def __init__(self, view):
-        self.view = view
+        super().__init__(view)
         self.running = True
 
     def mainloop(self):
