@@ -11,8 +11,7 @@ from .tkGUI.rt import ViewRT
 
 class View(_View):
     """Parent GUI view class"""
-    def __init__(self, view, root=tk.Tk()):
-        super().__init__(view)
+    def __init__(self, root=tk.Tk()):
         self.root = root
         self.root.title(f"pyspecan | {config.MODE.value}")
         self.root.protocol("WM_DELETE_WINDOW", self.quit)

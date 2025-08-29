@@ -175,6 +175,7 @@ class Controller(_Controller):
             path = self.model.reader.path
         fmt = self.view.var_file_fmt.get()
         self.model.set_path(path, fmt)
+        self.view.sld_samp.config(from_=0, to=self.model.reader.max_samp, resolution=self.model.block_size)
         self.draw_tb()
         self.draw_ctrl()
 
@@ -190,9 +191,11 @@ class Controller(_Controller):
         try:
             fs = float(fs)
             self.model.Fs = fs
+            self.draw_tb()
         except ValueError:
             pass
         self.view.var_fs.set(str(self.model.Fs))
+        self.draw_ctrl()
 
     def set_cf(self, *args, **kwargs):
         cf = self.view.var_cf.get()
@@ -202,3 +205,4 @@ class Controller(_Controller):
         except ValueError:
             pass
         self.view.var_cf.set(str(self.model.cf))
+        self.draw_ctrl()

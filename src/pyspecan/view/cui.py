@@ -4,8 +4,7 @@ from .base import View as _View
 
 class View(_View):
     """Parent CUI view class"""
-    def __init__(self, view):
-        super().__init__(view)
+    def __init__(self):
         self.running = True
 
     def mainloop(self):

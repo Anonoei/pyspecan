@@ -23,7 +23,7 @@ class SpecAn:
         self.model = Model(path, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f".view.{view.path}", "pyspecan").View
-        self.view = v(self)
+        self.view = v()
 
         ctrl = importlib.import_module(f".controller.{view.path}", "pyspecan").Controller
         self.controller = ctrl(self.model, self.view)

@@ -13,7 +13,9 @@ This is intended to be used as a callable module (or a script), but can be used 
 __version__ = "0.2.0"
 __author__ = "Anonoei <to+dev@an0.cx>"
 
-from .config import config, Mode
+from . import _internal
+
+from .config import config, Mode, View
 from . import err
 from . import obj
 from . import utils
