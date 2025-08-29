@@ -45,12 +45,23 @@ jobs:
           name: pyspecan.exe
           path: src/dist/windows
 
+  pyinstaller-upload:
+    runs-on: ubuntu-latest
+    needs:
+      - pyinstaller-build
+    permissions:
+      contents: write
+
+    steps:
       - name: Upload artifacts
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: |
             dist/pyspecan
             src/dist/windows/pyspecan.exe
+        
 
   release-build:
     runs-on: ubuntu-latest
