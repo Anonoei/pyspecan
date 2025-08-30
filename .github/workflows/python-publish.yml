@@ -53,6 +53,18 @@ jobs:
       contents: write
 
     steps:
+      - name: Retrieve artifact Nix
+        uses: actions/download-artifact@v4
+        with:
+          name: pyspecan
+          path: dist/
+          
+      - name: Retrieve artifact Win
+        uses: actions/download-artifact@v4
+        with:
+          name: pyspecan.exe
+          path: dist/
+          
       - name: Upload artifacts
         uses: softprops/action-gh-release@v2
         env:
@@ -60,7 +72,7 @@ jobs:
         with:
           files: |
             dist/pyspecan
-            src/dist/windows/pyspecan.exe
+            dist/pyspecan.exe
         
 
   release-build:
