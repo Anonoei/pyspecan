@@ -17,12 +17,14 @@ from ..model.reader import Format
 from ..view.tk_gui import View as GUI
 
 # from .GUI.manager import Manager
-from ..plot.mpl.base import BlitPlot
+from ..backend.mpl.base import BlitPlot
 # from ..view.tkGUI.base import GUIFreqPlot
 
 from .tkGUI.base import FreqPlotController
 from .tkGUI.swept import ControllerSwept
 from .tkGUI.rt import ControllerRT
+
+from ..backend.tk import theme as theme_tk
 
 class Controller(_Controller):
     """tkGUI Controller"""
@@ -33,8 +35,8 @@ class Controller(_Controller):
         self._stop = False
         self.time_show = 50.0
 
-        self.view.sld_samp.config(from_=0, to=self.model.reader.max_samp, resolution=self.model.block_size)
-        self.view.sld_samp.config(command=self.set_samp)
+        self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
+        self.view.sld_samp.scale.config(command=self.set_samp)
 
         self.view.ent_time.bind("<Return>", self.set_time)
         self.view.var_time.set(str(self.time_show))
@@ -51,7 +53,13 @@ class Controller(_Controller):
         self.view.ent_fs.bind("<Return>", self.set_fs)
         self.view.ent_cf.bind("<Return>", self.set_cf)
 
+        self.view.cb_style.config(values=[k for k in theme_tk.theme.keys()])
+        self.view.cb_style.bind("<<ComboboxSelected>>", self.set_theme)
+
         self.thread: threading.Thread = None # type: ignore
+
+        self.view.var_style.set([k for k in theme_tk.theme.keys()][0])
+        self.set_theme()
 
         if config.MODE == Mode.SWEPT:
             self.plot = ControllerSwept(self.view.plot)
@@ -61,6 +69,8 @@ class Controller(_Controller):
 
     def start(self):
         if self.running:
+            return
+        if self.model.reader.path is None:
             return
         self.running = True
         self.view.btn_start.config(state=tk.DISABLED)
@@ -175,7 +185,7 @@ class Controller(_Controller):
             path = self.model.reader.path
         fmt = self.view.var_file_fmt.get()
         self.model.set_path(path, fmt)
-        self.view.sld_samp.config(from_=0, to=self.model.reader.max_samp, resolution=self.model.block_size)
+        self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
         self.draw_tb()
         self.draw_ctrl()
 
@@ -206,3 +216,7 @@ class Controller(_Controller):
             pass
         self.view.var_cf.set(str(self.model.cf))
         self.draw_ctrl()
+
+    def set_theme(self, *args, **kwargs):
+        style = self.view.var_style.get()
+        theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]

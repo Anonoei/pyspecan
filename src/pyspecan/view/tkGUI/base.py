@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 # from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 
-from ...plot.mpl.base import Plot, BlitPlot
+from ...backend.mpl.base import Plot, BlitPlot
+
 
 class GUIPlot:
     """tkinter wrapper for pyspecan.plot.mpl"""
@@ -23,15 +24,15 @@ class GUIPlot:
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground="black",highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg="white")
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -40,9 +41,8 @@ class GUIPlot:
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text="Settings",
-                font=("Arial", 8), bg="white", fg="black")
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text="Settings", style="Settings.TButton")
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -93,18 +93,18 @@ class GUIFreqPlot(GUIBlitPlot):
     def __init__(self, view, root, *args, **kwargs):
         super().__init__(view, root, *args, **kwargs)
 
-        self.lbl_lo = tk.Label(self.fr_canv, text="V")
-        self.lbl_hi = tk.Label(self.fr_canv, text="^")
+        self.lbl_lo = ttk.Label(self.fr_canv, text="V")
+        self.lbl_hi = ttk.Label(self.fr_canv, text="^")
 
     def draw_settings(self, parent, row=0):
         var_scale = tk.StringVar(self.fr_sets)
-        ent_scale = tk.Entry(self.fr_sets, textvariable=var_scale, width=10)
+        ent_scale = ttk.Entry(self.fr_sets, textvariable=var_scale, width=10)
 
         var_ref_level = tk.StringVar(self.fr_sets)
-        ent_ref_level = tk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
+        ent_ref_level = ttk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
 
         var_vbw = tk.StringVar(self.fr_sets)
-        ent_vbw = tk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
+        ent_vbw = ttk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
 
         var_window = tk.StringVar(self.fr_sets)
         cb_window = ttk.Combobox(self.fr_sets, textvariable=var_window, width=9)
@@ -118,16 +118,16 @@ class GUIFreqPlot(GUIBlitPlot):
         self.wg_sets["window"] = cb_window
         self.settings["window"] = var_window
 
-        tk.Label(parent, text="Scale/Div").grid(row=row, column=0)
+        ttk.Label(parent, text="Scale/Div").grid(row=row, column=0)
         ent_scale.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text="Ref Level").grid(row=row, column=0)
+        ttk.Label(parent, text="Ref Level").grid(row=row, column=0)
         ent_ref_level.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text="VBW").grid(row=row, column=0)
+        ttk.Label(parent, text="VBW").grid(row=row, column=0)
         ent_vbw.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text="Window").grid(row=row, column=0)
+        ttk.Label(parent, text="Window").grid(row=row, column=0)
         cb_window.grid(row=row, column=1)
         row += 1
         return row

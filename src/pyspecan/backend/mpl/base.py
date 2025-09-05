@@ -2,7 +2,7 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 
-plt.style.use('dark_background')
+# plt.style.use('dark_background')
 
 class Plot:
     """Generic plotting parent"""

@@ -111,20 +111,26 @@ class ControllerSwept(FreqPlotController):
 
     def toggle_psd_min(self):
         """Toggle PSD min-hold visibility"""
+        art = self.view.plotter.art(0, "psd_min")
+        if art is None:
+            return
         if self.view.settings["show_min"].get() == 0:
             self.psd_max = None
-            self.view.plotter.art(0, "psd_min").set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, "psd_min").set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def toggle_psd_max(self):
         """Toggle PSD max-hold visibility"""
+        art = self.view.plotter.art(0, "psd_max")
+        if art is None:
+            return
         if self.view.settings["show_max"].get() == 0:
             self.psd_min = None
-            self.view.plotter.art(0, "psd_max").set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, "psd_max").set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def plot(self, freq, psd):

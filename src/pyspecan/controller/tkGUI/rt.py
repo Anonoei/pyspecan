@@ -7,7 +7,7 @@ import numpy as np
 from .base import FreqPlotController
 
 from ...utils import matrix
-from ...plot.mpl.color import cmap
+from ...backend.mpl.color import cmap
 
 class ControllerRT(FreqPlotController):
     """Controller for ViewRT"""

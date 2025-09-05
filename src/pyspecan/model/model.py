@@ -75,6 +75,8 @@ class Model:
         return True
 
     def set_path(self, path, fmt):
+        if path is None:
+            return
         self.reader.set_path(path, fmt)
 
     def cur_time(self):

@@ -23,7 +23,7 @@ class ViewRT(GUIFreqPlot):
 
         ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
         row += 1
-        tk.Label(parent, text="Colors").grid(row=row, column=0)
+        ttk.Label(parent, text="Colors").grid(row=row, column=0)
         cb_cmap.grid(row=row, column=1)
         row += 1
         return row

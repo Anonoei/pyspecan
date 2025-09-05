@@ -10,11 +10,13 @@ def get_file(strict=True, title: str="", filetypes=None):
             file = filedialog.askopenfilename(title=title)
         else:
             file = filedialog.askopenfilename(title=title, filetypes=filetypes)
+        if file == "" or file == ():
+            if strict:
+                continue
+            return None
         file = pathlib.Path(file)
-        if strict:
-            if file.exists():
-                return file
-        else:
-            if file == "":
-                return None
-            return file
+        if not file.exists():
+            if strict:
+                continue
+            return None
+        return file
