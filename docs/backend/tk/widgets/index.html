@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.view.tkGUI.rt API documentation</title>
-<meta name="description" content="GUI view RT mode plots">
+<title>pyspecan.backend.tk.widgets API documentation</title>
+<meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -33,69 +33,24 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.view.tkGUI.rt</code></h1>
+<h1 class="title">Module <code>pyspecan.backend.tk.widgets</code></h1>
 </header>
 <section id="section-intro">
-<p>GUI view RT mode plots</p>
 </section>
 <section>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
-<h2 class="section-title" id="header-classes">Classes</h2>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt id="pyspecan.view.tkGUI.rt.ViewRT"><code class="flex name class">
-<span>class <span class="ident">ViewRT</span></span>
-<span>(</span><span>view, root)</span>
-</code></dt>
+<dt><code class="name"><a title="pyspecan.backend.tk.widgets.scale" href="scale.html">pyspecan.backend.tk.widgets.scale</a></code></dt>
 <dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class ViewRT(GUIFreqPlot):
-    &#34;&#34;&#34;Manager for RT mode plots&#34;&#34;&#34;
-    def __init__(self, view, root):
-        super().__init__(view, root,
-            figsize=(10,10), dpi=100,
-            nrows=1, ncols=1, layout=&#34;tight&#34;
-        )
-    def draw_settings(self, parent, row=0):
-        row = super().draw_settings(parent, row)
-
-        var_cmap = tk.StringVar(self.fr_sets)
-        cb_cmap = ttk.Combobox(self.fr_sets, textvariable=var_cmap, width=9)
-
-        self.wg_sets[&#34;cmap&#34;] = cb_cmap
-        self.settings[&#34;cmap&#34;] = var_cmap
-
-        ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-        row += 1
-        ttk.Label(parent, text=&#34;Colors&#34;).grid(row=row, column=0)
-        cb_cmap.grid(row=row, column=1)
-        row += 1
-        return row</code></pre>
-</details>
-<div class="desc"><p>Manager for RT mode plots</p></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.base.GUIFreqPlot" href="base.html#pyspecan.view.tkGUI.base.GUIFreqPlot">GUIFreqPlot</a></li>
-<li><a title="pyspecan.view.tkGUI.base.GUIBlitPlot" href="base.html#pyspecan.view.tkGUI.base.GUIBlitPlot">GUIBlitPlot</a></li>
-<li><a title="pyspecan.view.tkGUI.base.GUIPlot" href="base.html#pyspecan.view.tkGUI.base.GUIPlot">GUIPlot</a></li>
-</ul>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pyspecan.view.tkGUI.base.GUIFreqPlot" href="base.html#pyspecan.view.tkGUI.base.GUIFreqPlot">GUIFreqPlot</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pyspecan.view.tkGUI.base.GUIFreqPlot.draw_settings" href="base.html#pyspecan.view.tkGUI.base.GUIPlot.draw_settings">draw_settings</a></code></li>
-</ul>
-</li>
-</ul>
+<div class="desc"></div>
 </dd>
 </dl>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
 </section>
 </article>
 <nav id="sidebar">
@@ -105,14 +60,12 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.view.tkGUI" href="index.html">pyspecan.view.tkGUI</a></code></li>
+<li><code><a title="pyspecan.backend.tk" href="../index.html">pyspecan.backend.tk</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-classes">Classes</a></h3>
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li>
-<h4><code><a title="pyspecan.view.tkGUI.rt.ViewRT" href="#pyspecan.view.tkGUI.rt.ViewRT">ViewRT</a></code></h4>
-</li>
+<li><code><a title="pyspecan.backend.tk.widgets.scale" href="scale.html">pyspecan.backend.tk.widgets.scale</a></code></li>
 </ul>
 </li>
 </ul>

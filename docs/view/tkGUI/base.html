@@ -94,18 +94,18 @@ el.replaceWith(d);
     def __init__(self, view, root, *args, **kwargs):
         super().__init__(view, root, *args, **kwargs)
 
-        self.lbl_lo = tk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = tk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
 
     def draw_settings(self, parent, row=0):
         var_scale = tk.StringVar(self.fr_sets)
-        ent_scale = tk.Entry(self.fr_sets, textvariable=var_scale, width=10)
+        ent_scale = ttk.Entry(self.fr_sets, textvariable=var_scale, width=10)
 
         var_ref_level = tk.StringVar(self.fr_sets)
-        ent_ref_level = tk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
+        ent_ref_level = ttk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
 
         var_vbw = tk.StringVar(self.fr_sets)
-        ent_vbw = tk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
+        ent_vbw = ttk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
 
         var_window = tk.StringVar(self.fr_sets)
         cb_window = ttk.Combobox(self.fr_sets, textvariable=var_window, width=9)
@@ -119,16 +119,16 @@ el.replaceWith(d);
         self.wg_sets[&#34;window&#34;] = cb_window
         self.settings[&#34;window&#34;] = var_window
 
-        tk.Label(parent, text=&#34;Scale/Div&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;Scale/Div&#34;).grid(row=row, column=0)
         ent_scale.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text=&#34;Ref Level&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;Ref Level&#34;).grid(row=row, column=0)
         ent_ref_level.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text=&#34;VBW&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;VBW&#34;).grid(row=row, column=0)
         ent_vbw.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text=&#34;Window&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;Window&#34;).grid(row=row, column=0)
         cb_window.grid(row=row, column=1)
         row += 1
         return row</code></pre>
@@ -158,18 +158,18 @@ el.replaceWith(d);
     def __init__(self, view, root, *args, **kwargs):
         super().__init__(view, root, *args, **kwargs)
 
-        self.lbl_lo = tk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = tk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
 
     def draw_settings(self, parent, row=0):
         var_scale = tk.StringVar(self.fr_sets)
-        ent_scale = tk.Entry(self.fr_sets, textvariable=var_scale, width=10)
+        ent_scale = ttk.Entry(self.fr_sets, textvariable=var_scale, width=10)
 
         var_ref_level = tk.StringVar(self.fr_sets)
-        ent_ref_level = tk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
+        ent_ref_level = ttk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
 
         var_vbw = tk.StringVar(self.fr_sets)
-        ent_vbw = tk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
+        ent_vbw = ttk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
 
         var_window = tk.StringVar(self.fr_sets)
         cb_window = ttk.Combobox(self.fr_sets, textvariable=var_window, width=9)
@@ -183,16 +183,16 @@ el.replaceWith(d);
         self.wg_sets[&#34;window&#34;] = cb_window
         self.settings[&#34;window&#34;] = var_window
 
-        tk.Label(parent, text=&#34;Scale/Div&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;Scale/Div&#34;).grid(row=row, column=0)
         ent_scale.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text=&#34;Ref Level&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;Ref Level&#34;).grid(row=row, column=0)
         ent_ref_level.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text=&#34;VBW&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;VBW&#34;).grid(row=row, column=0)
         ent_vbw.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text=&#34;Window&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;Window&#34;).grid(row=row, column=0)
         cb_window.grid(row=row, column=1)
         row += 1
         return row</code></pre>
@@ -211,18 +211,18 @@ el.replaceWith(d);
     def __init__(self, view, root, *args, **kwargs):
         super().__init__(view, root, *args, **kwargs)
 
-        self.lbl_lo = tk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = tk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
 
     def draw_settings(self, parent, row=0):
         var_scale = tk.StringVar(self.fr_sets)
-        ent_scale = tk.Entry(self.fr_sets, textvariable=var_scale, width=10)
+        ent_scale = ttk.Entry(self.fr_sets, textvariable=var_scale, width=10)
 
         var_ref_level = tk.StringVar(self.fr_sets)
-        ent_ref_level = tk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
+        ent_ref_level = ttk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
 
         var_vbw = tk.StringVar(self.fr_sets)
-        ent_vbw = tk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
+        ent_vbw = ttk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
 
         var_window = tk.StringVar(self.fr_sets)
         cb_window = ttk.Combobox(self.fr_sets, textvariable=var_window, width=9)
@@ -236,16 +236,16 @@ el.replaceWith(d);
         self.wg_sets[&#34;window&#34;] = cb_window
         self.settings[&#34;window&#34;] = var_window
 
-        tk.Label(parent, text=&#34;Scale/Div&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;Scale/Div&#34;).grid(row=row, column=0)
         ent_scale.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text=&#34;Ref Level&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;Ref Level&#34;).grid(row=row, column=0)
         ent_ref_level.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text=&#34;VBW&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;VBW&#34;).grid(row=row, column=0)
         ent_vbw.grid(row=row, column=1)
         row += 1
-        tk.Label(parent, text=&#34;Window&#34;).grid(row=row, column=0)
+        ttk.Label(parent, text=&#34;Window&#34;).grid(row=row, column=0)
         cb_window.grid(row=row, column=1)
         row += 1
         return row</code></pre>
@@ -264,7 +264,7 @@ el.replaceWith(d);
 </dd>
 <dt id="pyspecan.view.tkGUI.base.GUIPlot"><code class="flex name class">
 <span>class <span class="ident">GUIPlot</span></span>
-<span>(</span><span>view, root, plotter=pyspecan.plot.mpl.base.Plot, *args, **kwargs)</span>
+<span>(</span><span>view, root, plotter=pyspecan.backend.mpl.base.Plot, *args, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -286,15 +286,15 @@ el.replaceWith(d);
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -303,9 +303,8 @@ el.replaceWith(d);
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -372,15 +371,15 @@ el.replaceWith(d);
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -389,9 +388,8 @@ el.replaceWith(d);
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -465,15 +463,15 @@ def fig(self):
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -482,9 +480,8 @@ def fig(self):
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -546,15 +543,15 @@ def fig(self):
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -563,9 +560,8 @@ def fig(self):
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -627,15 +623,15 @@ def fig(self):
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -644,9 +640,8 @@ def fig(self):
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -708,15 +703,15 @@ def fig(self):
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -725,9 +720,8 @@ def fig(self):
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -789,15 +783,15 @@ def fig(self):
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -806,9 +800,8 @@ def fig(self):
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -870,15 +863,15 @@ def fig(self):
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -887,9 +880,8 @@ def fig(self):
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -951,15 +943,15 @@ def fig(self):
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -968,9 +960,8 @@ def fig(self):
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -1032,15 +1023,15 @@ def fig(self):
         self.settings = {}
         self.ready = False
 
-        self.fr_main = tk.Frame(root, highlightbackground=&#34;black&#34;,highlightthickness=1)
+        self.fr_main = ttk.Frame(root)
 
-        self.fr_sets = tk.Frame(self.fr_main)
+        self.fr_sets = ttk.Frame(self.fr_main)
         self.wg_sets = {}
         self.draw_settings(self.fr_sets)
         self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
         self.fr_sets.pack_forget()
 
-        self.fr_canv = tk.Frame(self.fr_main, bg=&#34;white&#34;)
+        self.fr_canv = ttk.Frame(self.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = plotter(fig)
@@ -1049,9 +1040,8 @@ def fig(self):
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
 
-        self.btn_toggle = tk.Button(self.fr_canv, text=&#34;Settings&#34;,
-                font=(&#34;Arial&#34;, 8), bg=&#34;white&#34;, fg=&#34;black&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=20)
+        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 

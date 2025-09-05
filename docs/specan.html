@@ -74,7 +74,7 @@ el.replaceWith(d);
         self.model = Model(path, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v(self)
+        self.view = v()
 
         ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
         self.controller = ctrl(self.model, self.view)
@@ -109,7 +109,7 @@ el.replaceWith(d);
         self.model = Model(path, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v(self)
+        self.view = v()
 
         ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
         self.controller = ctrl(self.model, self.view)
@@ -143,7 +143,7 @@ el.replaceWith(d);
         self.model = Model(path, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v(self)
+        self.view = v()
 
         ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
         self.controller = ctrl(self.model, self.view)
@@ -177,7 +177,7 @@ el.replaceWith(d);
         self.model = Model(path, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v(self)
+        self.view = v()
 
         ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
         self.controller = ctrl(self.model, self.view)

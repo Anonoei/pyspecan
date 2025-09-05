@@ -49,7 +49,6 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.view.cui.View"><code class="flex name class">
 <span>class <span class="ident">View</span></span>
-<span>(</span><span>view)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -58,8 +57,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class View(_View):
     &#34;&#34;&#34;Parent CUI view class&#34;&#34;&#34;
-    def __init__(self, view):
-        super().__init__(view)
+    def __init__(self):
         self.running = True
 
     def mainloop(self):

@@ -60,14 +60,16 @@ el.replaceWith(d);
             file = filedialog.askopenfilename(title=title)
         else:
             file = filedialog.askopenfilename(title=title, filetypes=filetypes)
+        if file == &#34;&#34; or file == ():
+            if strict:
+                continue
+            return None
         file = pathlib.Path(file)
-        if strict:
-            if file.exists():
-                return file
-        else:
-            if file == &#34;&#34;:
-                return None
-            return file</code></pre>
+        if not file.exists():
+            if strict:
+                continue
+            return None
+        return file</code></pre>
 </details>
 <div class="desc"><p>Prompts for file selection</p></div>
 </dd>

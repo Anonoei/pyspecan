@@ -65,8 +65,8 @@ el.replaceWith(d);
         self._stop = False
         self.time_show = 50.0
 
-        self.view.sld_samp.config(from_=0, to=self.model.reader.max_samp, resolution=self.model.block_size)
-        self.view.sld_samp.config(command=self.set_samp)
+        self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
+        self.view.sld_samp.scale.config(command=self.set_samp)
 
         self.view.ent_time.bind(&#34;&lt;Return&gt;&#34;, self.set_time)
         self.view.var_time.set(str(self.time_show))
@@ -83,7 +83,13 @@ el.replaceWith(d);
         self.view.ent_fs.bind(&#34;&lt;Return&gt;&#34;, self.set_fs)
         self.view.ent_cf.bind(&#34;&lt;Return&gt;&#34;, self.set_cf)
 
+        self.view.cb_style.config(values=[k for k in theme_tk.theme.keys()])
+        self.view.cb_style.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_theme)
+
         self.thread: threading.Thread = None # type: ignore
+
+        self.view.var_style.set([k for k in theme_tk.theme.keys()][0])
+        self.set_theme()
 
         if config.MODE == Mode.SWEPT:
             self.plot = ControllerSwept(self.view.plot)
@@ -93,6 +99,8 @@ el.replaceWith(d);
 
     def start(self):
         if self.running:
+            return
+        if self.model.reader.path is None:
             return
         self.running = True
         self.view.btn_start.config(state=tk.DISABLED)
@@ -207,6 +215,7 @@ el.replaceWith(d);
             path = self.model.reader.path
         fmt = self.view.var_file_fmt.get()
         self.model.set_path(path, fmt)
+        self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
         self.draw_tb()
         self.draw_ctrl()
 
@@ -222,9 +231,11 @@ el.replaceWith(d);
         try:
             fs = float(fs)
             self.model.Fs = fs
+            self.draw_tb()
         except ValueError:
             pass
         self.view.var_fs.set(str(self.model.Fs))
+        self.draw_ctrl()
 
     def set_cf(self, *args, **kwargs):
         cf = self.view.var_cf.get()
@@ -233,7 +244,12 @@ el.replaceWith(d);
             self.model.cf = cf
         except ValueError:
             pass
-        self.view.var_cf.set(str(self.model.cf))</code></pre>
+        self.view.var_cf.set(str(self.model.cf))
+        self.draw_ctrl()
+
+    def set_theme(self, *args, **kwargs):
+        style = self.view.var_style.get()
+        theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]</code></pre>
 </details>
 <div class="desc"><p>tkGUI Controller</p></div>
 <h3>Ancestors</h3>
@@ -383,7 +399,8 @@ el.replaceWith(d);
         self.model.cf = cf
     except ValueError:
         pass
-    self.view.var_cf.set(str(self.model.cf))</code></pre>
+    self.view.var_cf.set(str(self.model.cf))
+    self.draw_ctrl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -417,9 +434,11 @@ el.replaceWith(d);
     try:
         fs = float(fs)
         self.model.Fs = fs
+        self.draw_tb()
     except ValueError:
         pass
-    self.view.var_fs.set(str(self.model.Fs))</code></pre>
+    self.view.var_fs.set(str(self.model.Fs))
+    self.draw_ctrl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -437,6 +456,7 @@ el.replaceWith(d);
         path = self.model.reader.path
     fmt = self.view.var_file_fmt.get()
     self.model.set_path(path, fmt)
+    self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
     self.draw_tb()
     self.draw_ctrl()</code></pre>
 </details>
@@ -456,6 +476,20 @@ el.replaceWith(d);
     self.model.reader.cur_samp = samp
     self.draw_tb()
     # print(samp)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tk_gui.Controller.set_theme"><code class="name flex">
+<span>def <span class="ident">set_theme</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_theme(self, *args, **kwargs):
+    style = self.view.var_style.get()
+    theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -488,6 +522,8 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def start(self):
     if self.running:
+        return
+    if self.model.reader.path is None:
         return
     self.running = True
     self.view.btn_start.config(state=tk.DISABLED)
@@ -548,6 +584,7 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tk_gui.Controller.set_fs" href="#pyspecan.controller.tk_gui.Controller.set_fs">set_fs</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.set_path" href="#pyspecan.controller.tk_gui.Controller.set_path">set_path</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.set_samp" href="#pyspecan.controller.tk_gui.Controller.set_samp">set_samp</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.set_theme" href="#pyspecan.controller.tk_gui.Controller.set_theme">set_theme</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.set_time" href="#pyspecan.controller.tk_gui.Controller.set_time">set_time</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.start" href="#pyspecan.controller.tk_gui.Controller.start">start</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.stop" href="#pyspecan.controller.tk_gui.Controller.stop">stop</a></code></li>

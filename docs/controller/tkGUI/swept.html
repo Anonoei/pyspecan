@@ -160,20 +160,26 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
             self.psd_max = None
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
             self.psd_min = None
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def plot(self, freq, psd):
@@ -354,20 +360,26 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
             self.psd_max = None
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
             self.psd_min = None
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def plot(self, freq, psd):
@@ -542,20 +554,26 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
             self.psd_max = None
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
             self.psd_min = None
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def plot(self, freq, psd):
@@ -730,20 +748,26 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
             self.psd_max = None
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
             self.psd_min = None
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def plot(self, freq, psd):
@@ -918,20 +942,26 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
             self.psd_max = None
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
             self.psd_min = None
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def plot(self, freq, psd):
@@ -1106,20 +1136,26 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
             self.psd_max = None
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
             self.psd_min = None
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def plot(self, freq, psd):
@@ -1294,20 +1330,26 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
             self.psd_max = None
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        if art is None:
+            return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
             self.psd_min = None
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(False)
+            art.set_visible(False)
         else:
-            self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(True)
+            art.set_visible(True)
         self.update()
 
     def plot(self, freq, psd):
@@ -1399,11 +1441,14 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def toggle_psd_max(self):
     &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+    art = self.view.plotter.art(0, &#34;psd_max&#34;)
+    if art is None:
+        return
     if self.view.settings[&#34;show_max&#34;].get() == 0:
         self.psd_min = None
-        self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(False)
+        art.set_visible(False)
     else:
-        self.view.plotter.art(0, &#34;psd_max&#34;).set_visible(True)
+        art.set_visible(True)
     self.update()</code></pre>
 </details>
 <div class="desc"><p>Toggle PSD max-hold visibility</p></div>
@@ -1418,11 +1463,14 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def toggle_psd_min(self):
     &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+    art = self.view.plotter.art(0, &#34;psd_min&#34;)
+    if art is None:
+        return
     if self.view.settings[&#34;show_min&#34;].get() == 0:
         self.psd_max = None
-        self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(False)
+        art.set_visible(False)
     else:
-        self.view.plotter.art(0, &#34;psd_min&#34;).set_visible(True)
+        art.set_visible(True)
     self.update()</code></pre>
 </details>
 <div class="desc"><p>Toggle PSD min-hold visibility</p></div>
