@@ -48,7 +48,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.controller.tkGUI.swept.ControllerSwept"><code class="flex name class">
 <span>class <span class="ident">ControllerSwept</span></span>
-<span>(</span><span>view)</span>
+<span>(</span><span>view, ref_level=0.0, scale=10.0, vbw=10.0, window='blackman')</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -62,9 +62,9 @@ el.replaceWith(d);
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, 10.0, 10.0, 0.0)
-        self.view: GUIFreqPlot = self.view # type: ignore
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
+        super().__init__(view, ref_level, scale, vbw, window)
+        self.view: ViewSwept = self.view # type: ignore
         self.show_psd = 1
         self.show_spg = 0
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -76,22 +76,22 @@ el.replaceWith(d);
         self.psd_min = None
         self.psd_max = None
         self.__init_psd()
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.plotter.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
-        # self.view.plotter.ax(1).set_autoscale_on(False)
-        self.view.plotter.ax(1).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(1).locator_params(axis=&#34;y&#34;, nbins=10)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
         self.set_y()
         self._toggle_show()
-        self.view.plotter.canvas.draw()
+        self.update()
 
     def reset(self):
         self.psd_min = None
@@ -99,28 +99,33 @@ el.replaceWith(d);
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
 
-    def update(self):
-        self.view.plotter.update()
-
     def _toggle_show(self):
         if self.show_psd == 1 and self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_in_layout(True)
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            # self.view.plotter.ax(0).set_in_layout(True)
+            # self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[0])
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[1])
         elif self.show_psd == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
-            self.view.plotter.ax(1).set_visible(False)
-            self.view.plotter.ax(1).set_position((0,0,0,0))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(False)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;spg&#34;).ax.set_position((0,0,0,0))
+            art = self.view.plotter.ax(&#34;spg&#34;).art(&#34;spg&#34;)
+            if art is not None:
+                art.set_data([[]]) # clear SPG to be safe
         elif self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(False)
-            self.view.plotter.ax(0).set_position((0,0,0,0))
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(False)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            self.view.ax(&#34;psd&#34;).ax.set_position((0,0,0,0))
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
         # print(f&#34;_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}&#34;)
-        self.view.plotter.fig.canvas.draw()
-        self.view.plotter.fig.canvas.flush_events()
+        self.view.gs.update()
+        self.view.fig.canvas.draw()
+        self.view.fig.canvas.flush_events()
 
     def toggle_show_psd(self, *args, **kwargs):
         &#34;&#34;&#34;Toggle PSD plot visibility&#34;&#34;&#34;
@@ -134,10 +139,22 @@ el.replaceWith(d);
         self.view.settings[&#34;show_spg&#34;].set(self.show_spg)
         self._toggle_show()
 
+    def update_f(self, f):
+        fmin, fmax, fnum = f
+        psd_tick = np.linspace(fmin, fmax, 5)
+        psd_text = [f&#34;{f:.3f}&#34; for f in psd_tick]
+        self.view.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
+        self.view.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
+
+        spg_tick = np.linspace(0, fnum+1, 5)
+        spg_text = psd_text
+        self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
+        self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-        self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
-        self.view.plotter.set_ylim(1, self.max_count, 0)
+        self.view.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)
+        self.view.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)
 
     def set_scale(self, *args, **kwargs):
         prev = float(self.scale)
@@ -160,7 +177,7 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
@@ -172,7 +189,7 @@ el.replaceWith(d);
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
@@ -183,49 +200,45 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = vbw.vbw(psd, self.vbw)
+        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
             self._plot_spectrogram(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_psd(self, freq, psd):
-        self.view.plotter.ax(0).set_title(&#34;PSD&#34;)
+        self.view.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
 
         if self.view.settings[&#34;show_max&#34;].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))
             self.psd_max[psd &gt; self.psd_max] = psd[psd &gt; self.psd_max]
-            line_max = self.view.plot(0, freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
+            line_max = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
         else:
             line_max = None
         if self.view.settings[&#34;show_min&#34;].get() == 1:
             if self.psd_min is None:
                 self.psd_min = np.repeat(np.inf, len(psd))
             self.psd_min[psd &lt; self.psd_min] = psd[psd &lt; self.psd_min]
-            line_min = self.view.plot(0, freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
+            line_min = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
         else:
             line_min = None
-        line_psd = self.view.plot(0, freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
-
-        if not self.view.plotter.ax(0).get_xlim() == (freq[0], freq[-1]):
-            self.view.plotter.set_xlim(0, freq[0], freq[-1])
-        return (line_psd, line_max, line_min)
+        line_psd = self.view.ax(&#34;psd&#34;).plot(freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
 
     def _plot_spectrogram(self, freq, psd):
-        self.view.plotter.ax(1).set_title(&#34;Spectrogram&#34;)
+        self.view.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
-        im = self.view.imshow(
-            1, self.psds, name=&#34;spectrogram&#34;,
+        im = self.view.ax(&#34;spg&#34;).imshow(
+            self.psds, name=&#34;spg&#34;,
             vmin=self.y_btm, vmax=self.y_top,
             aspect=&#34;auto&#34;, origin=&#34;upper&#34;,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
-        return im
 
     def __init_psd(self):
         self.view.settings[&#34;show_min&#34;].set(1)
@@ -233,10 +246,10 @@ el.replaceWith(d);
         self.view.settings[&#34;show_max&#34;].set(1)
         self.view.wg_sets[&#34;show_max&#34;].configure(command=self.toggle_psd_max)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
 
     def __init_spectrogram(self):
         self.view.settings[&#34;max_count&#34;].set(str(self.max_count))</code></pre>
@@ -262,9 +275,9 @@ el.replaceWith(d);
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, 10.0, 10.0, 0.0)
-        self.view: GUIFreqPlot = self.view # type: ignore
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
+        super().__init__(view, ref_level, scale, vbw, window)
+        self.view: ViewSwept = self.view # type: ignore
         self.show_psd = 1
         self.show_spg = 0
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -276,22 +289,22 @@ el.replaceWith(d);
         self.psd_min = None
         self.psd_max = None
         self.__init_psd()
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.plotter.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
-        # self.view.plotter.ax(1).set_autoscale_on(False)
-        self.view.plotter.ax(1).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(1).locator_params(axis=&#34;y&#34;, nbins=10)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
         self.set_y()
         self._toggle_show()
-        self.view.plotter.canvas.draw()
+        self.update()
 
     def reset(self):
         self.psd_min = None
@@ -299,28 +312,33 @@ el.replaceWith(d);
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
 
-    def update(self):
-        self.view.plotter.update()
-
     def _toggle_show(self):
         if self.show_psd == 1 and self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_in_layout(True)
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            # self.view.plotter.ax(0).set_in_layout(True)
+            # self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[0])
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[1])
         elif self.show_psd == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
-            self.view.plotter.ax(1).set_visible(False)
-            self.view.plotter.ax(1).set_position((0,0,0,0))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(False)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;spg&#34;).ax.set_position((0,0,0,0))
+            art = self.view.plotter.ax(&#34;spg&#34;).art(&#34;spg&#34;)
+            if art is not None:
+                art.set_data([[]]) # clear SPG to be safe
         elif self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(False)
-            self.view.plotter.ax(0).set_position((0,0,0,0))
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(False)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            self.view.ax(&#34;psd&#34;).ax.set_position((0,0,0,0))
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
         # print(f&#34;_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}&#34;)
-        self.view.plotter.fig.canvas.draw()
-        self.view.plotter.fig.canvas.flush_events()
+        self.view.gs.update()
+        self.view.fig.canvas.draw()
+        self.view.fig.canvas.flush_events()
 
     def toggle_show_psd(self, *args, **kwargs):
         &#34;&#34;&#34;Toggle PSD plot visibility&#34;&#34;&#34;
@@ -334,10 +352,22 @@ el.replaceWith(d);
         self.view.settings[&#34;show_spg&#34;].set(self.show_spg)
         self._toggle_show()
 
+    def update_f(self, f):
+        fmin, fmax, fnum = f
+        psd_tick = np.linspace(fmin, fmax, 5)
+        psd_text = [f&#34;{f:.3f}&#34; for f in psd_tick]
+        self.view.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
+        self.view.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
+
+        spg_tick = np.linspace(0, fnum+1, 5)
+        spg_text = psd_text
+        self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
+        self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-        self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
-        self.view.plotter.set_ylim(1, self.max_count, 0)
+        self.view.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)
+        self.view.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)
 
     def set_scale(self, *args, **kwargs):
         prev = float(self.scale)
@@ -360,7 +390,7 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
@@ -372,7 +402,7 @@ el.replaceWith(d);
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
@@ -383,49 +413,45 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = vbw.vbw(psd, self.vbw)
+        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
             self._plot_spectrogram(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_psd(self, freq, psd):
-        self.view.plotter.ax(0).set_title(&#34;PSD&#34;)
+        self.view.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
 
         if self.view.settings[&#34;show_max&#34;].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))
             self.psd_max[psd &gt; self.psd_max] = psd[psd &gt; self.psd_max]
-            line_max = self.view.plot(0, freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
+            line_max = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
         else:
             line_max = None
         if self.view.settings[&#34;show_min&#34;].get() == 1:
             if self.psd_min is None:
                 self.psd_min = np.repeat(np.inf, len(psd))
             self.psd_min[psd &lt; self.psd_min] = psd[psd &lt; self.psd_min]
-            line_min = self.view.plot(0, freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
+            line_min = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
         else:
             line_min = None
-        line_psd = self.view.plot(0, freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
-
-        if not self.view.plotter.ax(0).get_xlim() == (freq[0], freq[-1]):
-            self.view.plotter.set_xlim(0, freq[0], freq[-1])
-        return (line_psd, line_max, line_min)
+        line_psd = self.view.ax(&#34;psd&#34;).plot(freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
 
     def _plot_spectrogram(self, freq, psd):
-        self.view.plotter.ax(1).set_title(&#34;Spectrogram&#34;)
+        self.view.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
-        im = self.view.imshow(
-            1, self.psds, name=&#34;spectrogram&#34;,
+        im = self.view.ax(&#34;spg&#34;).imshow(
+            self.psds, name=&#34;spg&#34;,
             vmin=self.y_btm, vmax=self.y_top,
             aspect=&#34;auto&#34;, origin=&#34;upper&#34;,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
-        return im
 
     def __init_psd(self):
         self.view.settings[&#34;show_min&#34;].set(1)
@@ -433,10 +459,10 @@ el.replaceWith(d);
         self.view.settings[&#34;show_max&#34;].set(1)
         self.view.wg_sets[&#34;show_max&#34;].configure(command=self.toggle_psd_max)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
 
     def __init_spectrogram(self):
         self.view.settings[&#34;max_count&#34;].set(str(self.max_count))</code></pre>
@@ -456,9 +482,9 @@ el.replaceWith(d);
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, 10.0, 10.0, 0.0)
-        self.view: GUIFreqPlot = self.view # type: ignore
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
+        super().__init__(view, ref_level, scale, vbw, window)
+        self.view: ViewSwept = self.view # type: ignore
         self.show_psd = 1
         self.show_spg = 0
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -470,22 +496,22 @@ el.replaceWith(d);
         self.psd_min = None
         self.psd_max = None
         self.__init_psd()
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.plotter.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
-        # self.view.plotter.ax(1).set_autoscale_on(False)
-        self.view.plotter.ax(1).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(1).locator_params(axis=&#34;y&#34;, nbins=10)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
         self.set_y()
         self._toggle_show()
-        self.view.plotter.canvas.draw()
+        self.update()
 
     def reset(self):
         self.psd_min = None
@@ -493,28 +519,33 @@ el.replaceWith(d);
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
 
-    def update(self):
-        self.view.plotter.update()
-
     def _toggle_show(self):
         if self.show_psd == 1 and self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_in_layout(True)
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            # self.view.plotter.ax(0).set_in_layout(True)
+            # self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[0])
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[1])
         elif self.show_psd == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
-            self.view.plotter.ax(1).set_visible(False)
-            self.view.plotter.ax(1).set_position((0,0,0,0))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(False)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;spg&#34;).ax.set_position((0,0,0,0))
+            art = self.view.plotter.ax(&#34;spg&#34;).art(&#34;spg&#34;)
+            if art is not None:
+                art.set_data([[]]) # clear SPG to be safe
         elif self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(False)
-            self.view.plotter.ax(0).set_position((0,0,0,0))
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(False)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            self.view.ax(&#34;psd&#34;).ax.set_position((0,0,0,0))
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
         # print(f&#34;_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}&#34;)
-        self.view.plotter.fig.canvas.draw()
-        self.view.plotter.fig.canvas.flush_events()
+        self.view.gs.update()
+        self.view.fig.canvas.draw()
+        self.view.fig.canvas.flush_events()
 
     def toggle_show_psd(self, *args, **kwargs):
         &#34;&#34;&#34;Toggle PSD plot visibility&#34;&#34;&#34;
@@ -528,10 +559,22 @@ el.replaceWith(d);
         self.view.settings[&#34;show_spg&#34;].set(self.show_spg)
         self._toggle_show()
 
+    def update_f(self, f):
+        fmin, fmax, fnum = f
+        psd_tick = np.linspace(fmin, fmax, 5)
+        psd_text = [f&#34;{f:.3f}&#34; for f in psd_tick]
+        self.view.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
+        self.view.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
+
+        spg_tick = np.linspace(0, fnum+1, 5)
+        spg_text = psd_text
+        self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
+        self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-        self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
-        self.view.plotter.set_ylim(1, self.max_count, 0)
+        self.view.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)
+        self.view.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)
 
     def set_scale(self, *args, **kwargs):
         prev = float(self.scale)
@@ -554,7 +597,7 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
@@ -566,7 +609,7 @@ el.replaceWith(d);
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
@@ -577,49 +620,45 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = vbw.vbw(psd, self.vbw)
+        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
             self._plot_spectrogram(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_psd(self, freq, psd):
-        self.view.plotter.ax(0).set_title(&#34;PSD&#34;)
+        self.view.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
 
         if self.view.settings[&#34;show_max&#34;].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))
             self.psd_max[psd &gt; self.psd_max] = psd[psd &gt; self.psd_max]
-            line_max = self.view.plot(0, freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
+            line_max = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
         else:
             line_max = None
         if self.view.settings[&#34;show_min&#34;].get() == 1:
             if self.psd_min is None:
                 self.psd_min = np.repeat(np.inf, len(psd))
             self.psd_min[psd &lt; self.psd_min] = psd[psd &lt; self.psd_min]
-            line_min = self.view.plot(0, freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
+            line_min = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
         else:
             line_min = None
-        line_psd = self.view.plot(0, freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
-
-        if not self.view.plotter.ax(0).get_xlim() == (freq[0], freq[-1]):
-            self.view.plotter.set_xlim(0, freq[0], freq[-1])
-        return (line_psd, line_max, line_min)
+        line_psd = self.view.ax(&#34;psd&#34;).plot(freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
 
     def _plot_spectrogram(self, freq, psd):
-        self.view.plotter.ax(1).set_title(&#34;Spectrogram&#34;)
+        self.view.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
-        im = self.view.imshow(
-            1, self.psds, name=&#34;spectrogram&#34;,
+        im = self.view.ax(&#34;spg&#34;).imshow(
+            self.psds, name=&#34;spg&#34;,
             vmin=self.y_btm, vmax=self.y_top,
             aspect=&#34;auto&#34;, origin=&#34;upper&#34;,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
-        return im
 
     def __init_psd(self):
         self.view.settings[&#34;show_min&#34;].set(1)
@@ -627,10 +666,10 @@ el.replaceWith(d);
         self.view.settings[&#34;show_max&#34;].set(1)
         self.view.wg_sets[&#34;show_max&#34;].configure(command=self.toggle_psd_max)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
 
     def __init_spectrogram(self):
         self.view.settings[&#34;max_count&#34;].set(str(self.max_count))</code></pre>
@@ -650,9 +689,9 @@ el.replaceWith(d);
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, 10.0, 10.0, 0.0)
-        self.view: GUIFreqPlot = self.view # type: ignore
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
+        super().__init__(view, ref_level, scale, vbw, window)
+        self.view: ViewSwept = self.view # type: ignore
         self.show_psd = 1
         self.show_spg = 0
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -664,22 +703,22 @@ el.replaceWith(d);
         self.psd_min = None
         self.psd_max = None
         self.__init_psd()
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.plotter.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
-        # self.view.plotter.ax(1).set_autoscale_on(False)
-        self.view.plotter.ax(1).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(1).locator_params(axis=&#34;y&#34;, nbins=10)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
         self.set_y()
         self._toggle_show()
-        self.view.plotter.canvas.draw()
+        self.update()
 
     def reset(self):
         self.psd_min = None
@@ -687,28 +726,33 @@ el.replaceWith(d);
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
 
-    def update(self):
-        self.view.plotter.update()
-
     def _toggle_show(self):
         if self.show_psd == 1 and self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_in_layout(True)
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            # self.view.plotter.ax(0).set_in_layout(True)
+            # self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[0])
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[1])
         elif self.show_psd == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
-            self.view.plotter.ax(1).set_visible(False)
-            self.view.plotter.ax(1).set_position((0,0,0,0))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(False)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;spg&#34;).ax.set_position((0,0,0,0))
+            art = self.view.plotter.ax(&#34;spg&#34;).art(&#34;spg&#34;)
+            if art is not None:
+                art.set_data([[]]) # clear SPG to be safe
         elif self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(False)
-            self.view.plotter.ax(0).set_position((0,0,0,0))
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(False)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            self.view.ax(&#34;psd&#34;).ax.set_position((0,0,0,0))
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
         # print(f&#34;_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}&#34;)
-        self.view.plotter.fig.canvas.draw()
-        self.view.plotter.fig.canvas.flush_events()
+        self.view.gs.update()
+        self.view.fig.canvas.draw()
+        self.view.fig.canvas.flush_events()
 
     def toggle_show_psd(self, *args, **kwargs):
         &#34;&#34;&#34;Toggle PSD plot visibility&#34;&#34;&#34;
@@ -722,10 +766,22 @@ el.replaceWith(d);
         self.view.settings[&#34;show_spg&#34;].set(self.show_spg)
         self._toggle_show()
 
+    def update_f(self, f):
+        fmin, fmax, fnum = f
+        psd_tick = np.linspace(fmin, fmax, 5)
+        psd_text = [f&#34;{f:.3f}&#34; for f in psd_tick]
+        self.view.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
+        self.view.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
+
+        spg_tick = np.linspace(0, fnum+1, 5)
+        spg_text = psd_text
+        self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
+        self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-        self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
-        self.view.plotter.set_ylim(1, self.max_count, 0)
+        self.view.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)
+        self.view.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)
 
     def set_scale(self, *args, **kwargs):
         prev = float(self.scale)
@@ -748,7 +804,7 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
@@ -760,7 +816,7 @@ el.replaceWith(d);
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
@@ -771,49 +827,45 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = vbw.vbw(psd, self.vbw)
+        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
             self._plot_spectrogram(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_psd(self, freq, psd):
-        self.view.plotter.ax(0).set_title(&#34;PSD&#34;)
+        self.view.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
 
         if self.view.settings[&#34;show_max&#34;].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))
             self.psd_max[psd &gt; self.psd_max] = psd[psd &gt; self.psd_max]
-            line_max = self.view.plot(0, freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
+            line_max = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
         else:
             line_max = None
         if self.view.settings[&#34;show_min&#34;].get() == 1:
             if self.psd_min is None:
                 self.psd_min = np.repeat(np.inf, len(psd))
             self.psd_min[psd &lt; self.psd_min] = psd[psd &lt; self.psd_min]
-            line_min = self.view.plot(0, freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
+            line_min = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
         else:
             line_min = None
-        line_psd = self.view.plot(0, freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
-
-        if not self.view.plotter.ax(0).get_xlim() == (freq[0], freq[-1]):
-            self.view.plotter.set_xlim(0, freq[0], freq[-1])
-        return (line_psd, line_max, line_min)
+        line_psd = self.view.ax(&#34;psd&#34;).plot(freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
 
     def _plot_spectrogram(self, freq, psd):
-        self.view.plotter.ax(1).set_title(&#34;Spectrogram&#34;)
+        self.view.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
-        im = self.view.imshow(
-            1, self.psds, name=&#34;spectrogram&#34;,
+        im = self.view.ax(&#34;spg&#34;).imshow(
+            self.psds, name=&#34;spg&#34;,
             vmin=self.y_btm, vmax=self.y_top,
             aspect=&#34;auto&#34;, origin=&#34;upper&#34;,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
-        return im
 
     def __init_psd(self):
         self.view.settings[&#34;show_min&#34;].set(1)
@@ -821,10 +873,10 @@ el.replaceWith(d);
         self.view.settings[&#34;show_max&#34;].set(1)
         self.view.wg_sets[&#34;show_max&#34;].configure(command=self.toggle_psd_max)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
 
     def __init_spectrogram(self):
         self.view.settings[&#34;max_count&#34;].set(str(self.max_count))</code></pre>
@@ -844,9 +896,9 @@ el.replaceWith(d);
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, 10.0, 10.0, 0.0)
-        self.view: GUIFreqPlot = self.view # type: ignore
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
+        super().__init__(view, ref_level, scale, vbw, window)
+        self.view: ViewSwept = self.view # type: ignore
         self.show_psd = 1
         self.show_spg = 0
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -858,22 +910,22 @@ el.replaceWith(d);
         self.psd_min = None
         self.psd_max = None
         self.__init_psd()
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.plotter.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
-        # self.view.plotter.ax(1).set_autoscale_on(False)
-        self.view.plotter.ax(1).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(1).locator_params(axis=&#34;y&#34;, nbins=10)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
         self.set_y()
         self._toggle_show()
-        self.view.plotter.canvas.draw()
+        self.update()
 
     def reset(self):
         self.psd_min = None
@@ -881,28 +933,33 @@ el.replaceWith(d);
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
 
-    def update(self):
-        self.view.plotter.update()
-
     def _toggle_show(self):
         if self.show_psd == 1 and self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_in_layout(True)
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            # self.view.plotter.ax(0).set_in_layout(True)
+            # self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[0])
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[1])
         elif self.show_psd == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
-            self.view.plotter.ax(1).set_visible(False)
-            self.view.plotter.ax(1).set_position((0,0,0,0))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(False)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;spg&#34;).ax.set_position((0,0,0,0))
+            art = self.view.plotter.ax(&#34;spg&#34;).art(&#34;spg&#34;)
+            if art is not None:
+                art.set_data([[]]) # clear SPG to be safe
         elif self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(False)
-            self.view.plotter.ax(0).set_position((0,0,0,0))
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(False)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            self.view.ax(&#34;psd&#34;).ax.set_position((0,0,0,0))
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
         # print(f&#34;_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}&#34;)
-        self.view.plotter.fig.canvas.draw()
-        self.view.plotter.fig.canvas.flush_events()
+        self.view.gs.update()
+        self.view.fig.canvas.draw()
+        self.view.fig.canvas.flush_events()
 
     def toggle_show_psd(self, *args, **kwargs):
         &#34;&#34;&#34;Toggle PSD plot visibility&#34;&#34;&#34;
@@ -916,10 +973,22 @@ el.replaceWith(d);
         self.view.settings[&#34;show_spg&#34;].set(self.show_spg)
         self._toggle_show()
 
+    def update_f(self, f):
+        fmin, fmax, fnum = f
+        psd_tick = np.linspace(fmin, fmax, 5)
+        psd_text = [f&#34;{f:.3f}&#34; for f in psd_tick]
+        self.view.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
+        self.view.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
+
+        spg_tick = np.linspace(0, fnum+1, 5)
+        spg_text = psd_text
+        self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
+        self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-        self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
-        self.view.plotter.set_ylim(1, self.max_count, 0)
+        self.view.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)
+        self.view.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)
 
     def set_scale(self, *args, **kwargs):
         prev = float(self.scale)
@@ -942,7 +1011,7 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
@@ -954,7 +1023,7 @@ el.replaceWith(d);
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
@@ -965,49 +1034,45 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = vbw.vbw(psd, self.vbw)
+        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
             self._plot_spectrogram(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_psd(self, freq, psd):
-        self.view.plotter.ax(0).set_title(&#34;PSD&#34;)
+        self.view.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
 
         if self.view.settings[&#34;show_max&#34;].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))
             self.psd_max[psd &gt; self.psd_max] = psd[psd &gt; self.psd_max]
-            line_max = self.view.plot(0, freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
+            line_max = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
         else:
             line_max = None
         if self.view.settings[&#34;show_min&#34;].get() == 1:
             if self.psd_min is None:
                 self.psd_min = np.repeat(np.inf, len(psd))
             self.psd_min[psd &lt; self.psd_min] = psd[psd &lt; self.psd_min]
-            line_min = self.view.plot(0, freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
+            line_min = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
         else:
             line_min = None
-        line_psd = self.view.plot(0, freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
-
-        if not self.view.plotter.ax(0).get_xlim() == (freq[0], freq[-1]):
-            self.view.plotter.set_xlim(0, freq[0], freq[-1])
-        return (line_psd, line_max, line_min)
+        line_psd = self.view.ax(&#34;psd&#34;).plot(freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
 
     def _plot_spectrogram(self, freq, psd):
-        self.view.plotter.ax(1).set_title(&#34;Spectrogram&#34;)
+        self.view.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
-        im = self.view.imshow(
-            1, self.psds, name=&#34;spectrogram&#34;,
+        im = self.view.ax(&#34;spg&#34;).imshow(
+            self.psds, name=&#34;spg&#34;,
             vmin=self.y_btm, vmax=self.y_top,
             aspect=&#34;auto&#34;, origin=&#34;upper&#34;,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
-        return im
 
     def __init_psd(self):
         self.view.settings[&#34;show_min&#34;].set(1)
@@ -1015,10 +1080,10 @@ el.replaceWith(d);
         self.view.settings[&#34;show_max&#34;].set(1)
         self.view.wg_sets[&#34;show_max&#34;].configure(command=self.toggle_psd_max)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
 
     def __init_spectrogram(self):
         self.view.settings[&#34;max_count&#34;].set(str(self.max_count))</code></pre>
@@ -1038,9 +1103,9 @@ el.replaceWith(d);
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, 10.0, 10.0, 0.0)
-        self.view: GUIFreqPlot = self.view # type: ignore
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
+        super().__init__(view, ref_level, scale, vbw, window)
+        self.view: ViewSwept = self.view # type: ignore
         self.show_psd = 1
         self.show_spg = 0
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -1052,22 +1117,22 @@ el.replaceWith(d);
         self.psd_min = None
         self.psd_max = None
         self.__init_psd()
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.plotter.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
-        # self.view.plotter.ax(1).set_autoscale_on(False)
-        self.view.plotter.ax(1).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(1).locator_params(axis=&#34;y&#34;, nbins=10)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
         self.set_y()
         self._toggle_show()
-        self.view.plotter.canvas.draw()
+        self.update()
 
     def reset(self):
         self.psd_min = None
@@ -1075,28 +1140,33 @@ el.replaceWith(d);
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
 
-    def update(self):
-        self.view.plotter.update()
-
     def _toggle_show(self):
         if self.show_psd == 1 and self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_in_layout(True)
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            # self.view.plotter.ax(0).set_in_layout(True)
+            # self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[0])
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[1])
         elif self.show_psd == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
-            self.view.plotter.ax(1).set_visible(False)
-            self.view.plotter.ax(1).set_position((0,0,0,0))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(False)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;spg&#34;).ax.set_position((0,0,0,0))
+            art = self.view.plotter.ax(&#34;spg&#34;).art(&#34;spg&#34;)
+            if art is not None:
+                art.set_data([[]]) # clear SPG to be safe
         elif self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(False)
-            self.view.plotter.ax(0).set_position((0,0,0,0))
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(False)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            self.view.ax(&#34;psd&#34;).ax.set_position((0,0,0,0))
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
         # print(f&#34;_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}&#34;)
-        self.view.plotter.fig.canvas.draw()
-        self.view.plotter.fig.canvas.flush_events()
+        self.view.gs.update()
+        self.view.fig.canvas.draw()
+        self.view.fig.canvas.flush_events()
 
     def toggle_show_psd(self, *args, **kwargs):
         &#34;&#34;&#34;Toggle PSD plot visibility&#34;&#34;&#34;
@@ -1110,10 +1180,22 @@ el.replaceWith(d);
         self.view.settings[&#34;show_spg&#34;].set(self.show_spg)
         self._toggle_show()
 
+    def update_f(self, f):
+        fmin, fmax, fnum = f
+        psd_tick = np.linspace(fmin, fmax, 5)
+        psd_text = [f&#34;{f:.3f}&#34; for f in psd_tick]
+        self.view.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
+        self.view.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
+
+        spg_tick = np.linspace(0, fnum+1, 5)
+        spg_text = psd_text
+        self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
+        self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-        self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
-        self.view.plotter.set_ylim(1, self.max_count, 0)
+        self.view.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)
+        self.view.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)
 
     def set_scale(self, *args, **kwargs):
         prev = float(self.scale)
@@ -1136,7 +1218,7 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
@@ -1148,7 +1230,7 @@ el.replaceWith(d);
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
@@ -1159,49 +1241,45 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = vbw.vbw(psd, self.vbw)
+        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
             self._plot_spectrogram(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_psd(self, freq, psd):
-        self.view.plotter.ax(0).set_title(&#34;PSD&#34;)
+        self.view.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
 
         if self.view.settings[&#34;show_max&#34;].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))
             self.psd_max[psd &gt; self.psd_max] = psd[psd &gt; self.psd_max]
-            line_max = self.view.plot(0, freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
+            line_max = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
         else:
             line_max = None
         if self.view.settings[&#34;show_min&#34;].get() == 1:
             if self.psd_min is None:
                 self.psd_min = np.repeat(np.inf, len(psd))
             self.psd_min[psd &lt; self.psd_min] = psd[psd &lt; self.psd_min]
-            line_min = self.view.plot(0, freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
+            line_min = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
         else:
             line_min = None
-        line_psd = self.view.plot(0, freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
-
-        if not self.view.plotter.ax(0).get_xlim() == (freq[0], freq[-1]):
-            self.view.plotter.set_xlim(0, freq[0], freq[-1])
-        return (line_psd, line_max, line_min)
+        line_psd = self.view.ax(&#34;psd&#34;).plot(freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
 
     def _plot_spectrogram(self, freq, psd):
-        self.view.plotter.ax(1).set_title(&#34;Spectrogram&#34;)
+        self.view.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
-        im = self.view.imshow(
-            1, self.psds, name=&#34;spectrogram&#34;,
+        im = self.view.ax(&#34;spg&#34;).imshow(
+            self.psds, name=&#34;spg&#34;,
             vmin=self.y_btm, vmax=self.y_top,
             aspect=&#34;auto&#34;, origin=&#34;upper&#34;,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
-        return im
 
     def __init_psd(self):
         self.view.settings[&#34;show_min&#34;].set(1)
@@ -1209,10 +1287,10 @@ el.replaceWith(d);
         self.view.settings[&#34;show_max&#34;].set(1)
         self.view.wg_sets[&#34;show_max&#34;].configure(command=self.toggle_psd_max)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
 
     def __init_spectrogram(self):
         self.view.settings[&#34;max_count&#34;].set(str(self.max_count))</code></pre>
@@ -1232,9 +1310,9 @@ el.replaceWith(d);
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, 10.0, 10.0, 0.0)
-        self.view: GUIFreqPlot = self.view # type: ignore
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
+        super().__init__(view, ref_level, scale, vbw, window)
+        self.view: ViewSwept = self.view # type: ignore
         self.show_psd = 1
         self.show_spg = 0
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -1246,22 +1324,22 @@ el.replaceWith(d);
         self.psd_min = None
         self.psd_max = None
         self.__init_psd()
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.plotter.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
-        # self.view.plotter.ax(1).set_autoscale_on(False)
-        self.view.plotter.ax(1).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(1).locator_params(axis=&#34;y&#34;, nbins=10)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
+        # self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
         self.set_y()
         self._toggle_show()
-        self.view.plotter.canvas.draw()
+        self.update()
 
     def reset(self):
         self.psd_min = None
@@ -1269,28 +1347,33 @@ el.replaceWith(d);
         self.psds = np.zeros((self.max_count, 1024))
         self.psds[:,:] = -np.inf
 
-    def update(self):
-        self.view.plotter.update()
-
     def _toggle_show(self):
         if self.show_psd == 1 and self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_in_layout(True)
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            # self.view.plotter.ax(0).set_in_layout(True)
+            # self.view.plotter.ax(1).set_in_layout(True)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[0])
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[1])
         elif self.show_psd == 1:
-            self.view.plotter.ax(0).set_visible(True)
-            self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
-            self.view.plotter.ax(1).set_visible(False)
-            self.view.plotter.ax(1).set_position((0,0,0,0))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(True)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(False)
+            self.view.ax(&#34;psd&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;spg&#34;).ax.set_position((0,0,0,0))
+            art = self.view.plotter.ax(&#34;spg&#34;).art(&#34;spg&#34;)
+            if art is not None:
+                art.set_data([[]]) # clear SPG to be safe
         elif self.show_spg == 1:
-            self.view.plotter.ax(0).set_visible(False)
-            self.view.plotter.ax(0).set_position((0,0,0,0))
-            self.view.plotter.ax(1).set_visible(True)
-            self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
+            self.view.ax(&#34;psd&#34;).ax.set_visible(False)
+            self.view.ax(&#34;spg&#34;).ax.set_visible(True)
+            self.view.ax(&#34;psd&#34;).ax.set_position((0,0,0,0))
+            self.view.ax(&#34;spg&#34;).ax.set_subplotspec(self.view.gs[:])
+            # self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
         # print(f&#34;_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}&#34;)
-        self.view.plotter.fig.canvas.draw()
-        self.view.plotter.fig.canvas.flush_events()
+        self.view.gs.update()
+        self.view.fig.canvas.draw()
+        self.view.fig.canvas.flush_events()
 
     def toggle_show_psd(self, *args, **kwargs):
         &#34;&#34;&#34;Toggle PSD plot visibility&#34;&#34;&#34;
@@ -1304,10 +1387,22 @@ el.replaceWith(d);
         self.view.settings[&#34;show_spg&#34;].set(self.show_spg)
         self._toggle_show()
 
+    def update_f(self, f):
+        fmin, fmax, fnum = f
+        psd_tick = np.linspace(fmin, fmax, 5)
+        psd_text = [f&#34;{f:.3f}&#34; for f in psd_tick]
+        self.view.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
+        self.view.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
+
+        spg_tick = np.linspace(0, fnum+1, 5)
+        spg_text = psd_text
+        self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
+        self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-        self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
-        self.view.plotter.set_ylim(1, self.max_count, 0)
+        self.view.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)
+        self.view.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)
 
     def set_scale(self, *args, **kwargs):
         prev = float(self.scale)
@@ -1330,7 +1425,7 @@ el.replaceWith(d);
 
     def toggle_psd_min(self):
         &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_min&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_min&#34;].get() == 0:
@@ -1342,7 +1437,7 @@ el.replaceWith(d);
 
     def toggle_psd_max(self):
         &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
-        art = self.view.plotter.art(0, &#34;psd_max&#34;)
+        art = self.view.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
         if art is None:
             return
         if self.view.settings[&#34;show_max&#34;].get() == 0:
@@ -1353,49 +1448,45 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = vbw.vbw(psd, self.vbw)
+        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
             self._plot_spectrogram(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_psd(self, freq, psd):
-        self.view.plotter.ax(0).set_title(&#34;PSD&#34;)
+        self.view.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
 
         if self.view.settings[&#34;show_max&#34;].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))
             self.psd_max[psd &gt; self.psd_max] = psd[psd &gt; self.psd_max]
-            line_max = self.view.plot(0, freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
+            line_max = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
         else:
             line_max = None
         if self.view.settings[&#34;show_min&#34;].get() == 1:
             if self.psd_min is None:
                 self.psd_min = np.repeat(np.inf, len(psd))
             self.psd_min[psd &lt; self.psd_min] = psd[psd &lt; self.psd_min]
-            line_min = self.view.plot(0, freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
+            line_min = self.view.ax(&#34;psd&#34;).plot(freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
         else:
             line_min = None
-        line_psd = self.view.plot(0, freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
-
-        if not self.view.plotter.ax(0).get_xlim() == (freq[0], freq[-1]):
-            self.view.plotter.set_xlim(0, freq[0], freq[-1])
-        return (line_psd, line_max, line_min)
+        line_psd = self.view.ax(&#34;psd&#34;).plot(freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
 
     def _plot_spectrogram(self, freq, psd):
-        self.view.plotter.ax(1).set_title(&#34;Spectrogram&#34;)
+        self.view.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
-        im = self.view.imshow(
-            1, self.psds, name=&#34;spectrogram&#34;,
+        im = self.view.ax(&#34;spg&#34;).imshow(
+            self.psds, name=&#34;spg&#34;,
             vmin=self.y_btm, vmax=self.y_top,
             aspect=&#34;auto&#34;, origin=&#34;upper&#34;,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
-        return im
 
     def __init_psd(self):
         self.view.settings[&#34;show_min&#34;].set(1)
@@ -1403,10 +1494,10 @@ el.replaceWith(d);
         self.view.settings[&#34;show_max&#34;].set(1)
         self.view.wg_sets[&#34;show_max&#34;].configure(command=self.toggle_psd_max)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        self.view.plotter.ax(0).locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.plotter.ax(0).locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.plotter.ax(0).grid(True, alpha=0.2)
+        self.view.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
 
     def __init_spectrogram(self):
         self.view.settings[&#34;max_count&#34;].set(str(self.max_count))</code></pre>
@@ -1426,8 +1517,8 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def set_y(self):
     &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-    self.view.plotter.set_ylim(0, self.y_btm, self.y_top)
-    self.view.plotter.set_ylim(1, self.max_count, 0)</code></pre>
+    self.view.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)
+    self.view.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)</code></pre>
 </details>
 <div class="desc"><p>Set plot ylimits</p></div>
 </dd>
@@ -1441,7 +1532,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def toggle_psd_max(self):
     &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
-    art = self.view.plotter.art(0, &#34;psd_max&#34;)
+    art = self.view.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
     if art is None:
         return
     if self.view.settings[&#34;show_max&#34;].get() == 0:
@@ -1463,7 +1554,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def toggle_psd_min(self):
     &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
-    art = self.view.plotter.art(0, &#34;psd_min&#34;)
+    art = self.view.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
     if art is None:
         return
     if self.view.settings[&#34;show_min&#34;].get() == 0:
@@ -1506,6 +1597,28 @@ el.replaceWith(d);
     self._toggle_show()</code></pre>
 </details>
 <div class="desc"><p>Toggle spectrogram plot visibility</p></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.update_f"><code class="name flex">
+<span>def <span class="ident">update_f</span></span>(<span>self, f)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_f(self, f):
+    fmin, fmax, fnum = f
+    psd_tick = np.linspace(fmin, fmax, 5)
+    psd_text = [f&#34;{f:.3f}&#34; for f in psd_tick]
+    self.view.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
+    self.view.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
+
+    spg_tick = np.linspace(0, fnum+1, 5)
+    spg_text = psd_text
+    self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
+    self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)</code></pre>
+</details>
+<div class="desc"></div>
 </dd>
 </dl>
 <h3>Inherited members</h3>
@@ -1555,6 +1668,7 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_psd_min" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_psd_min">toggle_psd_min</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_psd" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_psd">toggle_show_psd</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_spg" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_spg">toggle_show_spg</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.update_f" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.update_f">update_f</a></code></li>
 </ul>
 </li>
 </ul>

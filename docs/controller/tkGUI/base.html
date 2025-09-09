@@ -49,7 +49,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.controller.tkGUI.base.FreqPlotController"><code class="flex name class">
 <span>class <span class="ident">FreqPlotController</span></span>
-<span>(</span><span>view: <a title="pyspecan.view.tkGUI.base.GUIFreqPlot" href="../../view/tkGUI/base.html#pyspecan.view.tkGUI.base.GUIFreqPlot">GUIFreqPlot</a>,<br>vbw=10.0,<br>scale=10.0,<br>ref_level=0.0)</span>
+<span>(</span><span>view: <a title="pyspecan.view.tkGUI.base.GUIFreqPlot" href="../../view/tkGUI/base.html#pyspecan.view.tkGUI.base.GUIFreqPlot">GUIFreqPlot</a>,<br>ref_level=0.0,<br>scale=10.0,<br>vbw=10.0,<br>window='blackman')</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -59,7 +59,7 @@ el.replaceWith(d);
 <pre><code class="python">class FreqPlotController(PlotController):
     &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
-    def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
+    def __init__(self, view: GUIFreqPlot, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
         super().__init__(view)
         self.view: GUIFreqPlot = self.view # type hint
         self.window = &#34;blackman&#34;
@@ -77,6 +77,9 @@ el.replaceWith(d);
         self.view.wg_sets[&#34;window&#34;].configure(values=[k for k in WindowLUT.keys()])
         self.view.wg_sets[&#34;window&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_window)
         self.set_ref_level()
+
+    def update(self):
+        self.view.plotter.canvas.draw()
 
     @property
     def y_top(self):
@@ -157,7 +160,7 @@ el.replaceWith(d);
 <pre><code class="python">class FreqPlotController(PlotController):
     &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
-    def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
+    def __init__(self, view: GUIFreqPlot, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
         super().__init__(view)
         self.view: GUIFreqPlot = self.view # type hint
         self.window = &#34;blackman&#34;
@@ -175,6 +178,9 @@ el.replaceWith(d);
         self.view.wg_sets[&#34;window&#34;].configure(values=[k for k in WindowLUT.keys()])
         self.view.wg_sets[&#34;window&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_window)
         self.set_ref_level()
+
+    def update(self):
+        self.view.plotter.canvas.draw()
 
     @property
     def y_top(self):
@@ -245,7 +251,7 @@ el.replaceWith(d);
 <pre><code class="python">class FreqPlotController(PlotController):
     &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
-    def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
+    def __init__(self, view: GUIFreqPlot, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
         super().__init__(view)
         self.view: GUIFreqPlot = self.view # type hint
         self.window = &#34;blackman&#34;
@@ -263,6 +269,9 @@ el.replaceWith(d);
         self.view.wg_sets[&#34;window&#34;].configure(values=[k for k in WindowLUT.keys()])
         self.view.wg_sets[&#34;window&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_window)
         self.set_ref_level()
+
+    def update(self):
+        self.view.plotter.canvas.draw()
 
     @property
     def y_top(self):
@@ -333,7 +342,7 @@ el.replaceWith(d);
 <pre><code class="python">class FreqPlotController(PlotController):
     &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
-    def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
+    def __init__(self, view: GUIFreqPlot, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
         super().__init__(view)
         self.view: GUIFreqPlot = self.view # type hint
         self.window = &#34;blackman&#34;
@@ -351,6 +360,9 @@ el.replaceWith(d);
         self.view.wg_sets[&#34;window&#34;].configure(values=[k for k in WindowLUT.keys()])
         self.view.wg_sets[&#34;window&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_window)
         self.set_ref_level()
+
+    def update(self):
+        self.view.plotter.canvas.draw()
 
     @property
     def y_top(self):
@@ -421,7 +433,7 @@ el.replaceWith(d);
 <pre><code class="python">class FreqPlotController(PlotController):
     &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
     __slots__ = (&#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;)
-    def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
+    def __init__(self, view: GUIFreqPlot, ref_level=0.0, scale=10.0, vbw=10.0, window=&#34;blackman&#34;):
         super().__init__(view)
         self.view: GUIFreqPlot = self.view # type hint
         self.window = &#34;blackman&#34;
@@ -439,6 +451,9 @@ el.replaceWith(d);
         self.view.wg_sets[&#34;window&#34;].configure(values=[k for k in WindowLUT.keys()])
         self.view.wg_sets[&#34;window&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_window)
         self.set_ref_level()
+
+    def update(self):
+        self.view.plotter.canvas.draw()
 
     @property
     def y_top(self):

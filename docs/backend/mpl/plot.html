@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.specan API documentation</title>
-<meta name="description" content="Initialize pyspecan module/script">
+<title>pyspecan.backend.mpl.plot API documentation</title>
+<meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -33,10 +33,9 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.specan</code></h1>
+<h1 class="title">Module <code>pyspecan.backend.mpl.plot</code></h1>
 </header>
 <section id="section-intro">
-<p>Initialize pyspecan module/script</p>
 </section>
 <section>
 </section>
@@ -47,171 +46,118 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.specan.SpecAn"><code class="flex name class">
-<span>class <span class="ident">SpecAn</span></span>
-<span>(</span><span>view,<br>mode='psd',<br>file=None,<br>dtype=None,<br>Fs=1,<br>cf=0,<br>nfft=1024,<br>ref_level=0.0,<br>scale_div=10.0,<br>vbw=10.0,<br>window='blackman')</span>
+<dt id="pyspecan.backend.mpl.plot.BlitPlot"><code class="flex name class">
+<span>class <span class="ident">BlitPlot</span></span>
+<span>(</span><span>fig: matplotlib.figure.Figure = &lt;Figure size 640x480 with 0 Axes&gt;)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class SpecAn:
-    &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
-    __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self,
-                view, mode=&#34;psd&#34;,
-                file=None, dtype=None,
-                Fs=1, cf=0, nfft=1024,
-                ref_level=0.0, scale_div=10.0,
-                vbw=10.0, window=&#34;blackman&#34;):
+<pre><code class="python">class BlitPlot(_Plot):
+    &#34;&#34;&#34;Plot supporting blitting&#34;&#34;&#34;
+    __slots__ = (&#34;_bg&#34;, &#34;_cid&#34;)
+    def __init__(self, fig: Figure = plt.figure()):
+        super().__init__(fig)
+        for i, ax in enumerate(fig.axes):
+            self._axs[i] = BlitAx(ax, self)
+        self._bg = None
+        self._cid = self._canv.mpl_connect(&#34;draw_event&#34;, self._on_draw)
 
-        if not isinstance(mode, Mode):
-            if not mode in Mode.choices():
-                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
-            mode = Mode[mode]
-        if not isinstance(view, View):
-            if not view in View.choices():
-                raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
-            view = View.get_view(view)
+    def update(self):
+        cv = self.canvas
+        fig = cv.figure
+        if self._bg is None:
+            self._on_draw(None)
+        else:
+            cv.restore_region(self._bg) # type: ignore
+            self._draw_animated()
+            # cv.blit(self._fig.bbox)
+            cv.blit(fig.bbox)
+        cv.flush_events()
 
-        config.MODE = mode # set global mode
+    def add_ax(self, name, ax: Axes):
+        self._axs[name] = BlitAx(ax)
 
-        self.model = Model(file, dtype, nfft, Fs, cf)
+    def _on_draw(self, event):
+        cv = self.canvas
+        if event is not None:
+            if event.canvas != cv:
+                raise RuntimeError
+        self._bg = cv.copy_from_bbox(cv.figure.bbox) # type: ignore
+        self._draw_animated()
 
-        v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v()
-
-        ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, ref_level, scale_div, vbw, window)
-
-        self.model.show()
-        self.view.mainloop()</code></pre>
+    def _draw_animated(self):
+        for xname, ax in self._axs.items():
+            for aname, art in ax.artists.items():
+                # print(f&#34;Drawing {xname}[{aname}]&#34;)
+                self._fig.draw_artist(art)</code></pre>
 </details>
-<div class="desc"><p>Class to initialize pyspecan</p></div>
-<h3>Instance variables</h3>
+<div class="desc"><p>Plot supporting blitting</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pyspecan.backend.mpl.plot._Plot</li>
+</ul>
+<h3>Methods</h3>
 <dl>
-<dt id="pyspecan.specan.SpecAn.controller"><code class="name">var <span class="ident">controller</span></code></dt>
+<dt id="pyspecan.backend.mpl.plot.BlitPlot.add_ax"><code class="name flex">
+<span>def <span class="ident">add_ax</span></span>(<span>self, name, ax: matplotlib.axes._axes.Axes)</span>
+</code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class SpecAn:
-    &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
-    __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self,
-                view, mode=&#34;psd&#34;,
-                file=None, dtype=None,
-                Fs=1, cf=0, nfft=1024,
-                ref_level=0.0, scale_div=10.0,
-                vbw=10.0, window=&#34;blackman&#34;):
-
-        if not isinstance(mode, Mode):
-            if not mode in Mode.choices():
-                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
-            mode = Mode[mode]
-        if not isinstance(view, View):
-            if not view in View.choices():
-                raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
-            view = View.get_view(view)
-
-        config.MODE = mode # set global mode
-
-        self.model = Model(file, dtype, nfft, Fs, cf)
-
-        v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v()
-
-        ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, ref_level, scale_div, vbw, window)
-
-        self.model.show()
-        self.view.mainloop()</code></pre>
+<pre><code class="python">def add_ax(self, name, ax: Axes):
+    self._axs[name] = BlitAx(ax)</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Add new axes</p></div>
 </dd>
-<dt id="pyspecan.specan.SpecAn.model"><code class="name">var <span class="ident">model</span></code></dt>
+<dt id="pyspecan.backend.mpl.plot.BlitPlot.update"><code class="name flex">
+<span>def <span class="ident">update</span></span>(<span>self)</span>
+</code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class SpecAn:
-    &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
-    __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self,
-                view, mode=&#34;psd&#34;,
-                file=None, dtype=None,
-                Fs=1, cf=0, nfft=1024,
-                ref_level=0.0, scale_div=10.0,
-                vbw=10.0, window=&#34;blackman&#34;):
-
-        if not isinstance(mode, Mode):
-            if not mode in Mode.choices():
-                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
-            mode = Mode[mode]
-        if not isinstance(view, View):
-            if not view in View.choices():
-                raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
-            view = View.get_view(view)
-
-        config.MODE = mode # set global mode
-
-        self.model = Model(file, dtype, nfft, Fs, cf)
-
-        v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v()
-
-        ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, ref_level, scale_div, vbw, window)
-
-        self.model.show()
-        self.view.mainloop()</code></pre>
+<pre><code class="python">def update(self):
+    cv = self.canvas
+    fig = cv.figure
+    if self._bg is None:
+        self._on_draw(None)
+    else:
+        cv.restore_region(self._bg) # type: ignore
+        self._draw_animated()
+        # cv.blit(self._fig.bbox)
+        cv.blit(fig.bbox)
+    cv.flush_events()</code></pre>
 </details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.specan.SpecAn.view"><code class="name">var <span class="ident">view</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class SpecAn:
-    &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
-    __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self,
-                view, mode=&#34;psd&#34;,
-                file=None, dtype=None,
-                Fs=1, cf=0, nfft=1024,
-                ref_level=0.0, scale_div=10.0,
-                vbw=10.0, window=&#34;blackman&#34;):
-
-        if not isinstance(mode, Mode):
-            if not mode in Mode.choices():
-                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
-            mode = Mode[mode]
-        if not isinstance(view, View):
-            if not view in View.choices():
-                raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
-            view = View.get_view(view)
-
-        config.MODE = mode # set global mode
-
-        self.model = Model(file, dtype, nfft, Fs, cf)
-
-        v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v()
-
-        ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, ref_level, scale_div, vbw, window)
-
-        self.model.show()
-        self.view.mainloop()</code></pre>
-</details>
-<div class="desc"></div>
+<div class="desc"><p>Update plot</p></div>
 </dd>
 </dl>
+</dd>
+<dt id="pyspecan.backend.mpl.plot.Plot"><code class="flex name class">
+<span>class <span class="ident">Plot</span></span>
+<span>(</span><span>fig: matplotlib.figure.Figure = &lt;Figure size 640x480 with 0 Axes&gt;)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Plot(_Plot):
+    def __init__(self, fig: Figure = plt.figure()):
+        super().__init__(fig)
+        for i, ax in enumerate(fig.axes):
+            self._axs[i] = Ax(ax, self)</code></pre>
+</details>
+<div class="desc"><p>Generic plotting parent</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pyspecan.backend.mpl.plot._Plot</li>
+</ul>
 </dd>
 </dl>
 </section>
@@ -223,18 +169,20 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan" href="index.html">pyspecan</a></code></li>
+<li><code><a title="pyspecan.backend.mpl" href="index.html">pyspecan.backend.mpl</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.specan.SpecAn" href="#pyspecan.specan.SpecAn">SpecAn</a></code></h4>
+<h4><code><a title="pyspecan.backend.mpl.plot.BlitPlot" href="#pyspecan.backend.mpl.plot.BlitPlot">BlitPlot</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.specan.SpecAn.controller" href="#pyspecan.specan.SpecAn.controller">controller</a></code></li>
-<li><code><a title="pyspecan.specan.SpecAn.model" href="#pyspecan.specan.SpecAn.model">model</a></code></li>
-<li><code><a title="pyspecan.specan.SpecAn.view" href="#pyspecan.specan.SpecAn.view">view</a></code></li>
+<li><code><a title="pyspecan.backend.mpl.plot.BlitPlot.add_ax" href="#pyspecan.backend.mpl.plot.BlitPlot.add_ax">add_ax</a></code></li>
+<li><code><a title="pyspecan.backend.mpl.plot.BlitPlot.update" href="#pyspecan.backend.mpl.plot.BlitPlot.update">update</a></code></li>
 </ul>
+</li>
+<li>
+<h4><code><a title="pyspecan.backend.mpl.plot.Plot" href="#pyspecan.backend.mpl.plot.Plot">Plot</a></code></h4>
 </li>
 </ul>
 </li>

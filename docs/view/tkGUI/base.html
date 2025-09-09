@@ -49,7 +49,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.view.tkGUI.base.GUIBlitPlot"><code class="flex name class">
 <span>class <span class="ident">GUIBlitPlot</span></span>
-<span>(</span><span>view, root, *args, **kwargs)</span>
+<span>(</span><span>view, root, fig)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -58,8 +58,8 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class GUIBlitPlot(GUIPlot):
     &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl BlitPlot&#34;&#34;&#34;
-    def __init__(self, view, root, *args, **kwargs):
-        super().__init__(view, root, BlitPlot, *args, **kwargs)</code></pre>
+    def __init__(self, view, root, fig):
+        super().__init__(view, root, fig, BlitPlot)</code></pre>
 </details>
 <div class="desc"><p>tkinter wrapper for pyspecan.plot.mpl BlitPlot</p></div>
 <h3>Ancestors</h3>
@@ -81,7 +81,7 @@ el.replaceWith(d);
 </dd>
 <dt id="pyspecan.view.tkGUI.base.GUIFreqPlot"><code class="flex name class">
 <span>class <span class="ident">GUIFreqPlot</span></span>
-<span>(</span><span>view, root, *args, **kwargs)</span>
+<span>(</span><span>view, root, fig)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -91,8 +91,8 @@ el.replaceWith(d);
 <pre><code class="python">class GUIFreqPlot(GUIBlitPlot):
     &#34;&#34;&#34;Frequency domain view helpers&#34;&#34;&#34;
     __slots__ = (&#34;lbl_lo&#34;, &#34;lbl_hi&#34;)
-    def __init__(self, view, root, *args, **kwargs):
-        super().__init__(view, root, *args, **kwargs)
+    def __init__(self, view, root, fig):
+        super().__init__(view, root, fig)
 
         self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
         self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
@@ -155,8 +155,8 @@ el.replaceWith(d);
 <pre><code class="python">class GUIFreqPlot(GUIBlitPlot):
     &#34;&#34;&#34;Frequency domain view helpers&#34;&#34;&#34;
     __slots__ = (&#34;lbl_lo&#34;, &#34;lbl_hi&#34;)
-    def __init__(self, view, root, *args, **kwargs):
-        super().__init__(view, root, *args, **kwargs)
+    def __init__(self, view, root, fig):
+        super().__init__(view, root, fig)
 
         self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
         self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
@@ -208,8 +208,8 @@ el.replaceWith(d);
 <pre><code class="python">class GUIFreqPlot(GUIBlitPlot):
     &#34;&#34;&#34;Frequency domain view helpers&#34;&#34;&#34;
     __slots__ = (&#34;lbl_lo&#34;, &#34;lbl_hi&#34;)
-    def __init__(self, view, root, *args, **kwargs):
-        super().__init__(view, root, *args, **kwargs)
+    def __init__(self, view, root, fig):
+        super().__init__(view, root, fig)
 
         self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
         self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
@@ -264,7 +264,7 @@ el.replaceWith(d);
 </dd>
 <dt id="pyspecan.view.tkGUI.base.GUIPlot"><code class="flex name class">
 <span>class <span class="ident">GUIPlot</span></span>
-<span>(</span><span>view, root, plotter=pyspecan.backend.mpl.base.Plot, *args, **kwargs)</span>
+<span>(</span><span>view,<br>root,<br>fig: matplotlib.figure.Figure,<br>plotter=pyspecan.backend.mpl.plot._Plot)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -272,15 +272,15 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -308,42 +308,19 @@ el.replaceWith(d);
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
-<div class="desc"><p>tkinter wrapper for pyspecan.plot.mpl</p></div>
+<div class="desc"><p>tkinter wrapper for pyspecan.backend.mpl.plot</p></div>
 <h3>Subclasses</h3>
 <ul class="hlist">
 <li><a title="pyspecan.view.tkGUI.base.GUIBlitPlot" href="#pyspecan.view.tkGUI.base.GUIBlitPlot">GUIBlitPlot</a></li>
@@ -357,15 +334,15 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -393,40 +370,17 @@ el.replaceWith(d);
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -449,15 +403,15 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -485,40 +439,17 @@ def fig(self):
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -529,15 +460,15 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -565,40 +496,17 @@ def fig(self):
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -609,15 +517,15 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -645,40 +553,17 @@ def fig(self):
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -689,15 +574,15 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -725,40 +610,17 @@ def fig(self):
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -769,15 +631,15 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -805,40 +667,17 @@ def fig(self):
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -849,15 +688,15 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -885,40 +724,17 @@ def fig(self):
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -929,15 +745,15 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -965,40 +781,17 @@ def fig(self):
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -1009,15 +802,15 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl&#34;&#34;&#34;
+    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
     __slots__ = (
         &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
         &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
         &#34;wg_sets&#34;,
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -1045,59 +838,23 @@ def fig(self):
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()
-
     @property
     def fig(self):
         return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
+    def ax(self, name):
+        return self.plotter.ax(name)
     def add_ax(self, *args, **kwargs):
         return self.plotter.add_ax(*args,**kwargs)
 
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)</code></pre>
+    def draw_settings(self, parent, row=0):
+        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
+        raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.add_artist"><code class="name flex">
-<span>def <span class="ident">add_artist</span></span>(<span>self, idx, art, name)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def add_artist(self, idx, art, name):
-    return self.plotter.add_artist(idx, art, name)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 <dt id="pyspecan.view.tkGUI.base.GUIPlot.add_ax"><code class="name flex">
 <span>def <span class="ident">add_ax</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
@@ -1111,29 +868,16 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.art"><code class="name flex">
-<span>def <span class="ident">art</span></span>(<span>self, i, j)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def art(self, i, j):
-    return self.plotter.art(i, j)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 <dt id="pyspecan.view.tkGUI.base.GUIPlot.ax"><code class="name flex">
-<span>def <span class="ident">ax</span></span>(<span>self, idx)</span>
+<span>def <span class="ident">ax</span></span>(<span>self, name)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def ax(self, idx):
-    return self.plotter.ax(idx)</code></pre>
+<pre><code class="python">def ax(self, name):
+    return self.plotter.ax(name)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -1150,71 +894,6 @@ def fig(self):
     raise NotImplementedError()</code></pre>
 </details>
 <div class="desc"><p>Initialize settings panel</p></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.imshow"><code class="name flex">
-<span>def <span class="ident">imshow</span></span>(<span>self, idx, *args, **kwargs)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def imshow(self, idx, *args, **kwargs):
-    return self.plotter.imshow(idx, *args, **kwargs)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.plot"><code class="name flex">
-<span>def <span class="ident">plot</span></span>(<span>self, idx, *args, **kwargs)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def plot(self, idx, *args, **kwargs):
-    return self.plotter.plot(idx, *args, **kwargs)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.set_data"><code class="name flex">
-<span>def <span class="ident">set_data</span></span>(<span>self, i, j, x, y)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_data(self, i, j, x, y):
-    self.plotter.set_data(i, j, x, y)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.set_xdata"><code class="name flex">
-<span>def <span class="ident">set_xdata</span></span>(<span>self, i, j, x)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_xdata(self, i, j, x):
-    self.plotter.set_xdata(i, j, x)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.set_ydata"><code class="name flex">
-<span>def <span class="ident">set_ydata</span></span>(<span>self, i, j, y)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_ydata(self, i, j, y):
-    self.plotter.set_ydata(i, j, y)</code></pre>
-</details>
-<div class="desc"></div>
 </dd>
 </dl>
 </dd>
@@ -1246,9 +925,7 @@ def fig(self):
 <li>
 <h4><code><a title="pyspecan.view.tkGUI.base.GUIPlot" href="#pyspecan.view.tkGUI.base.GUIPlot">GUIPlot</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.add_artist" href="#pyspecan.view.tkGUI.base.GUIPlot.add_artist">add_artist</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.add_ax" href="#pyspecan.view.tkGUI.base.GUIPlot.add_ax">add_ax</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.art" href="#pyspecan.view.tkGUI.base.GUIPlot.art">art</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.ax" href="#pyspecan.view.tkGUI.base.GUIPlot.ax">ax</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.btn_toggle" href="#pyspecan.view.tkGUI.base.GUIPlot.btn_toggle">btn_toggle</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.draw_settings" href="#pyspecan.view.tkGUI.base.GUIPlot.draw_settings">draw_settings</a></code></li>
@@ -1256,13 +933,8 @@ def fig(self):
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.fr_canv" href="#pyspecan.view.tkGUI.base.GUIPlot.fr_canv">fr_canv</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.fr_main" href="#pyspecan.view.tkGUI.base.GUIPlot.fr_main">fr_main</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.fr_sets" href="#pyspecan.view.tkGUI.base.GUIPlot.fr_sets">fr_sets</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.imshow" href="#pyspecan.view.tkGUI.base.GUIPlot.imshow">imshow</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.plot" href="#pyspecan.view.tkGUI.base.GUIPlot.plot">plot</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.plotter" href="#pyspecan.view.tkGUI.base.GUIPlot.plotter">plotter</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.ready" href="#pyspecan.view.tkGUI.base.GUIPlot.ready">ready</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.set_data" href="#pyspecan.view.tkGUI.base.GUIPlot.set_data">set_data</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.set_xdata" href="#pyspecan.view.tkGUI.base.GUIPlot.set_xdata">set_xdata</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.set_ydata" href="#pyspecan.view.tkGUI.base.GUIPlot.set_ydata">set_ydata</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.settings" href="#pyspecan.view.tkGUI.base.GUIPlot.settings">settings</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.view" href="#pyspecan.view.tkGUI.base.GUIPlot.view">view</a></code></li>
 <li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.wg_sets" href="#pyspecan.view.tkGUI.base.GUIPlot.wg_sets">wg_sets</a></code></li>

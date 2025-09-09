@@ -59,10 +59,13 @@ el.replaceWith(d);
 <pre><code class="python">class ViewSwept(GUIFreqPlot):
     &#34;&#34;&#34;Manager for SWEPT mode plots&#34;&#34;&#34;
     def __init__(self, view, root):
-        super().__init__(view, root,
-            figsize=(5,5), dpi=100,
-            nrows=2, ncols=1, layout=&#34;constrained&#34;
-        )
+        fig = plt.figure(figsize=(5,5), layout=&#34;constrained&#34;)
+        super().__init__(view, root, fig)
+        self.gs = self.plotter.fig.add_gridspec(2,1)
+        self.plotter.add_ax(&#34;psd&#34;, fig.add_subplot(self.gs[0]))
+        self.plotter.add_ax(&#34;spg&#34;, fig.add_subplot(self.gs[1]))
+        self.gs.update()
+
     def draw_settings(self, parent, row=0):
         var_show_psd = tk.IntVar(self.fr_sets)
         chk_show_psd = ttk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_show_psd)

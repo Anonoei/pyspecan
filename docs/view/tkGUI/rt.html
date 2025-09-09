@@ -59,10 +59,12 @@ el.replaceWith(d);
 <pre><code class="python">class ViewRT(GUIFreqPlot):
     &#34;&#34;&#34;Manager for RT mode plots&#34;&#34;&#34;
     def __init__(self, view, root):
-        super().__init__(view, root,
-            figsize=(10,10), dpi=100,
-            nrows=1, ncols=1, layout=&#34;tight&#34;
-        )
+        fig = plt.figure(figsize=(5,5), layout=&#34;constrained&#34;)
+        super().__init__(view, root, fig)
+        self.gs = self.plotter.fig.add_gridspec(1,1)
+        self.plotter.add_ax(&#34;pst&#34;, fig.add_subplot(self.gs[0]))
+        self.gs.update()
+
     def draw_settings(self, parent, row=0):
         row = super().draw_settings(parent, row)
 

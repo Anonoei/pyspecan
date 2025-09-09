@@ -49,7 +49,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.controller.tkGUI.rt.ControllerRT"><code class="flex name class">
 <span>class <span class="ident">ControllerRT</span></span>
-<span>(</span><span>view)</span>
+<span>(</span><span>view, ref_level=0.0, scale=10.0, vbw=5.0, window='blackman')</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -62,11 +62,11 @@ el.replaceWith(d);
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, vbw=5.0)
-        # self.view: viewPSD = self.view # type hint
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window=&#34;blackman&#34;):
         self.x = 1001
         self.y = 600
+        super().__init__(view, ref_level, scale, vbw, window)
+        # self.view: viewPSD = self.view # type hint
         self.cmap = &#34;hot&#34;
         self._cmap_set = False
         self._cb_drawn = False
@@ -75,20 +75,22 @@ el.replaceWith(d);
         self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
         self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_cmap)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        # self.view.plotter.ax(0).set_frame_on(False)
+        self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
 
-        self.set_x()
         self.set_y()
 
-    def set_x(self):
+    def update_f(self, f):
+        fmin, fmax, fnum = f
         &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(0, 0, self.x)
+        self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
+        self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)
 
     def set_y(self):
         &#34;&#34;&#34;Set plot yticks and ylabels&#34;&#34;&#34;
@@ -100,8 +102,8 @@ el.replaceWith(d);
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(0, 0, self.y)
+        self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
+        self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -124,14 +126,15 @@ el.replaceWith(d);
         self._plot_persistent(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_persistent(self, freq, psds):
-        self.view.plotter.ax(0).set_title(&#34;Persistent&#34;)
+        self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
-        im = self.view.imshow(
-                0, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
+        im = self.view.ax(&#34;pst&#34;).imshow(
+                mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect=&#34;auto&#34;,
                 interpolation=&#34;nearest&#34;, resample=False, rasterized=True
@@ -140,14 +143,14 @@ el.replaceWith(d);
         if not self._cb_drawn:
             # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(0),
+                im, ax=self.view.ax(&#34;pst&#34;).ax,
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
             self._cb_drawn = True
 
         if self._cmap_set:
-            self.view.plotter.set_ylim(0, 0, self.y)
+            self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
             self._cmap_set = False</code></pre>
 </details>
 <div class="desc"><p>Controller for ViewRT</p></div>
@@ -170,11 +173,11 @@ el.replaceWith(d);
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, vbw=5.0)
-        # self.view: viewPSD = self.view # type hint
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window=&#34;blackman&#34;):
         self.x = 1001
         self.y = 600
+        super().__init__(view, ref_level, scale, vbw, window)
+        # self.view: viewPSD = self.view # type hint
         self.cmap = &#34;hot&#34;
         self._cmap_set = False
         self._cb_drawn = False
@@ -183,20 +186,22 @@ el.replaceWith(d);
         self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
         self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_cmap)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        # self.view.plotter.ax(0).set_frame_on(False)
+        self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
 
-        self.set_x()
         self.set_y()
 
-    def set_x(self):
+    def update_f(self, f):
+        fmin, fmax, fnum = f
         &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(0, 0, self.x)
+        self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
+        self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)
 
     def set_y(self):
         &#34;&#34;&#34;Set plot yticks and ylabels&#34;&#34;&#34;
@@ -208,8 +213,8 @@ el.replaceWith(d);
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(0, 0, self.y)
+        self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
+        self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -232,14 +237,15 @@ el.replaceWith(d);
         self._plot_persistent(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_persistent(self, freq, psds):
-        self.view.plotter.ax(0).set_title(&#34;Persistent&#34;)
+        self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
-        im = self.view.imshow(
-                0, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
+        im = self.view.ax(&#34;pst&#34;).imshow(
+                mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect=&#34;auto&#34;,
                 interpolation=&#34;nearest&#34;, resample=False, rasterized=True
@@ -248,14 +254,14 @@ el.replaceWith(d);
         if not self._cb_drawn:
             # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(0),
+                im, ax=self.view.ax(&#34;pst&#34;).ax,
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
             self._cb_drawn = True
 
         if self._cmap_set:
-            self.view.plotter.set_ylim(0, 0, self.y)
+            self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
             self._cmap_set = False</code></pre>
 </details>
 <div class="desc"></div>
@@ -272,11 +278,11 @@ el.replaceWith(d);
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, vbw=5.0)
-        # self.view: viewPSD = self.view # type hint
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window=&#34;blackman&#34;):
         self.x = 1001
         self.y = 600
+        super().__init__(view, ref_level, scale, vbw, window)
+        # self.view: viewPSD = self.view # type hint
         self.cmap = &#34;hot&#34;
         self._cmap_set = False
         self._cb_drawn = False
@@ -285,20 +291,22 @@ el.replaceWith(d);
         self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
         self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_cmap)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        # self.view.plotter.ax(0).set_frame_on(False)
+        self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
 
-        self.set_x()
         self.set_y()
 
-    def set_x(self):
+    def update_f(self, f):
+        fmin, fmax, fnum = f
         &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(0, 0, self.x)
+        self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
+        self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)
 
     def set_y(self):
         &#34;&#34;&#34;Set plot yticks and ylabels&#34;&#34;&#34;
@@ -310,8 +318,8 @@ el.replaceWith(d);
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(0, 0, self.y)
+        self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
+        self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -334,14 +342,15 @@ el.replaceWith(d);
         self._plot_persistent(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_persistent(self, freq, psds):
-        self.view.plotter.ax(0).set_title(&#34;Persistent&#34;)
+        self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
-        im = self.view.imshow(
-                0, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
+        im = self.view.ax(&#34;pst&#34;).imshow(
+                mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect=&#34;auto&#34;,
                 interpolation=&#34;nearest&#34;, resample=False, rasterized=True
@@ -350,14 +359,14 @@ el.replaceWith(d);
         if not self._cb_drawn:
             # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(0),
+                im, ax=self.view.ax(&#34;pst&#34;).ax,
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
             self._cb_drawn = True
 
         if self._cmap_set:
-            self.view.plotter.set_ylim(0, 0, self.y)
+            self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
             self._cmap_set = False</code></pre>
 </details>
 <div class="desc"></div>
@@ -374,11 +383,11 @@ el.replaceWith(d);
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view):
-        super().__init__(view, vbw=5.0)
-        # self.view: viewPSD = self.view # type hint
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window=&#34;blackman&#34;):
         self.x = 1001
         self.y = 600
+        super().__init__(view, ref_level, scale, vbw, window)
+        # self.view: viewPSD = self.view # type hint
         self.cmap = &#34;hot&#34;
         self._cmap_set = False
         self._cb_drawn = False
@@ -387,20 +396,22 @@ el.replaceWith(d);
         self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
         self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_cmap)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        # self.view.plotter.ax(0).set_frame_on(False)
+        self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
+        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.view.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
 
-        self.set_x()
         self.set_y()
 
-    def set_x(self):
+    def update_f(self, f):
+        fmin, fmax, fnum = f
         &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(0, 0, self.x)
+        self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
+        self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)
 
     def set_y(self):
         &#34;&#34;&#34;Set plot yticks and ylabels&#34;&#34;&#34;
@@ -412,8 +423,8 @@ el.replaceWith(d);
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(0, 0, self.y)
+        self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
+        self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -436,14 +447,15 @@ el.replaceWith(d);
         self._plot_persistent(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_persistent(self, freq, psds):
-        self.view.plotter.ax(0).set_title(&#34;Persistent&#34;)
+        self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
-        im = self.view.imshow(
-                0, mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
+        im = self.view.ax(&#34;pst&#34;).imshow(
+                mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect=&#34;auto&#34;,
                 interpolation=&#34;nearest&#34;, resample=False, rasterized=True
@@ -452,14 +464,14 @@ el.replaceWith(d);
         if not self._cb_drawn:
             # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(0),
+                im, ax=self.view.ax(&#34;pst&#34;).ax,
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
             self._cb_drawn = True
 
         if self._cmap_set:
-            self.view.plotter.set_ylim(0, 0, self.y)
+            self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
             self._cmap_set = False</code></pre>
 </details>
 <div class="desc"></div>
@@ -482,25 +494,6 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Set plot color mapping</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.set_x"><code class="name flex">
-<span>def <span class="ident">set_x</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_x(self):
-    &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
-    x_mul = [0.0,0.25,0.5,0.75,1.0]
-
-    x_tick = [self.x*m for m in x_mul]
-    x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-    self.view.plotter.ax(0).set_xticks(x_tick, x_text)
-    self.view.plotter.set_xlim(0, 0, self.x)</code></pre>
-</details>
-<div class="desc"><p>Set plot xticks and xlabels</p></div>
-</dd>
 <dt id="pyspecan.controller.tkGUI.rt.ControllerRT.set_y"><code class="name flex">
 <span>def <span class="ident">set_y</span></span>(<span>self)</span>
 </code></dt>
@@ -519,10 +512,30 @@ el.replaceWith(d);
 
     y_tick = [self.y*m for m in y_mul]
     y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-    self.view.plotter.ax(0).set_yticks(y_tick, y_text)
-    self.view.plotter.set_ylim(0, 0, self.y)</code></pre>
+    self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
+    self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)</code></pre>
 </details>
 <div class="desc"><p>Set plot yticks and ylabels</p></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.update_f"><code class="name flex">
+<span>def <span class="ident">update_f</span></span>(<span>self, f)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_f(self, f):
+    fmin, fmax, fnum = f
+    &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
+    x_mul = [0.0,0.25,0.5,0.75,1.0]
+
+    x_tick = [self.x*m for m in x_mul]
+    x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
+    self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
+    self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)</code></pre>
+</details>
+<div class="desc"></div>
 </dd>
 </dl>
 <h3>Inherited members</h3>
@@ -563,8 +576,8 @@ el.replaceWith(d);
 <ul class="two-column">
 <li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.cmap" href="#pyspecan.controller.tkGUI.rt.ControllerRT.cmap">cmap</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.set_cmap" href="#pyspecan.controller.tkGUI.rt.ControllerRT.set_cmap">set_cmap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.set_x" href="#pyspecan.controller.tkGUI.rt.ControllerRT.set_x">set_x</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.set_y" href="#pyspecan.controller.tkGUI.rt.ControllerRT.set_y">set_y</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.update_f" href="#pyspecan.controller.tkGUI.rt.ControllerRT.update_f">update_f</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.x" href="#pyspecan.controller.tkGUI.rt.ControllerRT.x">x</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.y" href="#pyspecan.controller.tkGUI.rt.ControllerRT.y">y</a></code></li>
 </ul>

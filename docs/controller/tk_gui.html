@@ -49,7 +49,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.controller.tk_gui.Controller"><code class="flex name class">
 <span>class <span class="ident">Controller</span></span>
-<span>(</span><span>model: <a title="pyspecan.model.model.Model" href="../model/model.html#pyspecan.model.model.Model">Model</a>,<br>view: <a title="pyspecan.view.tk_gui.View" href="../view/tk_gui.html#pyspecan.view.tk_gui.View">View</a>)</span>
+<span>(</span><span>model: <a title="pyspecan.model.model.Model" href="../model/model.html#pyspecan.model.model.Model">Model</a>,<br>view: <a title="pyspecan.view.tk_gui.View" href="../view/tk_gui.html#pyspecan.view.tk_gui.View">View</a>,<br>ref_level,<br>scale,<br>vbw,<br>window)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -58,12 +58,13 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class Controller(_Controller):
     &#34;&#34;&#34;tkGUI Controller&#34;&#34;&#34;
-    def __init__(self, model: Model, view: GUI):
+    def __init__(self, model: Model, view: GUI, ref_level, scale, vbw, window):
         super().__init__(model, view)
         self.view: GUI = self.view # type hints
         self.running = False
         self._stop = False
         self.time_show = 50.0
+        self._last_f = None
 
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
         self.view.sld_samp.scale.config(command=self.set_samp)
@@ -88,13 +89,13 @@ el.replaceWith(d);
 
         self.thread: threading.Thread = None # type: ignore
 
-        self.view.var_style.set([k for k in theme_tk.theme.keys()][0])
+        self.view.var_style.set(&#34;Dark&#34;)
         self.set_theme()
 
         if config.MODE == Mode.SWEPT:
-            self.plot = ControllerSwept(self.view.plot)
+            self.plot = ControllerSwept(self.view.plot, ref_level, scale, vbw, window)
         elif config.MODE == Mode.RT:
-            self.plot = ControllerRT(self.view.plot)
+            self.plot = ControllerRT(self.view.plot, ref_level, scale, vbw, window)
         self.draw()
 
     def start(self):
@@ -147,16 +148,28 @@ el.replaceWith(d);
             vbw = self.plot.vbw
             window = self.plot.window
             if not isinstance(self.view.plot.plotter, BlitPlot):
-                self.view.plot.plotter.ax(0).cla()
+                self.view.plot.plotter.cla()
                 print(&#34;Cleared plot!&#34;)
+            self._check_f()
             self.plot.plot(self.model.f, self.model.psd(vbw, window))
-            self.plot.update()
+            # self.plot.update()
 
         ptime = (time.perf_counter() - ptime)
         self.view.var_draw_time.set(f&#34;{ptime:06.3f}s&#34;)
         self.draw_tb()
         # print(f&#34;Plotted in {ptime*1000:.1f}ms&#34;)
         return ptime
+
+    def _check_f(self):
+        def _update_f():
+            return (self.model.f[0], self.model.f[-1]+(self.model.f[-1]-self.model.f[-2]), len(self.model.f))
+        if self._last_f is None:
+            self._last_f = _update_f()
+            self.plot.update_f(self._last_f)
+        elif not self.model.f[0] == self._last_f[0] and not len(self.model.f) == self._last_f[2]:
+            self._last_f = _update_f()
+            self.plot.update_f(self._last_f)
+
 
     def _prev(self):
         valid = self.model.prev()
