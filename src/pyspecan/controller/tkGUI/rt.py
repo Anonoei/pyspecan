@@ -15,11 +15,11 @@ class ControllerRT(FreqPlotController):
         "x", "y", "cmap",
         "_cmap_set", "_cb_drawn"
     )
-    def __init__(self, view):
-        super().__init__(view, vbw=5.0)
-        # self.view: viewPSD = self.view # type hint
+    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window="blackman"):
         self.x = 1001
         self.y = 600
+        super().__init__(view, ref_level, scale, vbw, window)
+        # self.view: viewPSD = self.view # type hint
         self.cmap = "hot"
         self._cmap_set = False
         self._cb_drawn = False
@@ -28,20 +28,22 @@ class ControllerRT(FreqPlotController):
         self.view.wg_sets["cmap"].configure(values=[k for k in cmap.keys()])
         self.view.wg_sets["cmap"].bind("<<ComboboxSelected>>", self.set_cmap)
 
-        self.view.plotter.ax(0).set_autoscale_on(False)
-        # self.view.plotter.ax(0).set_frame_on(False)
+        self.view.ax("pst").ax.set_autoscale_on(False)
+        self.view.ax("pst").ax.locator_params(axis="x", nbins=5)
+        self.view.ax("pst").ax.locator_params(axis="y", nbins=10)
+        self.view.ax("pst").ax.grid(True, alpha=0.2)
 
-        self.set_x()
         self.set_y()
 
-    def set_x(self):
+    def update_f(self, f):
+        fmin, fmax, fnum = f
         """Set plot xticks and xlabels"""
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
         x_text = [f"{m-self.x/2:.1f}" for m in x_tick]
-        self.view.plotter.ax(0).set_xticks(x_tick, x_text)
-        self.view.plotter.set_xlim(0, 0, self.x)
+        self.view.ax("pst").ax.set_xticks(x_tick, x_text)
+        self.view.ax("pst").set_xlim(0, self.x)
 
     def set_y(self):
         """Set plot yticks and ylabels"""
@@ -53,8 +55,8 @@ class ControllerRT(FreqPlotController):
 
         y_tick = [self.y*m for m in y_mul]
         y_text = [f"{(y_rng*m)+y_off:.1f}" for m in y_mul]
-        self.view.plotter.ax(0).set_yticks(y_tick, y_text)
-        self.view.plotter.set_ylim(0, 0, self.y)
+        self.view.ax("pst").ax.set_yticks(y_tick, y_text)
+        self.view.ax("pst").set_ylim(0, self.y)
 
     def set_scale(self, *args, **kwargs):
         prev = self.scale
@@ -77,14 +79,15 @@ class ControllerRT(FreqPlotController):
         self._plot_persistent(freq, psd)
 
         self._show_y_location(psd)
+        self.update()
 
     def _plot_persistent(self, freq, psds):
-        self.view.plotter.ax(0).set_title("Persistent")
+        self.view.ax("pst").ax.set_title("Persistent")
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
-        im = self.view.imshow(
-                0, mat, name="mat", cmap=cmap[self.cmap],
+        im = self.view.ax("pst").imshow(
+                mat, name="mat", cmap=cmap[self.cmap],
                 vmin=0, vmax=1,
                 aspect="auto",
                 interpolation="nearest", resample=False, rasterized=True
@@ -93,12 +96,12 @@ class ControllerRT(FreqPlotController):
         if not self._cb_drawn:
             # print("Adding colorbar")
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.plotter.ax(0),
+                im, ax=self.view.ax("pst").ax,
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
             self._cb_drawn = True
 
         if self._cmap_set:
-            self.view.plotter.set_ylim(0, 0, self.y)
+            self.view.ax("pst").set_ylim(0, self.y)
             self._cmap_set = False

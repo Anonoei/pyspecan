@@ -2,16 +2,20 @@
 import tkinter as tk
 from tkinter import ttk
 
+import matplotlib.pyplot as plt
+
 # from ...plot.mpl.base import BlitPlot
 from .base import GUIFreqPlot
 
 class ViewRT(GUIFreqPlot):
     """Manager for RT mode plots"""
     def __init__(self, view, root):
-        super().__init__(view, root,
-            figsize=(10,10), dpi=100,
-            nrows=1, ncols=1, layout="tight"
-        )
+        fig = plt.figure(figsize=(5,5), layout="constrained")
+        super().__init__(view, root, fig)
+        self.gs = self.plotter.fig.add_gridspec(1,1)
+        self.plotter.add_ax("pst", fig.add_subplot(self.gs[0]))
+        self.gs.update()
+
     def draw_settings(self, parent, row=0):
         row = super().draw_settings(parent, row)
 

@@ -2,16 +2,22 @@
 import tkinter as tk
 from tkinter import ttk
 
+import matplotlib.pyplot as plt
+from matplotlib import gridspec
+
 # from ...plot.mpl.base import BlitPlot
 from .base import GUIFreqPlot
 
 class ViewSwept(GUIFreqPlot):
     """Manager for SWEPT mode plots"""
     def __init__(self, view, root):
-        super().__init__(view, root,
-            figsize=(5,5), dpi=100,
-            nrows=2, ncols=1, layout="constrained"
-        )
+        fig = plt.figure(figsize=(5,5), layout="constrained")
+        super().__init__(view, root, fig)
+        self.gs = self.plotter.fig.add_gridspec(2,1)
+        self.plotter.add_ax("psd", fig.add_subplot(self.gs[0]))
+        self.plotter.add_ax("spg", fig.add_subplot(self.gs[1]))
+        self.gs.update()
+
     def draw_settings(self, parent, row=0):
         var_show_psd = tk.IntVar(self.fr_sets)
         chk_show_psd = ttk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_show_psd)

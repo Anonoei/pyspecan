@@ -17,7 +17,7 @@ from ..model.reader import Format
 from ..view.tk_gui import View as GUI
 
 # from .GUI.manager import Manager
-from ..backend.mpl.base import BlitPlot
+from ..backend.mpl.plot import BlitPlot
 # from ..view.tkGUI.base import GUIFreqPlot
 
 from .tkGUI.base import FreqPlotController
@@ -28,12 +28,13 @@ from ..backend.tk import theme as theme_tk
 
 class Controller(_Controller):
     """tkGUI Controller"""
-    def __init__(self, model: Model, view: GUI):
+    def __init__(self, model: Model, view: GUI, ref_level, scale, vbw, window):
         super().__init__(model, view)
         self.view: GUI = self.view # type hints
         self.running = False
         self._stop = False
         self.time_show = 50.0
+        self._last_f = None
 
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
         self.view.sld_samp.scale.config(command=self.set_samp)
@@ -58,13 +59,13 @@ class Controller(_Controller):
 
         self.thread: threading.Thread = None # type: ignore
 
-        self.view.var_style.set([k for k in theme_tk.theme.keys()][0])
+        self.view.var_style.set("Dark")
         self.set_theme()
 
         if config.MODE == Mode.SWEPT:
-            self.plot = ControllerSwept(self.view.plot)
+            self.plot = ControllerSwept(self.view.plot, ref_level, scale, vbw, window)
         elif config.MODE == Mode.RT:
-            self.plot = ControllerRT(self.view.plot)
+            self.plot = ControllerRT(self.view.plot, ref_level, scale, vbw, window)
         self.draw()
 
     def start(self):
@@ -117,16 +118,28 @@ class Controller(_Controller):
             vbw = self.plot.vbw
             window = self.plot.window
             if not isinstance(self.view.plot.plotter, BlitPlot):
-                self.view.plot.plotter.ax(0).cla()
+                self.view.plot.plotter.cla()
                 print("Cleared plot!")
+            self._check_f()
             self.plot.plot(self.model.f, self.model.psd(vbw, window))
-            self.plot.update()
+            # self.plot.update()
 
         ptime = (time.perf_counter() - ptime)
         self.view.var_draw_time.set(f"{ptime:06.3f}s")
         self.draw_tb()
         # print(f"Plotted in {ptime*1000:.1f}ms")
         return ptime
+
+    def _check_f(self):
+        def _update_f():
+            return (self.model.f[0], self.model.f[-1]+(self.model.f[-1]-self.model.f[-2]), len(self.model.f))
+        if self._last_f is None:
+            self._last_f = _update_f()
+            self.plot.update_f(self._last_f)
+        elif not self.model.f[0] == self._last_f[0] and not len(self.model.f) == self._last_f[2]:
+            self._last_f = _update_f()
+            self.plot.update_f(self._last_f)
+
 
     def _prev(self):
         valid = self.model.prev()

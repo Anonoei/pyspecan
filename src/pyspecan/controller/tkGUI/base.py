@@ -40,7 +40,7 @@ class PlotController:
 class FreqPlotController(PlotController):
     """Controller for view.tkGUI.GUIFreqPlot"""
     __slots__ = ("window", "vbw", "scale", "ref_level")
-    def __init__(self, view: GUIFreqPlot, vbw=10.0, scale=10.0, ref_level=0.0):
+    def __init__(self, view: GUIFreqPlot, ref_level=0.0, scale=10.0, vbw=10.0, window="blackman"):
         super().__init__(view)
         self.view: GUIFreqPlot = self.view # type hint
         self.window = "blackman"
@@ -58,6 +58,9 @@ class FreqPlotController(PlotController):
         self.view.wg_sets["window"].configure(values=[k for k in WindowLUT.keys()])
         self.view.wg_sets["window"].bind("<<ComboboxSelected>>", self.set_window)
         self.set_ref_level()
+
+    def update(self):
+        self.view.plotter.canvas.draw()
 
     @property
     def y_top(self):

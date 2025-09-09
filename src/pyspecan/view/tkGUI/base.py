@@ -3,22 +3,23 @@ import tkinter as tk
 from tkinter import ttk
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 # from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
 
-from ...backend.mpl.base import Plot, BlitPlot
+from ...backend.mpl.plot import _Plot, Plot, BlitPlot
 
 
 class GUIPlot:
-    """tkinter wrapper for pyspecan.plot.mpl"""
+    """tkinter wrapper for pyspecan.backend.mpl.plot"""
     __slots__ = (
         "view", "_root", "plotter", "settings", "ready",
         "fr_main", "fr_canv", "fr_sets", "btn_toggle",
         "wg_sets",
     )
-    def __init__(self, view, root, plotter=Plot, *args, **kwargs):
-        fig, ax = plt.subplots(*args, **kwargs)
-
+    def __init__(self, view, root, fig: Figure, plotter=_Plot):
+        if plotter is _Plot:
+            plotter = Plot
         self.view = view
         self._root = root
         self.settings = {}
@@ -46,52 +47,29 @@ class GUIPlot:
 
         self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+    @property
+    def fig(self):
+        return self.plotter.fig
+    def ax(self, name):
+        return self.plotter.ax(name)
+    def add_ax(self, *args, **kwargs):
+        return self.plotter.add_ax(*args,**kwargs)
+
     def draw_settings(self, parent, row=0):
         """Initialize settings panel"""
         raise NotImplementedError()
 
-    @property
-    def fig(self):
-        return self.plotter.fig
-
-    def ax(self, idx):
-        return self.plotter.ax(idx)
-
-    def art(self, i, j):
-        return self.plotter.art(i, j)
-
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def add_artist(self, idx, art, name):
-        return self.plotter.add_artist(idx, art, name)
-
-    def plot(self, idx, *args, **kwargs):
-        return self.plotter.plot(idx, *args, **kwargs)
-
-    def imshow(self, idx, *args, **kwargs):
-        return self.plotter.imshow(idx, *args, **kwargs)
-
-    def set_data(self, i, j, x, y):
-        self.plotter.set_data(i, j, x, y)
-
-    def set_xdata(self, i, j, x):
-        self.plotter.set_xdata(i, j, x)
-
-    def set_ydata(self, i, j, y):
-        self.plotter.set_ydata(i, j, y)
-
 class GUIBlitPlot(GUIPlot):
     """tkinter wrapper for pyspecan.plot.mpl BlitPlot"""
-    def __init__(self, view, root, *args, **kwargs):
-        super().__init__(view, root, BlitPlot, *args, **kwargs)
+    def __init__(self, view, root, fig):
+        super().__init__(view, root, fig, BlitPlot)
 
 
 class GUIFreqPlot(GUIBlitPlot):
     """Frequency domain view helpers"""
     __slots__ = ("lbl_lo", "lbl_hi")
-    def __init__(self, view, root, *args, **kwargs):
-        super().__init__(view, root, *args, **kwargs)
+    def __init__(self, view, root, fig):
+        super().__init__(view, root, fig)
 
         self.lbl_lo = ttk.Label(self.fr_canv, text="V")
         self.lbl_hi = ttk.Label(self.fr_canv, text="^")

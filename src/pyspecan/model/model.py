@@ -28,6 +28,8 @@ class Model:
             self.block_size = self.nfft
         elif config.MODE == Mode.RT:
             self.block_size = self.nfft*4
+        else:
+            raise err.UnknownOption(f"Unknown mode specified: {config.MODE}")
 
         self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
