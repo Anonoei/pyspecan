@@ -15,6 +15,14 @@ class SpecAn:
                 ref_level=0.0, scale_div=10.0,
                 vbw=10.0, window="blackman"):
 
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().enable()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().start()
+
         if not isinstance(mode, Mode):
             if not mode in Mode.choices():
                 raise err.UnknownOption(f"Unknown mode {mode}")
@@ -36,3 +44,15 @@ class SpecAn:
 
         self.model.show()
         self.view.mainloop()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().stop()
+
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().disable()
+            if config.PROFILE_PATH is None:
+                Profile().show()
+            else:
+                Profile().dump(config.PROFILE_PATH)

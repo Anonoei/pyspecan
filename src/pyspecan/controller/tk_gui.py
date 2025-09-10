@@ -26,6 +26,8 @@ from .tkGUI.rt import ControllerRT
 
 from ..backend.tk import theme as theme_tk
 
+from ..utils.monitor import Memory
+
 class Controller(_Controller):
     """tkGUI Controller"""
     def __init__(self, model: Model, view: GUI, ref_level, scale, vbw, window):
@@ -113,6 +115,8 @@ class Controller(_Controller):
                 time.sleep(wait)
 
     def _plot(self):
+        if config.MON_MEM:
+            Memory().peak()
         ptime = time.perf_counter()
         if isinstance(self.plot, FreqPlotController):
             vbw = self.plot.vbw

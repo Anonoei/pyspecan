@@ -28,16 +28,16 @@ class ControllerSwept(FreqPlotController):
         self.psd_max = None
         self.__init_psd()
         self.view.plotter.ax("psd").ax.set_autoscale_on(False)
-        # self.view.plotter.ax("psd").ax.locator_params(axis="x", nbins=5)
+        self.view.plotter.ax("psd").ax.locator_params(axis="x", nbins=5)
         self.view.plotter.ax("psd").ax.locator_params(axis="y", nbins=10)
         self.view.plotter.ax("psd").ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
-        self.psds = np.zeros((self.max_count, 1024))
+        self.psds = np.zeros((self.max_count, 1024), dtype=np.float32)
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
-        # self.view.plotter.ax("spg").ax.set_autoscale_on(False)
-        # self.view.plotter.ax("spg").ax.locator_params(axis="x", nbins=5)
+        self.view.plotter.ax("spg").ax.set_autoscale_on(False)
+        self.view.plotter.ax("spg").ax.locator_params(axis="x", nbins=5)
         self.view.plotter.ax("spg").ax.locator_params(axis="y", nbins=5)
 
         self.set_y()
@@ -54,27 +54,19 @@ class ControllerSwept(FreqPlotController):
         if self.show_psd == 1 and self.show_spg == 1:
             self.view.ax("psd").ax.set_visible(True)
             self.view.ax("spg").ax.set_visible(True)
-            # self.view.plotter.ax(0).set_in_layout(True)
-            # self.view.plotter.ax(1).set_in_layout(True)
             self.view.ax("psd").ax.set_subplotspec(self.view.gs[0])
             self.view.ax("spg").ax.set_subplotspec(self.view.gs[1])
         elif self.show_psd == 1:
             self.view.ax("psd").ax.set_visible(True)
             self.view.ax("spg").ax.set_visible(False)
             self.view.ax("psd").ax.set_subplotspec(self.view.gs[:])
-            # self.view.plotter.ax(0).set_position((0.06, 0.05, 0.92, 0.90))
-            self.view.ax("spg").ax.set_position((0,0,0,0))
             art = self.view.plotter.ax("spg").art("spg")
             if art is not None:
                 art.set_data([[]]) # clear SPG to be safe
         elif self.show_spg == 1:
             self.view.ax("psd").ax.set_visible(False)
             self.view.ax("spg").ax.set_visible(True)
-            self.view.ax("psd").ax.set_position((0,0,0,0))
             self.view.ax("spg").ax.set_subplotspec(self.view.gs[:])
-            # self.view.plotter.ax(1).set_position((0.06, 0.05, 0.92, 0.90))
-        # print(f"_toggle_show, psd: {self.show_psd}, spg: {self.show_spg}")
-        self.view.gs.update()
         self.view.fig.canvas.draw()
         self.view.fig.canvas.flush_events()
 

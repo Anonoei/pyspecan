@@ -32,6 +32,9 @@ class _Plot:
     def ax(self, name) -> Ax:
         return self._axs[name]
 
+    def axes(self):
+        return [v for v in self._axs.values()]
+
     def add_ax(self, name, ax: Axes):
         """Add new axes"""
         self._axs[name] = Ax(ax)

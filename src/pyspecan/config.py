@@ -55,6 +55,10 @@ class config:
     SENTINEL = object()
     MODE: Mode = Mode.NONE
 
+    MON_MEM = False
+    PROFILE = False
+    PROFILE_PATH = [None, "pyspecan.prof"][1]
+
     def __new__(cls):
         if cls.__instance is None:
             cls.__instance = object.__new__(cls)
