@@ -7,14 +7,16 @@ from ..model.reader import Format
 
 from ..utils.window import WindowLUT
 
+from ..obj import Frequency
+
 def define_args():
     parser = argparse.ArgumentParser("pyspecan")
     ctrl = parser.add_argument_group("Controller")
     ctrl.add_argument("-f", "--file", default=None, help="file path")
     ctrl.add_argument("-d", "--dtype", choices=Format.choices(), default=Format.cf32.name, help="data format")
 
-    ctrl.add_argument("-fs", "--Fs", default=1, help="sample rate")
-    ctrl.add_argument("-cf", "--cf", default=0, help="center frequency")
+    ctrl.add_argument("-fs", "--Fs", default=1, type=Frequency.get, help="sample rate")
+    ctrl.add_argument("-cf", "--cf", default=0, type=Frequency.get, help="center frequency")
     ctrl.add_argument("-n", "--nfft", default=1024, help="FFT size")
 
     view = parser.add_argument_group("View")

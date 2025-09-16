@@ -3,6 +3,7 @@ import numpy as np
 
 from .. import err
 from ..config import config, Mode
+from ..obj import Frequency
 from ..utils.window import WindowLUT
 from ..utils import psd as _psd
 from ..utils import stft
@@ -17,8 +18,8 @@ class Model:
     )
     def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
+        self.Fs = Frequency.get(Fs)
+        self.cf = Frequency.get(cf)
 
         self.nfft = int(nfft)
 
@@ -31,7 +32,7 @@ class Model:
         else:
             raise err.UnknownOption(f"Unknown mode specified: {config.MODE}")
 
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
+        self.f = np.arange(-self.Fs.raw/2, self.Fs.raw/2, self.Fs.raw/self.nfft)
         self._samples = np.empty(self.nfft, dtype=np.complex64)
         self._psd = np.empty(self.nfft, dtype=np.float32)
 

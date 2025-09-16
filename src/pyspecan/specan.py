@@ -3,6 +3,8 @@ import importlib
 
 from . import err
 from .config import config, Mode, View
+from .obj import Frequency
+
 from .model.model import Model
 
 class SpecAn:
@@ -22,6 +24,9 @@ class SpecAn:
         if config.MON_MEM:
             from .utils.monitor import Memory
             Memory().start()
+
+        Fs = Frequency.get(Fs)
+        cf = Frequency.get(cf)
 
         if not isinstance(mode, Mode):
             if not mode in Mode.choices():

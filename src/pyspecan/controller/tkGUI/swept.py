@@ -5,6 +5,7 @@ from ...view.tkGUI.swept import ViewSwept
 from .base import FreqPlotController
 
 from ...utils import vbw as _vbw
+from ...obj import Frequency
 
 class ControllerSwept(FreqPlotController):
     """Controller for ViewSwept"""
@@ -85,7 +86,7 @@ class ControllerSwept(FreqPlotController):
     def update_f(self, f):
         fmin, fmax, fnum = f
         psd_tick = np.linspace(fmin, fmax, 5)
-        psd_text = [f"{f:.3f}" for f in psd_tick]
+        psd_text = [str(Frequency.get(f)) for f in psd_tick]
         self.view.ax("psd").set_xlim(fmin, fmax)
         self.view.ax("psd").ax.set_xticks(psd_tick, psd_text)
 

@@ -21,8 +21,7 @@ class Memory:
         return f"{tracemalloc.get_traced_memory()}"
 
     def start(self):
-        if config.MON_MEM:
-            tracemalloc.start()
+        tracemalloc.start()
 
     def stop(self):
         tracemalloc.stop()
