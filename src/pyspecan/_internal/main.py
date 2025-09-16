@@ -48,7 +48,7 @@ def _process_args(parser):
     ctrl_args = importlib.import_module(f".controller.{view.path}", "pyspecan").define_args
     ctrl_args(parser)
 
-    args = parser.parse_args(remaining)
+    args = parser.parse_args()
     if run_help:
         parser.print_help()
         exit()
