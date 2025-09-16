@@ -20,6 +20,10 @@ def define_args():
     parser.add_argument("-fs", "--Fs", default=1, type=Frequency.get, help="sample rate")
     parser.add_argument("-cf", "--cf", default=0, type=Frequency.get, help="center frequency")
     parser.add_argument("-n", "--nfft", default=1024, help="FFT size")
+
+    mon = parser.add_argument_group("developer toggles")
+    mon.add_argument("--mon_mem", action="store_true")
+    mon.add_argument("--profile", action="store_true")
     return parser
 
 def _main(args):
@@ -44,6 +48,10 @@ def _process_args(parser):
         raise err.UnknownOption(f"Unknown view {args.view}")
 
     config.MODE = mode
+    if args.mon_mem:
+        config.MON_MEM = True
+    if args.profile:
+        config.PROFILE = True
 
     ctrl_args = importlib.import_module(f".controller.{view.path}", "pyspecan").define_args
     ctrl_args(parser)
