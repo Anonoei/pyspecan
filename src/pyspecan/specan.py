@@ -62,7 +62,7 @@ class SpecAn:
         self.model = Model(file, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f".view.{view.path}", "pyspecan").View
-        self.view = v()
+        self.view = v(**kwargs)
 
         ctrl = importlib.import_module(f".controller.{view.path}", "pyspecan").Controller
         self.controller = ctrl(self.model, self.view, **kwargs)

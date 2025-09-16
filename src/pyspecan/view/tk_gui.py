@@ -14,10 +14,10 @@ from ..backend.mpl import theme as theme_mpl
 
 class View(_View):
     """Parent GUI view class"""
-    def __init__(self, root=tk.Tk()):
+    def __init__(self, root=tk.Tk(), **kwargs):
         self.root = root
 
-        theme_mpl.get("Dark")() # Set matplotlib to dark theme
+        theme_mpl.get(kwargs.get("theme", "Dark"))() # Set matplotlib theme
 
         # self.style = ttk.Style(root)
         self.root.title(f"pyspecan | {config.MODE.value}")
