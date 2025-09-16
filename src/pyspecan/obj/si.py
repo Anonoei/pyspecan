@@ -33,7 +33,7 @@ class SI:
             return cls(val)
 
     def to_str(self):
-        fmt = f"{self._si}"
+        fmt = f"{self._si:.3f}"
         unit = self._units[self._mul][1]
         if not unit == "":
             fmt += f"{unit}"

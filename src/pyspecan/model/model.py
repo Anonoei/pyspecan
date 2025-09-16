@@ -32,7 +32,7 @@ class Model:
         else:
             raise err.UnknownOption(f"Unknown mode specified: {config.MODE}")
 
-        self.f = np.arange(-self.Fs.raw/2, self.Fs.raw/2, self.Fs.raw/self._nfft)
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
         self._samples = np.empty(self._nfft, dtype=np.complex64)
         self._psd = np.empty(self._nfft, dtype=np.float32)
 

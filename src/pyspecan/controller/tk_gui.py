@@ -12,7 +12,6 @@ from ..config import config, Mode
 
 from ..utils import dialog
 from ..utils.time import strfmt_td
-from ..obj import Frequency
 
 from ..model.model import Model
 from ..model.reader import Format
@@ -55,7 +54,7 @@ class Controller(_Controller):
         self._last_f = None
 
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
-        self.view.sld_samp.scale.config(command=self.handle_event)
+        self.view.sld_samp.scale.config(command=self.handle_sld_samp)
 
         self.view.ent_time.bind("<Return>", self.handle_event)
         self.view.var_time.set(str(self.time_show))
@@ -195,9 +194,7 @@ class Controller(_Controller):
 
     # --- GUI bind events and setters --- #
     def handle_event(self, event):
-        if event.widget == self.view.sld_samp:
-            self.set_samp(self.view.var_samp.get())
-        elif event.widget == self.view.ent_time:
+        if event.widget == self.view.ent_time:
             self.set_time(self.view.var_time.get())
         elif event.widget == self.view.cb_file_fmt:
             self.set_dtype(self.view.var_file_fmt.get())
@@ -208,6 +205,9 @@ class Controller(_Controller):
 
     def handle_btn_file(self):
         self.set_path(dialog.get_file(False))
+
+    def handle_sld_samp(self, *args):
+        self.set_samp(self.view.var_samp.get())
 
     def set_samp(self, samp):
         self.stop()
