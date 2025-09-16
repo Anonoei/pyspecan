@@ -1,4 +1,5 @@
 """Initialize tkGUI Controller"""
+import argparse
 import threading
 import time
 import datetime as dt
@@ -29,14 +30,28 @@ from ..backend.tk import theme as theme_tk
 
 from ..utils.monitor import Memory
 
+def define_args(parser: argparse.ArgumentParser):
+    ctrl = parser.add_argument_group("tkGUI")
+    ctrl.add_argument("--theme", default="Dark", choices=[k for k in theme_tk.theme.keys()])
+    ctrl.add_argument("--sweep", default=50.0, type=float)
+    from .tkGUI.base import define_args as base_args
+    base_args(ctrl) # type: ignore
+    mode_args = None
+    if config.MODE == Mode.SWEPT:
+        from .tkGUI.swept import define_args as mode_args
+    elif config.MODE == Mode.RT:
+        from .tkGUI.rt import define_args as mode_args
+    if not mode_args is None:
+        mode_args(parser)
+
 class Controller(_Controller):
     """tkGUI Controller"""
-    def __init__(self, model: Model, view: GUI, ref_level, scale, vbw, window):
+    def __init__(self, model: Model, view: GUI, **kwargs):
         super().__init__(model, view)
         self.view: GUI = self.view # type hints
         self.running = False
         self._stop = False
-        self.time_show = 50.0
+        self.time_show = kwargs.get("sweep", 50.0)
         self._last_f = None
 
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
@@ -57,18 +72,16 @@ class Controller(_Controller):
         self.view.ent_fs.bind("<Return>", self.handle_event)
         self.view.ent_cf.bind("<Return>", self.handle_event)
 
-        self.view.cb_style.config(values=[k for k in theme_tk.theme.keys()])
-        self.view.cb_style.bind("<<ComboboxSelected>>", self.set_theme)
-
         self.thread: threading.Thread = None # type: ignore
 
-        self.view.var_style.set("Dark")
-        self.set_theme(self.view.var_style.get())
+        style = kwargs.get("theme", "Dark")
+
+        theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]
 
         if config.MODE == Mode.SWEPT:
-            self.plot = ControllerSwept(self.view.plot, ref_level, scale, vbw, window)
+            self.plot = ControllerSwept(self.view.plot, **kwargs)
         elif config.MODE == Mode.RT:
-            self.plot = ControllerRT(self.view.plot, ref_level, scale, vbw, window)
+            self.plot = ControllerRT(self.view.plot, **kwargs)
         self.draw()
 
     def start(self):
@@ -192,8 +205,6 @@ class Controller(_Controller):
             self.set_fs(self.view.var_fs.get())
         elif event.widget == self.view.ent_cf:
             self.set_cf(self.view.var_cf.get())
-        elif event.widget == self.view.cb_style:
-            self.set_theme(self.view.var_style.get())
 
     def handle_btn_file(self):
         self.set_path(dialog.get_file(False))
@@ -229,5 +240,3 @@ class Controller(_Controller):
         self.model.cf = cf
         self.view.var_cf.set(str(self.model.cf))
         self.draw_ctrl()
-    def set_theme(self, style):
-        theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]

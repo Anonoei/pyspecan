@@ -10,12 +10,32 @@ from .model.model import Model
 class SpecAn:
     """Class to initialize pyspecan"""
     __slots__ = ("model", "view", "controller")
-    def __init__(self,
-                view, mode="psd",
-                file=None, dtype=None,
-                Fs=1, cf=0, nfft=1024,
-                ref_level=0.0, scale_div=10.0,
-                vbw=10.0, window="blackman"):
+    def __init__(self, view, mode="psd", **kwargs):
+        file = kwargs.get("file", config.SENTINEL)
+        if file is not config.SENTINEL:
+            del kwargs["file"]
+        else:
+            file = None
+        fmt = kwargs.get("dtype", config.SENTINEL)
+        if fmt is not config.SENTINEL:
+            del kwargs["dtype"]
+        else:
+            fmt = "cf32"
+        Fs = kwargs.get("Fs", config.SENTINEL)
+        if Fs is not config.SENTINEL:
+            del kwargs["Fs"]
+        else:
+            Fs = 1
+        cf = kwargs.get("cf", config.SENTINEL)
+        if cf is not config.SENTINEL:
+            del kwargs["cf"]
+        else:
+            cf = 0
+        nfft = kwargs.get("nfft", config.SENTINEL)
+        if nfft is not config.SENTINEL:
+            del kwargs["nfft"]
+        else:
+            nfft = 1024
 
         if config.PROFILE:
             from .utils.monitor import Profile
@@ -25,27 +45,27 @@ class SpecAn:
             from .utils.monitor import Memory
             Memory().start()
 
-        Fs = Frequency.get(Fs)
-        cf = Frequency.get(cf)
-
         if not isinstance(mode, Mode):
-            if not mode in Mode.choices():
-                raise err.UnknownOption(f"Unknown mode {mode}")
             mode = Mode[mode]
+            if mode == Mode.NONE:
+                raise err.UnknownOption(f"Unknown mode {mode}")
         if not isinstance(view, View):
-            if not view in View.choices():
+            view = View.get(view)
+            if view == View.NONE:
                 raise err.UnknownOption(f"Unknown view {view}")
-            view = View.get_view(view)
 
         config.MODE = mode # set global mode
 
-        self.model = Model(file, dtype, nfft, Fs, cf)
+        Fs = Frequency.get(Fs)
+        cf = Frequency.get(cf)
+
+        self.model = Model(file, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f".view.{view.path}", "pyspecan").View
         self.view = v()
 
         ctrl = importlib.import_module(f".controller.{view.path}", "pyspecan").Controller
-        self.controller = ctrl(self.model, self.view, ref_level, scale_div, vbw, window)
+        self.controller = ctrl(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()

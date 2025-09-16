@@ -1,13 +1,17 @@
 """Controller for RT mode"""
+import argparse
 import numpy as np
-# import tkinter as tk
-# from tkinter import ttk
 
-# from .base import GUIFreqPlot
 from .base import FreqPlotController
 
 from ...utils import matrix
 from ...backend.mpl.color import cmap
+
+def define_args(parser: argparse.ArgumentParser):
+    mode = parser.add_argument_group("RT mode")
+    mode.add_argument("--x", default=1001, type=int, help="histogram x pixels")
+    mode.add_argument("--y", default=600, type=int, help="histogram y pixels")
+    mode.add_argument("--cmap", default="hot", choices=[k for k in cmap.keys()], help="histogram color map")
 
 class ControllerRT(FreqPlotController):
     """Controller for ViewRT"""
@@ -15,12 +19,12 @@ class ControllerRT(FreqPlotController):
         "x", "y", "cmap",
         "_cmap_set", "_cb_drawn"
     )
-    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window="blackman"):
-        self.x = 1001
-        self.y = 600
-        super().__init__(view, ref_level, scale, vbw, window)
+    def __init__(self, view, **kwargs):
+        self.x = kwargs.get("x", 1001)
+        self.y = kwargs.get("y", 600)
+        self.cmap = kwargs.get("cmap", "hot")
+        super().__init__(view, **kwargs)
         # self.view: viewPSD = self.view # type hint
-        self.cmap = "hot"
         self._cmap_set = False
         self._cb_drawn = False
 

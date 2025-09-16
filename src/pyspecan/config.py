@@ -16,6 +16,13 @@ class Mode(Enum):
             arr.append(inst.name)
         return arr
 
+    @classmethod
+    def get(cls, option: str):
+        for inst in cls:
+            if inst.name == option:
+                return inst
+        return cls.NONE
+
 class View(Enum):
     """Specan views"""
     NONE = (("none",), None)
@@ -28,7 +35,7 @@ class View(Enum):
         return self.value[1]
 
     @classmethod
-    def get_view(cls, option: str):
+    def get(cls, option: str):
         """return view instance"""
         for inst in cls:
             if inst.name == option or option in inst.value[0]:

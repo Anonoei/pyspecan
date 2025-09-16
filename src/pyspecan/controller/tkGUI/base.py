@@ -1,4 +1,6 @@
 """Base Controllers for tkGUI Controller"""
+import argparse
+
 import tkinter as tk
 
 import numpy as np
@@ -9,7 +11,13 @@ from ...view.tkGUI.base import GUIPlot
 # from ...view.tkGUI.base import GUIBlitPlot
 from ...view.tkGUI.base import GUIFreqPlot
 
-class PlotController:
+def define_args(parser: argparse.ArgumentParser):
+    parser.add_argument("-rl", "--ref_level", default=0.0, help="ref Level")
+    parser.add_argument("-sd", "--scale_div", default=10.0, help="scale per division")
+    parser.add_argument("-vb", "--vbw", default=10.0, help="video bandwidth")
+    parser.add_argument("-w", "--window", default="blackman", choices=[k for k in WindowLUT.keys()], help="FFT window function")
+
+class _PlotController:
     """Controller for view.tkGUI.GUIPlot"""
     __slots__ = ("view",)
     def __init__(self, view: GUIPlot):
@@ -37,16 +45,16 @@ class PlotController:
         """Update plot data"""
         raise NotImplementedError()
 
-class FreqPlotController(PlotController):
+class FreqPlotController(_PlotController):
     """Controller for view.tkGUI.GUIFreqPlot"""
     __slots__ = ("window", "vbw", "scale", "ref_level")
-    def __init__(self, view: GUIFreqPlot, ref_level=0.0, scale=10.0, vbw=10.0, window="blackman"):
+    def __init__(self, view: GUIFreqPlot, **kwargs):
         super().__init__(view)
         self.view: GUIFreqPlot = self.view # type hint
-        self.window = "blackman"
-        self.vbw = vbw
-        self.scale = scale
-        self.ref_level = ref_level
+        self.window =  kwargs.get("window", "blackman")
+        self.vbw = kwargs.get("vbw", 10.0)
+        self.scale = kwargs.get("scale_div", 10.0)
+        self.ref_level = kwargs.get("ref_level", 0.0)
 
         self.view.settings["scale"].set(str(self.scale))
         self.view.wg_sets["scale"].bind("<Return>", self.handle_event)

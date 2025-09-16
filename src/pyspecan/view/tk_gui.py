@@ -127,14 +127,6 @@ class View(_View):
         self.ent_cf.grid(row=row,column=1, sticky=tk.W)
         root.pack(padx=2,pady=2, fill=tk.X)
 
-        root = ttk.Frame(parent) # Misc
-        row = 0
-        self.var_style = tk.StringVar(root)
-        ttk.Label(root, text="Theme:").grid(row=row,column=0, sticky=tk.W)
-        self.cb_style = ttk.Combobox(root, textvariable=self.var_style, width=10)
-        self.cb_style.grid(row=row,column=1, sticky=tk.W)
-        root.pack(padx=2,pady=2, fill=tk.X)
-
     def mainloop(self):
         self.root.mainloop()
 

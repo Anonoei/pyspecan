@@ -1,3 +1,5 @@
+"""Controller for SWEPT mode"""
+import argparse
 import numpy as np
 
 from ...view.tkGUI.swept import ViewSwept
@@ -7,6 +9,11 @@ from .base import FreqPlotController
 from ...utils import vbw as _vbw
 from ...obj import Frequency
 
+def define_args(parser: argparse.ArgumentParser):
+    mode = parser.add_argument_group("SWEPT mode")
+    mode.add_argument("--psd", action="store_false", help="show psd")
+    mode.add_argument("--spg", action="store_true", help="show spectrogram")
+
 class ControllerSwept(FreqPlotController):
     """Controller for ViewSwept"""
     __slots__ = (
@@ -14,11 +21,11 @@ class ControllerSwept(FreqPlotController):
         "psd_min", "psd_max",
         "max_count", "psds"
     )
-    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=10.0, window="blackman"):
-        super().__init__(view, ref_level, scale, vbw, window)
+    def __init__(self, view, **kwargs):
+        super().__init__(view, **kwargs)
         self.view: ViewSwept = self.view # type: ignore
-        self.show_psd = 1
-        self.show_spg = 0
+        self.show_psd = int(kwargs.get("psd", True))
+        self.show_spg = int(kwargs.get("spg", False))
         self.view.settings["show_psd"].set(self.show_psd)
         self.view.wg_sets["show_psd"].configure(command=self.toggle_show_psd)
         self.view.settings["show_spg"].set(self.show_spg)
