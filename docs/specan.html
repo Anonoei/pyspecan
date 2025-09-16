@@ -49,7 +49,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.specan.SpecAn"><code class="flex name class">
 <span>class <span class="ident">SpecAn</span></span>
-<span>(</span><span>view,<br>mode='psd',<br>file=None,<br>dtype=None,<br>Fs=1,<br>cf=0,<br>nfft=1024,<br>ref_level=0.0,<br>scale_div=10.0,<br>vbw=10.0,<br>window='blackman')</span>
+<span>(</span><span>view, mode='psd', **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -59,34 +59,77 @@ el.replaceWith(d);
 <pre><code class="python">class SpecAn:
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self,
-                view, mode=&#34;psd&#34;,
-                file=None, dtype=None,
-                Fs=1, cf=0, nfft=1024,
-                ref_level=0.0, scale_div=10.0,
-                vbw=10.0, window=&#34;blackman&#34;):
+    def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
+        file = kwargs.get(&#34;file&#34;, config.SENTINEL)
+        if file is not config.SENTINEL:
+            del kwargs[&#34;file&#34;]
+        else:
+            file = None
+        fmt = kwargs.get(&#34;dtype&#34;, config.SENTINEL)
+        if fmt is not config.SENTINEL:
+            del kwargs[&#34;dtype&#34;]
+        else:
+            fmt = &#34;cf32&#34;
+        Fs = kwargs.get(&#34;Fs&#34;, config.SENTINEL)
+        if Fs is not config.SENTINEL:
+            del kwargs[&#34;Fs&#34;]
+        else:
+            Fs = 1
+        cf = kwargs.get(&#34;cf&#34;, config.SENTINEL)
+        if cf is not config.SENTINEL:
+            del kwargs[&#34;cf&#34;]
+        else:
+            cf = 0
+        nfft = kwargs.get(&#34;nfft&#34;, config.SENTINEL)
+        if nfft is not config.SENTINEL:
+            del kwargs[&#34;nfft&#34;]
+        else:
+            nfft = 1024
+
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().enable()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().start()
 
         if not isinstance(mode, Mode):
-            if not mode in Mode.choices():
-                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
             mode = Mode[mode]
+            if mode == Mode.NONE:
+                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
         if not isinstance(view, View):
-            if not view in View.choices():
+            view = View.get(view)
+            if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
-            view = View.get_view(view)
 
         config.MODE = mode # set global mode
 
-        self.model = Model(file, dtype, nfft, Fs, cf)
+        Fs = Frequency.get(Fs)
+        cf = Frequency.get(cf)
+
+        self.model = Model(file, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
         self.view = v()
 
         ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, ref_level, scale_div, vbw, window)
+        self.controller = ctrl(self.model, self.view, **kwargs)
 
         self.model.show()
-        self.view.mainloop()</code></pre>
+        self.view.mainloop()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().stop()
+
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().disable()
+            if config.PROFILE_PATH is None:
+                Profile().show()
+            else:
+                Profile().dump(config.PROFILE_PATH)</code></pre>
 </details>
 <div class="desc"><p>Class to initialize pyspecan</p></div>
 <h3>Instance variables</h3>
@@ -100,34 +143,77 @@ el.replaceWith(d);
 <pre><code class="python">class SpecAn:
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self,
-                view, mode=&#34;psd&#34;,
-                file=None, dtype=None,
-                Fs=1, cf=0, nfft=1024,
-                ref_level=0.0, scale_div=10.0,
-                vbw=10.0, window=&#34;blackman&#34;):
+    def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
+        file = kwargs.get(&#34;file&#34;, config.SENTINEL)
+        if file is not config.SENTINEL:
+            del kwargs[&#34;file&#34;]
+        else:
+            file = None
+        fmt = kwargs.get(&#34;dtype&#34;, config.SENTINEL)
+        if fmt is not config.SENTINEL:
+            del kwargs[&#34;dtype&#34;]
+        else:
+            fmt = &#34;cf32&#34;
+        Fs = kwargs.get(&#34;Fs&#34;, config.SENTINEL)
+        if Fs is not config.SENTINEL:
+            del kwargs[&#34;Fs&#34;]
+        else:
+            Fs = 1
+        cf = kwargs.get(&#34;cf&#34;, config.SENTINEL)
+        if cf is not config.SENTINEL:
+            del kwargs[&#34;cf&#34;]
+        else:
+            cf = 0
+        nfft = kwargs.get(&#34;nfft&#34;, config.SENTINEL)
+        if nfft is not config.SENTINEL:
+            del kwargs[&#34;nfft&#34;]
+        else:
+            nfft = 1024
+
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().enable()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().start()
 
         if not isinstance(mode, Mode):
-            if not mode in Mode.choices():
-                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
             mode = Mode[mode]
+            if mode == Mode.NONE:
+                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
         if not isinstance(view, View):
-            if not view in View.choices():
+            view = View.get(view)
+            if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
-            view = View.get_view(view)
 
         config.MODE = mode # set global mode
 
-        self.model = Model(file, dtype, nfft, Fs, cf)
+        Fs = Frequency.get(Fs)
+        cf = Frequency.get(cf)
+
+        self.model = Model(file, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
         self.view = v()
 
         ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, ref_level, scale_div, vbw, window)
+        self.controller = ctrl(self.model, self.view, **kwargs)
 
         self.model.show()
-        self.view.mainloop()</code></pre>
+        self.view.mainloop()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().stop()
+
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().disable()
+            if config.PROFILE_PATH is None:
+                Profile().show()
+            else:
+                Profile().dump(config.PROFILE_PATH)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -140,34 +226,77 @@ el.replaceWith(d);
 <pre><code class="python">class SpecAn:
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self,
-                view, mode=&#34;psd&#34;,
-                file=None, dtype=None,
-                Fs=1, cf=0, nfft=1024,
-                ref_level=0.0, scale_div=10.0,
-                vbw=10.0, window=&#34;blackman&#34;):
+    def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
+        file = kwargs.get(&#34;file&#34;, config.SENTINEL)
+        if file is not config.SENTINEL:
+            del kwargs[&#34;file&#34;]
+        else:
+            file = None
+        fmt = kwargs.get(&#34;dtype&#34;, config.SENTINEL)
+        if fmt is not config.SENTINEL:
+            del kwargs[&#34;dtype&#34;]
+        else:
+            fmt = &#34;cf32&#34;
+        Fs = kwargs.get(&#34;Fs&#34;, config.SENTINEL)
+        if Fs is not config.SENTINEL:
+            del kwargs[&#34;Fs&#34;]
+        else:
+            Fs = 1
+        cf = kwargs.get(&#34;cf&#34;, config.SENTINEL)
+        if cf is not config.SENTINEL:
+            del kwargs[&#34;cf&#34;]
+        else:
+            cf = 0
+        nfft = kwargs.get(&#34;nfft&#34;, config.SENTINEL)
+        if nfft is not config.SENTINEL:
+            del kwargs[&#34;nfft&#34;]
+        else:
+            nfft = 1024
+
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().enable()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().start()
 
         if not isinstance(mode, Mode):
-            if not mode in Mode.choices():
-                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
             mode = Mode[mode]
+            if mode == Mode.NONE:
+                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
         if not isinstance(view, View):
-            if not view in View.choices():
+            view = View.get(view)
+            if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
-            view = View.get_view(view)
 
         config.MODE = mode # set global mode
 
-        self.model = Model(file, dtype, nfft, Fs, cf)
+        Fs = Frequency.get(Fs)
+        cf = Frequency.get(cf)
+
+        self.model = Model(file, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
         self.view = v()
 
         ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, ref_level, scale_div, vbw, window)
+        self.controller = ctrl(self.model, self.view, **kwargs)
 
         self.model.show()
-        self.view.mainloop()</code></pre>
+        self.view.mainloop()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().stop()
+
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().disable()
+            if config.PROFILE_PATH is None:
+                Profile().show()
+            else:
+                Profile().dump(config.PROFILE_PATH)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -180,34 +309,77 @@ el.replaceWith(d);
 <pre><code class="python">class SpecAn:
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self,
-                view, mode=&#34;psd&#34;,
-                file=None, dtype=None,
-                Fs=1, cf=0, nfft=1024,
-                ref_level=0.0, scale_div=10.0,
-                vbw=10.0, window=&#34;blackman&#34;):
+    def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
+        file = kwargs.get(&#34;file&#34;, config.SENTINEL)
+        if file is not config.SENTINEL:
+            del kwargs[&#34;file&#34;]
+        else:
+            file = None
+        fmt = kwargs.get(&#34;dtype&#34;, config.SENTINEL)
+        if fmt is not config.SENTINEL:
+            del kwargs[&#34;dtype&#34;]
+        else:
+            fmt = &#34;cf32&#34;
+        Fs = kwargs.get(&#34;Fs&#34;, config.SENTINEL)
+        if Fs is not config.SENTINEL:
+            del kwargs[&#34;Fs&#34;]
+        else:
+            Fs = 1
+        cf = kwargs.get(&#34;cf&#34;, config.SENTINEL)
+        if cf is not config.SENTINEL:
+            del kwargs[&#34;cf&#34;]
+        else:
+            cf = 0
+        nfft = kwargs.get(&#34;nfft&#34;, config.SENTINEL)
+        if nfft is not config.SENTINEL:
+            del kwargs[&#34;nfft&#34;]
+        else:
+            nfft = 1024
+
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().enable()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().start()
 
         if not isinstance(mode, Mode):
-            if not mode in Mode.choices():
-                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
             mode = Mode[mode]
+            if mode == Mode.NONE:
+                raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
         if not isinstance(view, View):
-            if not view in View.choices():
+            view = View.get(view)
+            if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
-            view = View.get_view(view)
 
         config.MODE = mode # set global mode
 
-        self.model = Model(file, dtype, nfft, Fs, cf)
+        Fs = Frequency.get(Fs)
+        cf = Frequency.get(cf)
+
+        self.model = Model(file, fmt, nfft, Fs, cf)
 
         v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
         self.view = v()
 
         ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, ref_level, scale_div, vbw, window)
+        self.controller = ctrl(self.model, self.view, **kwargs)
 
         self.model.show()
-        self.view.mainloop()</code></pre>
+        self.view.mainloop()
+
+        if config.MON_MEM:
+            from .utils.monitor import Memory
+            Memory().stop()
+
+        if config.PROFILE:
+            from .utils.monitor import Profile
+            Profile().disable()
+            if config.PROFILE_PATH is None:
+                Profile().show()
+            else:
+                Profile().dump(config.PROFILE_PATH)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>

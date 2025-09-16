@@ -59,27 +59,27 @@ el.replaceWith(d);
     __slots__ = (
         &#34;mode&#34;, &#34;reader&#34;, &#34;block_size&#34;,
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
+        &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;, &#34;_overlap&#34;
     )
     def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
+        self._Fs = Frequency.get(Fs)
+        self._cf = Frequency.get(cf)
 
-        self.nfft = int(nfft)
+        self._nfft = int(nfft)
 
-        self.overlap = 0.8 # rt
+        self._overlap = 0.8 # rt
 
         if config.MODE == Mode.SWEPT:
-            self.block_size = self.nfft
+            self.block_size = self._nfft
         elif config.MODE == Mode.RT:
-            self.block_size = self.nfft*4
+            self.block_size = self._nfft*4
         else:
             raise err.UnknownOption(f&#34;Unknown mode specified: {config.MODE}&#34;)
 
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
-        self._samples = np.empty(self.nfft, dtype=np.complex64)
-        self._psd = np.empty(self.nfft, dtype=np.float32)
+        self.f = np.arange(-self.Fs.raw/2, self.Fs.raw/2, self.Fs.raw/self._nfft)
+        self._samples = np.empty(self._nfft, dtype=np.complex64)
+        self._psd = np.empty(self._nfft, dtype=np.float32)
 
     def show(self, ind=0):
         print(&#34; &#34;*ind + &#34;Reader:&#34;)
@@ -97,10 +97,10 @@ el.replaceWith(d);
             return None
         if self._psd is None:
             if config.MODE == Mode.SWEPT:
-                psd = _psd.psd(self._samples, self.Fs, vbw, win)
+                psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
                 self._psd = psd
             elif config.MODE == Mode.RT:
-                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
+                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
                 self._psd = psd
         return self._psd
 
@@ -122,103 +122,49 @@ el.replaceWith(d);
         self._psd = None
         return True
 
-    def set_path(self, path, fmt):
-        if path is None:
-            return
-        self.reader.set_path(path, fmt)
-
     def cur_time(self):
         return self.reader.cur_samp/self.Fs
 
     def tot_time(self):
-        return self.reader.max_samp/self.Fs</code></pre>
+        return self.reader.max_samp/self.Fs
+
+    def get_fs(self):
+        return self._Fs
+    def set_fs(self, fs):
+        self._Fs = Frequency.get(fs)
+    Fs = property(get_fs, set_fs)
+
+    def get_cf(self):
+        return self._cf
+    def set_cf(self, cf):
+        self._cf = Frequency.get(cf)
+    cf = property(get_cf, set_cf)
+
+    def get_nfft(self):
+        return self._nfft
+    def set_nfft(self, nfft):
+        self._nfft = int(nfft)
+    nfft = property(get_nfft, set_nfft)
+
+    def get_overlap(self):
+        return self._overlap
+    def set_overlap(self, overlap):
+        if overlap &lt;= 0.0 or overlap &gt; 1.0:
+            raise ValueError
+        self._overlap = float(overlap)
+    overlap = property(get_overlap, set_overlap)</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.model.model.Model.Fs"><code class="name">var <span class="ident">Fs</span></code></dt>
+<dt id="pyspecan.model.model.Model.Fs"><code class="name">prop <span class="ident">Fs</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Model:
-    __slots__ = (
-        &#34;mode&#34;, &#34;reader&#34;, &#34;block_size&#34;,
-        &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
-    )
-    def __init__(self, path, fmt, nfft, Fs, cf):
-        self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
-
-        self.nfft = int(nfft)
-
-        self.overlap = 0.8 # rt
-
-        if config.MODE == Mode.SWEPT:
-            self.block_size = self.nfft
-        elif config.MODE == Mode.RT:
-            self.block_size = self.nfft*4
-        else:
-            raise err.UnknownOption(f&#34;Unknown mode specified: {config.MODE}&#34;)
-
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
-        self._samples = np.empty(self.nfft, dtype=np.complex64)
-        self._psd = np.empty(self.nfft, dtype=np.float32)
-
-    def show(self, ind=0):
-        print(&#34; &#34;*ind + &#34;Reader:&#34;)
-        self.reader.show(ind+2)
-
-    def reset(self):
-        self.reader.reset()
-
-    @property
-    def samples(self):
-        return self._samples
-
-    def psd(self, vbw=None, win=&#34;blackman&#34;):
-        if self._samples is None:
-            return None
-        if self._psd is None:
-            if config.MODE == Mode.SWEPT:
-                psd = _psd.psd(self._samples, self.Fs, vbw, win)
-                self._psd = psd
-            elif config.MODE == Mode.RT:
-                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
-                self._psd = psd
-        return self._psd
-
-    def next(self):
-        try:
-            samples = self.reader.next(self.block_size)
-        except err.Overflow:
-            return False
-        self._samples = samples
-        self._psd = None
-        return True
-
-    def prev(self):
-        try:
-            samples = self.reader.prev(self.block_size)
-        except err.Overflow:
-            return False
-        self._samples = samples
-        self._psd = None
-        return True
-
-    def set_path(self, path, fmt):
-        if path is None:
-            return
-        self.reader.set_path(path, fmt)
-
-    def cur_time(self):
-        return self.reader.cur_samp/self.Fs
-
-    def tot_time(self):
-        return self.reader.max_samp/self.Fs</code></pre>
+<pre><code class="python">def get_fs(self):
+    return self._Fs</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -232,27 +178,27 @@ el.replaceWith(d);
     __slots__ = (
         &#34;mode&#34;, &#34;reader&#34;, &#34;block_size&#34;,
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
+        &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;, &#34;_overlap&#34;
     )
     def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
+        self._Fs = Frequency.get(Fs)
+        self._cf = Frequency.get(cf)
 
-        self.nfft = int(nfft)
+        self._nfft = int(nfft)
 
-        self.overlap = 0.8 # rt
+        self._overlap = 0.8 # rt
 
         if config.MODE == Mode.SWEPT:
-            self.block_size = self.nfft
+            self.block_size = self._nfft
         elif config.MODE == Mode.RT:
-            self.block_size = self.nfft*4
+            self.block_size = self._nfft*4
         else:
             raise err.UnknownOption(f&#34;Unknown mode specified: {config.MODE}&#34;)
 
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
-        self._samples = np.empty(self.nfft, dtype=np.complex64)
-        self._psd = np.empty(self.nfft, dtype=np.float32)
+        self.f = np.arange(-self.Fs.raw/2, self.Fs.raw/2, self.Fs.raw/self._nfft)
+        self._samples = np.empty(self._nfft, dtype=np.complex64)
+        self._psd = np.empty(self._nfft, dtype=np.float32)
 
     def show(self, ind=0):
         print(&#34; &#34;*ind + &#34;Reader:&#34;)
@@ -270,10 +216,10 @@ el.replaceWith(d);
             return None
         if self._psd is None:
             if config.MODE == Mode.SWEPT:
-                psd = _psd.psd(self._samples, self.Fs, vbw, win)
+                psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
                 self._psd = psd
             elif config.MODE == Mode.RT:
-                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
+                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
                 self._psd = psd
         return self._psd
 
@@ -295,102 +241,48 @@ el.replaceWith(d);
         self._psd = None
         return True
 
-    def set_path(self, path, fmt):
-        if path is None:
-            return
-        self.reader.set_path(path, fmt)
-
     def cur_time(self):
         return self.reader.cur_samp/self.Fs
 
     def tot_time(self):
-        return self.reader.max_samp/self.Fs</code></pre>
+        return self.reader.max_samp/self.Fs
+
+    def get_fs(self):
+        return self._Fs
+    def set_fs(self, fs):
+        self._Fs = Frequency.get(fs)
+    Fs = property(get_fs, set_fs)
+
+    def get_cf(self):
+        return self._cf
+    def set_cf(self, cf):
+        self._cf = Frequency.get(cf)
+    cf = property(get_cf, set_cf)
+
+    def get_nfft(self):
+        return self._nfft
+    def set_nfft(self, nfft):
+        self._nfft = int(nfft)
+    nfft = property(get_nfft, set_nfft)
+
+    def get_overlap(self):
+        return self._overlap
+    def set_overlap(self, overlap):
+        if overlap &lt;= 0.0 or overlap &gt; 1.0:
+            raise ValueError
+        self._overlap = float(overlap)
+    overlap = property(get_overlap, set_overlap)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.model.Model.cf"><code class="name">var <span class="ident">cf</span></code></dt>
+<dt id="pyspecan.model.model.Model.cf"><code class="name">prop <span class="ident">cf</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Model:
-    __slots__ = (
-        &#34;mode&#34;, &#34;reader&#34;, &#34;block_size&#34;,
-        &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
-    )
-    def __init__(self, path, fmt, nfft, Fs, cf):
-        self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
-
-        self.nfft = int(nfft)
-
-        self.overlap = 0.8 # rt
-
-        if config.MODE == Mode.SWEPT:
-            self.block_size = self.nfft
-        elif config.MODE == Mode.RT:
-            self.block_size = self.nfft*4
-        else:
-            raise err.UnknownOption(f&#34;Unknown mode specified: {config.MODE}&#34;)
-
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
-        self._samples = np.empty(self.nfft, dtype=np.complex64)
-        self._psd = np.empty(self.nfft, dtype=np.float32)
-
-    def show(self, ind=0):
-        print(&#34; &#34;*ind + &#34;Reader:&#34;)
-        self.reader.show(ind+2)
-
-    def reset(self):
-        self.reader.reset()
-
-    @property
-    def samples(self):
-        return self._samples
-
-    def psd(self, vbw=None, win=&#34;blackman&#34;):
-        if self._samples is None:
-            return None
-        if self._psd is None:
-            if config.MODE == Mode.SWEPT:
-                psd = _psd.psd(self._samples, self.Fs, vbw, win)
-                self._psd = psd
-            elif config.MODE == Mode.RT:
-                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
-                self._psd = psd
-        return self._psd
-
-    def next(self):
-        try:
-            samples = self.reader.next(self.block_size)
-        except err.Overflow:
-            return False
-        self._samples = samples
-        self._psd = None
-        return True
-
-    def prev(self):
-        try:
-            samples = self.reader.prev(self.block_size)
-        except err.Overflow:
-            return False
-        self._samples = samples
-        self._psd = None
-        return True
-
-    def set_path(self, path, fmt):
-        if path is None:
-            return
-        self.reader.set_path(path, fmt)
-
-    def cur_time(self):
-        return self.reader.cur_samp/self.Fs
-
-    def tot_time(self):
-        return self.reader.max_samp/self.Fs</code></pre>
+<pre><code class="python">def get_cf(self):
+    return self._cf</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -404,27 +296,27 @@ el.replaceWith(d);
     __slots__ = (
         &#34;mode&#34;, &#34;reader&#34;, &#34;block_size&#34;,
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
+        &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;, &#34;_overlap&#34;
     )
     def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
+        self._Fs = Frequency.get(Fs)
+        self._cf = Frequency.get(cf)
 
-        self.nfft = int(nfft)
+        self._nfft = int(nfft)
 
-        self.overlap = 0.8 # rt
+        self._overlap = 0.8 # rt
 
         if config.MODE == Mode.SWEPT:
-            self.block_size = self.nfft
+            self.block_size = self._nfft
         elif config.MODE == Mode.RT:
-            self.block_size = self.nfft*4
+            self.block_size = self._nfft*4
         else:
             raise err.UnknownOption(f&#34;Unknown mode specified: {config.MODE}&#34;)
 
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
-        self._samples = np.empty(self.nfft, dtype=np.complex64)
-        self._psd = np.empty(self.nfft, dtype=np.float32)
+        self.f = np.arange(-self.Fs.raw/2, self.Fs.raw/2, self.Fs.raw/self._nfft)
+        self._samples = np.empty(self._nfft, dtype=np.complex64)
+        self._psd = np.empty(self._nfft, dtype=np.float32)
 
     def show(self, ind=0):
         print(&#34; &#34;*ind + &#34;Reader:&#34;)
@@ -442,10 +334,10 @@ el.replaceWith(d);
             return None
         if self._psd is None:
             if config.MODE == Mode.SWEPT:
-                psd = _psd.psd(self._samples, self.Fs, vbw, win)
+                psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
                 self._psd = psd
             elif config.MODE == Mode.RT:
-                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
+                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
                 self._psd = psd
         return self._psd
 
@@ -467,16 +359,37 @@ el.replaceWith(d);
         self._psd = None
         return True
 
-    def set_path(self, path, fmt):
-        if path is None:
-            return
-        self.reader.set_path(path, fmt)
-
     def cur_time(self):
         return self.reader.cur_samp/self.Fs
 
     def tot_time(self):
-        return self.reader.max_samp/self.Fs</code></pre>
+        return self.reader.max_samp/self.Fs
+
+    def get_fs(self):
+        return self._Fs
+    def set_fs(self, fs):
+        self._Fs = Frequency.get(fs)
+    Fs = property(get_fs, set_fs)
+
+    def get_cf(self):
+        return self._cf
+    def set_cf(self, cf):
+        self._cf = Frequency.get(cf)
+    cf = property(get_cf, set_cf)
+
+    def get_nfft(self):
+        return self._nfft
+    def set_nfft(self, nfft):
+        self._nfft = int(nfft)
+    nfft = property(get_nfft, set_nfft)
+
+    def get_overlap(self):
+        return self._overlap
+    def set_overlap(self, overlap):
+        if overlap &lt;= 0.0 or overlap &gt; 1.0:
+            raise ValueError
+        self._overlap = float(overlap)
+    overlap = property(get_overlap, set_overlap)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -490,27 +403,27 @@ el.replaceWith(d);
     __slots__ = (
         &#34;mode&#34;, &#34;reader&#34;, &#34;block_size&#34;,
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
+        &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;, &#34;_overlap&#34;
     )
     def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
+        self._Fs = Frequency.get(Fs)
+        self._cf = Frequency.get(cf)
 
-        self.nfft = int(nfft)
+        self._nfft = int(nfft)
 
-        self.overlap = 0.8 # rt
+        self._overlap = 0.8 # rt
 
         if config.MODE == Mode.SWEPT:
-            self.block_size = self.nfft
+            self.block_size = self._nfft
         elif config.MODE == Mode.RT:
-            self.block_size = self.nfft*4
+            self.block_size = self._nfft*4
         else:
             raise err.UnknownOption(f&#34;Unknown mode specified: {config.MODE}&#34;)
 
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
-        self._samples = np.empty(self.nfft, dtype=np.complex64)
-        self._psd = np.empty(self.nfft, dtype=np.float32)
+        self.f = np.arange(-self.Fs.raw/2, self.Fs.raw/2, self.Fs.raw/self._nfft)
+        self._samples = np.empty(self._nfft, dtype=np.complex64)
+        self._psd = np.empty(self._nfft, dtype=np.float32)
 
     def show(self, ind=0):
         print(&#34; &#34;*ind + &#34;Reader:&#34;)
@@ -528,10 +441,10 @@ el.replaceWith(d);
             return None
         if self._psd is None:
             if config.MODE == Mode.SWEPT:
-                psd = _psd.psd(self._samples, self.Fs, vbw, win)
+                psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
                 self._psd = psd
             elif config.MODE == Mode.RT:
-                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
+                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
                 self._psd = psd
         return self._psd
 
@@ -553,188 +466,59 @@ el.replaceWith(d);
         self._psd = None
         return True
 
-    def set_path(self, path, fmt):
-        if path is None:
-            return
-        self.reader.set_path(path, fmt)
-
     def cur_time(self):
         return self.reader.cur_samp/self.Fs
 
     def tot_time(self):
-        return self.reader.max_samp/self.Fs</code></pre>
+        return self.reader.max_samp/self.Fs
+
+    def get_fs(self):
+        return self._Fs
+    def set_fs(self, fs):
+        self._Fs = Frequency.get(fs)
+    Fs = property(get_fs, set_fs)
+
+    def get_cf(self):
+        return self._cf
+    def set_cf(self, cf):
+        self._cf = Frequency.get(cf)
+    cf = property(get_cf, set_cf)
+
+    def get_nfft(self):
+        return self._nfft
+    def set_nfft(self, nfft):
+        self._nfft = int(nfft)
+    nfft = property(get_nfft, set_nfft)
+
+    def get_overlap(self):
+        return self._overlap
+    def set_overlap(self, overlap):
+        if overlap &lt;= 0.0 or overlap &gt; 1.0:
+            raise ValueError
+        self._overlap = float(overlap)
+    overlap = property(get_overlap, set_overlap)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.model.Model.nfft"><code class="name">var <span class="ident">nfft</span></code></dt>
+<dt id="pyspecan.model.model.Model.nfft"><code class="name">prop <span class="ident">nfft</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Model:
-    __slots__ = (
-        &#34;mode&#34;, &#34;reader&#34;, &#34;block_size&#34;,
-        &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
-    )
-    def __init__(self, path, fmt, nfft, Fs, cf):
-        self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
-
-        self.nfft = int(nfft)
-
-        self.overlap = 0.8 # rt
-
-        if config.MODE == Mode.SWEPT:
-            self.block_size = self.nfft
-        elif config.MODE == Mode.RT:
-            self.block_size = self.nfft*4
-        else:
-            raise err.UnknownOption(f&#34;Unknown mode specified: {config.MODE}&#34;)
-
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
-        self._samples = np.empty(self.nfft, dtype=np.complex64)
-        self._psd = np.empty(self.nfft, dtype=np.float32)
-
-    def show(self, ind=0):
-        print(&#34; &#34;*ind + &#34;Reader:&#34;)
-        self.reader.show(ind+2)
-
-    def reset(self):
-        self.reader.reset()
-
-    @property
-    def samples(self):
-        return self._samples
-
-    def psd(self, vbw=None, win=&#34;blackman&#34;):
-        if self._samples is None:
-            return None
-        if self._psd is None:
-            if config.MODE == Mode.SWEPT:
-                psd = _psd.psd(self._samples, self.Fs, vbw, win)
-                self._psd = psd
-            elif config.MODE == Mode.RT:
-                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
-                self._psd = psd
-        return self._psd
-
-    def next(self):
-        try:
-            samples = self.reader.next(self.block_size)
-        except err.Overflow:
-            return False
-        self._samples = samples
-        self._psd = None
-        return True
-
-    def prev(self):
-        try:
-            samples = self.reader.prev(self.block_size)
-        except err.Overflow:
-            return False
-        self._samples = samples
-        self._psd = None
-        return True
-
-    def set_path(self, path, fmt):
-        if path is None:
-            return
-        self.reader.set_path(path, fmt)
-
-    def cur_time(self):
-        return self.reader.cur_samp/self.Fs
-
-    def tot_time(self):
-        return self.reader.max_samp/self.Fs</code></pre>
+<pre><code class="python">def get_nfft(self):
+    return self._nfft</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.model.Model.overlap"><code class="name">var <span class="ident">overlap</span></code></dt>
+<dt id="pyspecan.model.model.Model.overlap"><code class="name">prop <span class="ident">overlap</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Model:
-    __slots__ = (
-        &#34;mode&#34;, &#34;reader&#34;, &#34;block_size&#34;,
-        &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
-    )
-    def __init__(self, path, fmt, nfft, Fs, cf):
-        self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
-
-        self.nfft = int(nfft)
-
-        self.overlap = 0.8 # rt
-
-        if config.MODE == Mode.SWEPT:
-            self.block_size = self.nfft
-        elif config.MODE == Mode.RT:
-            self.block_size = self.nfft*4
-        else:
-            raise err.UnknownOption(f&#34;Unknown mode specified: {config.MODE}&#34;)
-
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
-        self._samples = np.empty(self.nfft, dtype=np.complex64)
-        self._psd = np.empty(self.nfft, dtype=np.float32)
-
-    def show(self, ind=0):
-        print(&#34; &#34;*ind + &#34;Reader:&#34;)
-        self.reader.show(ind+2)
-
-    def reset(self):
-        self.reader.reset()
-
-    @property
-    def samples(self):
-        return self._samples
-
-    def psd(self, vbw=None, win=&#34;blackman&#34;):
-        if self._samples is None:
-            return None
-        if self._psd is None:
-            if config.MODE == Mode.SWEPT:
-                psd = _psd.psd(self._samples, self.Fs, vbw, win)
-                self._psd = psd
-            elif config.MODE == Mode.RT:
-                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
-                self._psd = psd
-        return self._psd
-
-    def next(self):
-        try:
-            samples = self.reader.next(self.block_size)
-        except err.Overflow:
-            return False
-        self._samples = samples
-        self._psd = None
-        return True
-
-    def prev(self):
-        try:
-            samples = self.reader.prev(self.block_size)
-        except err.Overflow:
-            return False
-        self._samples = samples
-        self._psd = None
-        return True
-
-    def set_path(self, path, fmt):
-        if path is None:
-            return
-        self.reader.set_path(path, fmt)
-
-    def cur_time(self):
-        return self.reader.cur_samp/self.Fs
-
-    def tot_time(self):
-        return self.reader.max_samp/self.Fs</code></pre>
+<pre><code class="python">def get_overlap(self):
+    return self._overlap</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -748,27 +532,27 @@ el.replaceWith(d);
     __slots__ = (
         &#34;mode&#34;, &#34;reader&#34;, &#34;block_size&#34;,
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;Fs&#34;, &#34;cf&#34;, &#34;nfft&#34;, &#34;overlap&#34;
+        &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;, &#34;_overlap&#34;
     )
     def __init__(self, path, fmt, nfft, Fs, cf):
         self.reader = Reader(fmt, path)
-        self.Fs = float(Fs)
-        self.cf = float(cf)
+        self._Fs = Frequency.get(Fs)
+        self._cf = Frequency.get(cf)
 
-        self.nfft = int(nfft)
+        self._nfft = int(nfft)
 
-        self.overlap = 0.8 # rt
+        self._overlap = 0.8 # rt
 
         if config.MODE == Mode.SWEPT:
-            self.block_size = self.nfft
+            self.block_size = self._nfft
         elif config.MODE == Mode.RT:
-            self.block_size = self.nfft*4
+            self.block_size = self._nfft*4
         else:
             raise err.UnknownOption(f&#34;Unknown mode specified: {config.MODE}&#34;)
 
-        self.f = np.arange(-self.Fs/2, self.Fs/2, self.Fs/self.nfft)
-        self._samples = np.empty(self.nfft, dtype=np.complex64)
-        self._psd = np.empty(self.nfft, dtype=np.float32)
+        self.f = np.arange(-self.Fs.raw/2, self.Fs.raw/2, self.Fs.raw/self._nfft)
+        self._samples = np.empty(self._nfft, dtype=np.complex64)
+        self._psd = np.empty(self._nfft, dtype=np.float32)
 
     def show(self, ind=0):
         print(&#34; &#34;*ind + &#34;Reader:&#34;)
@@ -786,10 +570,10 @@ el.replaceWith(d);
             return None
         if self._psd is None:
             if config.MODE == Mode.SWEPT:
-                psd = _psd.psd(self._samples, self.Fs, vbw, win)
+                psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
                 self._psd = psd
             elif config.MODE == Mode.RT:
-                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
+                psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
                 self._psd = psd
         return self._psd
 
@@ -811,16 +595,37 @@ el.replaceWith(d);
         self._psd = None
         return True
 
-    def set_path(self, path, fmt):
-        if path is None:
-            return
-        self.reader.set_path(path, fmt)
-
     def cur_time(self):
         return self.reader.cur_samp/self.Fs
 
     def tot_time(self):
-        return self.reader.max_samp/self.Fs</code></pre>
+        return self.reader.max_samp/self.Fs
+
+    def get_fs(self):
+        return self._Fs
+    def set_fs(self, fs):
+        self._Fs = Frequency.get(fs)
+    Fs = property(get_fs, set_fs)
+
+    def get_cf(self):
+        return self._cf
+    def set_cf(self, cf):
+        self._cf = Frequency.get(cf)
+    cf = property(get_cf, set_cf)
+
+    def get_nfft(self):
+        return self._nfft
+    def set_nfft(self, nfft):
+        self._nfft = int(nfft)
+    nfft = property(get_nfft, set_nfft)
+
+    def get_overlap(self):
+        return self._overlap
+    def set_overlap(self, overlap):
+        if overlap &lt;= 0.0 or overlap &gt; 1.0:
+            raise ValueError
+        self._overlap = float(overlap)
+    overlap = property(get_overlap, set_overlap)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -849,6 +654,58 @@ def samples(self):
 </summary>
 <pre><code class="python">def cur_time(self):
     return self.reader.cur_samp/self.Fs</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.model.Model.get_cf"><code class="name flex">
+<span>def <span class="ident">get_cf</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_cf(self):
+    return self._cf</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.model.Model.get_fs"><code class="name flex">
+<span>def <span class="ident">get_fs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_fs(self):
+    return self._Fs</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.model.Model.get_nfft"><code class="name flex">
+<span>def <span class="ident">get_nfft</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_nfft(self):
+    return self._nfft</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.model.Model.get_overlap"><code class="name flex">
+<span>def <span class="ident">get_overlap</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_overlap(self):
+    return self._overlap</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -903,10 +760,10 @@ def samples(self):
         return None
     if self._psd is None:
         if config.MODE == Mode.SWEPT:
-            psd = _psd.psd(self._samples, self.Fs, vbw, win)
+            psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
             self._psd = psd
         elif config.MODE == Mode.RT:
-            psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs, vbw, win)
+            psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
             self._psd = psd
     return self._psd</code></pre>
 </details>
@@ -925,18 +782,57 @@ def samples(self):
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.model.Model.set_path"><code class="name flex">
-<span>def <span class="ident">set_path</span></span>(<span>self, path, fmt)</span>
+<dt id="pyspecan.model.model.Model.set_cf"><code class="name flex">
+<span>def <span class="ident">set_cf</span></span>(<span>self, cf)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_path(self, path, fmt):
-    if path is None:
-        return
-    self.reader.set_path(path, fmt)</code></pre>
+<pre><code class="python">def set_cf(self, cf):
+    self._cf = Frequency.get(cf)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.model.Model.set_fs"><code class="name flex">
+<span>def <span class="ident">set_fs</span></span>(<span>self, fs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_fs(self, fs):
+    self._Fs = Frequency.get(fs)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.model.Model.set_nfft"><code class="name flex">
+<span>def <span class="ident">set_nfft</span></span>(<span>self, nfft)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_nfft(self, nfft):
+    self._nfft = int(nfft)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.model.Model.set_overlap"><code class="name flex">
+<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_overlap(self, overlap):
+    if overlap &lt;= 0.0 or overlap &gt; 1.0:
+        raise ValueError
+    self._overlap = float(overlap)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -992,6 +888,10 @@ def samples(self):
 <li><code><a title="pyspecan.model.model.Model.cf" href="#pyspecan.model.model.Model.cf">cf</a></code></li>
 <li><code><a title="pyspecan.model.model.Model.cur_time" href="#pyspecan.model.model.Model.cur_time">cur_time</a></code></li>
 <li><code><a title="pyspecan.model.model.Model.f" href="#pyspecan.model.model.Model.f">f</a></code></li>
+<li><code><a title="pyspecan.model.model.Model.get_cf" href="#pyspecan.model.model.Model.get_cf">get_cf</a></code></li>
+<li><code><a title="pyspecan.model.model.Model.get_fs" href="#pyspecan.model.model.Model.get_fs">get_fs</a></code></li>
+<li><code><a title="pyspecan.model.model.Model.get_nfft" href="#pyspecan.model.model.Model.get_nfft">get_nfft</a></code></li>
+<li><code><a title="pyspecan.model.model.Model.get_overlap" href="#pyspecan.model.model.Model.get_overlap">get_overlap</a></code></li>
 <li><code><a title="pyspecan.model.model.Model.mode" href="#pyspecan.model.model.Model.mode">mode</a></code></li>
 <li><code><a title="pyspecan.model.model.Model.next" href="#pyspecan.model.model.Model.next">next</a></code></li>
 <li><code><a title="pyspecan.model.model.Model.nfft" href="#pyspecan.model.model.Model.nfft">nfft</a></code></li>
@@ -1001,7 +901,10 @@ def samples(self):
 <li><code><a title="pyspecan.model.model.Model.reader" href="#pyspecan.model.model.Model.reader">reader</a></code></li>
 <li><code><a title="pyspecan.model.model.Model.reset" href="#pyspecan.model.model.Model.reset">reset</a></code></li>
 <li><code><a title="pyspecan.model.model.Model.samples" href="#pyspecan.model.model.Model.samples">samples</a></code></li>
-<li><code><a title="pyspecan.model.model.Model.set_path" href="#pyspecan.model.model.Model.set_path">set_path</a></code></li>
+<li><code><a title="pyspecan.model.model.Model.set_cf" href="#pyspecan.model.model.Model.set_cf">set_cf</a></code></li>
+<li><code><a title="pyspecan.model.model.Model.set_fs" href="#pyspecan.model.model.Model.set_fs">set_fs</a></code></li>
+<li><code><a title="pyspecan.model.model.Model.set_nfft" href="#pyspecan.model.model.Model.set_nfft">set_nfft</a></code></li>
+<li><code><a title="pyspecan.model.model.Model.set_overlap" href="#pyspecan.model.model.Model.set_overlap">set_overlap</a></code></li>
 <li><code><a title="pyspecan.model.model.Model.show" href="#pyspecan.model.model.Model.show">show</a></code></li>
 <li><code><a title="pyspecan.model.model.Model.tot_time" href="#pyspecan.model.model.Model.tot_time">tot_time</a></code></li>
 </ul>

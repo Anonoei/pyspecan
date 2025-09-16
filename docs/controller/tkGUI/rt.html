@@ -43,13 +43,32 @@ el.replaceWith(d);
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="pyspecan.controller.tkGUI.rt.define_args"><code class="name flex">
+<span>def <span class="ident">define_args</span></span>(<span>parser: argparse.ArgumentParser)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def define_args(parser: argparse.ArgumentParser):
+    mode = parser.add_argument_group(&#34;RT mode&#34;)
+    mode.add_argument(&#34;--x&#34;, default=1001, type=int, help=&#34;histogram x pixels&#34;)
+    mode.add_argument(&#34;--y&#34;, default=600, type=int, help=&#34;histogram y pixels&#34;)
+    mode.add_argument(&#34;--cmap&#34;, default=&#34;hot&#34;, choices=[k for k in cmap.keys()], help=&#34;histogram color map&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
 <dt id="pyspecan.controller.tkGUI.rt.ControllerRT"><code class="flex name class">
 <span>class <span class="ident">ControllerRT</span></span>
-<span>(</span><span>view, ref_level=0.0, scale=10.0, vbw=5.0, window='blackman')</span>
+<span>(</span><span>view, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -62,12 +81,12 @@ el.replaceWith(d);
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window=&#34;blackman&#34;):
-        self.x = 1001
-        self.y = 600
-        super().__init__(view, ref_level, scale, vbw, window)
+    def __init__(self, view, **kwargs):
+        self.x = kwargs.get(&#34;x&#34;, 1001)
+        self.y = kwargs.get(&#34;y&#34;, 600)
+        self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
+        super().__init__(view, **kwargs)
         # self.view: viewPSD = self.view # type hint
-        self.cmap = &#34;hot&#34;
         self._cmap_set = False
         self._cb_drawn = False
 
@@ -83,8 +102,8 @@ el.replaceWith(d);
         self.set_y()
 
     def update_f(self, f):
-        fmin, fmax, fnum = f
         &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
+        fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
@@ -105,30 +124,13 @@ el.replaceWith(d);
         self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
         self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
 
-    def set_scale(self, *args, **kwargs):
-        prev = self.scale
-        super().set_scale(*args, **kwargs)
-        if not prev == self.scale:
-            self.set_y()
-
-    def set_ref_level(self, *args, **kwargs):
-        prev = self.ref_level
-        super().set_ref_level(*args, **kwargs)
-        if not prev == self.ref_level:
-            self.set_y()
-
-    def set_cmap(self, *args, **kwargs):
-        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-        self.cmap = self.view.settings[&#34;cmap&#34;].get()
-        self._cmap_set = True
-
     def plot(self, freq, psd):
-        self._plot_persistent(freq, psd)
+        self._plot_persistent(psd)
 
         self._show_y_location(psd)
         self.update()
 
-    def _plot_persistent(self, freq, psds):
+    def _plot_persistent(self, psds):
         self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
@@ -143,7 +145,7 @@ el.replaceWith(d);
         if not self._cb_drawn:
             # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.ax(&#34;pst&#34;).ax,
+                im, ax=self.view.ax(&#34;pst&#34;).ax, # type: ignore
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
@@ -151,13 +153,35 @@ el.replaceWith(d);
 
         if self._cmap_set:
             self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-            self._cmap_set = False</code></pre>
+            self._cmap_set = False
+
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
+            self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+        else:
+            super().handle_event(event)
+
+    def set_scale(self, scale):
+        prev = self.scale
+        super().set_scale(scale)
+        if not prev == self.scale:
+            self.set_y()
+    def set_ref_level(self, ref):
+        prev = self.ref_level
+        super().set_ref_level(ref)
+        if not prev == self.ref_level:
+            self.set_y()
+    def set_cmap(self, _cmap):
+        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
+        self.cmap = _cmap
+        self._cmap_set = True</code></pre>
 </details>
 <div class="desc"><p>Controller for ViewRT</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li><a title="pyspecan.controller.tkGUI.base.FreqPlotController" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController">FreqPlotController</a></li>
-<li><a title="pyspecan.controller.tkGUI.base.PlotController" href="base.html#pyspecan.controller.tkGUI.base.PlotController">PlotController</a></li>
+<li>pyspecan.controller.tkGUI.base._PlotController</li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
@@ -173,12 +197,12 @@ el.replaceWith(d);
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window=&#34;blackman&#34;):
-        self.x = 1001
-        self.y = 600
-        super().__init__(view, ref_level, scale, vbw, window)
+    def __init__(self, view, **kwargs):
+        self.x = kwargs.get(&#34;x&#34;, 1001)
+        self.y = kwargs.get(&#34;y&#34;, 600)
+        self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
+        super().__init__(view, **kwargs)
         # self.view: viewPSD = self.view # type hint
-        self.cmap = &#34;hot&#34;
         self._cmap_set = False
         self._cb_drawn = False
 
@@ -194,8 +218,8 @@ el.replaceWith(d);
         self.set_y()
 
     def update_f(self, f):
-        fmin, fmax, fnum = f
         &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
+        fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
@@ -216,30 +240,13 @@ el.replaceWith(d);
         self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
         self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
 
-    def set_scale(self, *args, **kwargs):
-        prev = self.scale
-        super().set_scale(*args, **kwargs)
-        if not prev == self.scale:
-            self.set_y()
-
-    def set_ref_level(self, *args, **kwargs):
-        prev = self.ref_level
-        super().set_ref_level(*args, **kwargs)
-        if not prev == self.ref_level:
-            self.set_y()
-
-    def set_cmap(self, *args, **kwargs):
-        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-        self.cmap = self.view.settings[&#34;cmap&#34;].get()
-        self._cmap_set = True
-
     def plot(self, freq, psd):
-        self._plot_persistent(freq, psd)
+        self._plot_persistent(psd)
 
         self._show_y_location(psd)
         self.update()
 
-    def _plot_persistent(self, freq, psds):
+    def _plot_persistent(self, psds):
         self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
@@ -254,7 +261,7 @@ el.replaceWith(d);
         if not self._cb_drawn:
             # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.ax(&#34;pst&#34;).ax,
+                im, ax=self.view.ax(&#34;pst&#34;).ax, # type: ignore
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
@@ -262,7 +269,29 @@ el.replaceWith(d);
 
         if self._cmap_set:
             self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-            self._cmap_set = False</code></pre>
+            self._cmap_set = False
+
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
+            self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+        else:
+            super().handle_event(event)
+
+    def set_scale(self, scale):
+        prev = self.scale
+        super().set_scale(scale)
+        if not prev == self.scale:
+            self.set_y()
+    def set_ref_level(self, ref):
+        prev = self.ref_level
+        super().set_ref_level(ref)
+        if not prev == self.ref_level:
+            self.set_y()
+    def set_cmap(self, _cmap):
+        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
+        self.cmap = _cmap
+        self._cmap_set = True</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -278,12 +307,12 @@ el.replaceWith(d);
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window=&#34;blackman&#34;):
-        self.x = 1001
-        self.y = 600
-        super().__init__(view, ref_level, scale, vbw, window)
+    def __init__(self, view, **kwargs):
+        self.x = kwargs.get(&#34;x&#34;, 1001)
+        self.y = kwargs.get(&#34;y&#34;, 600)
+        self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
+        super().__init__(view, **kwargs)
         # self.view: viewPSD = self.view # type hint
-        self.cmap = &#34;hot&#34;
         self._cmap_set = False
         self._cb_drawn = False
 
@@ -299,8 +328,8 @@ el.replaceWith(d);
         self.set_y()
 
     def update_f(self, f):
-        fmin, fmax, fnum = f
         &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
+        fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
@@ -321,30 +350,13 @@ el.replaceWith(d);
         self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
         self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
 
-    def set_scale(self, *args, **kwargs):
-        prev = self.scale
-        super().set_scale(*args, **kwargs)
-        if not prev == self.scale:
-            self.set_y()
-
-    def set_ref_level(self, *args, **kwargs):
-        prev = self.ref_level
-        super().set_ref_level(*args, **kwargs)
-        if not prev == self.ref_level:
-            self.set_y()
-
-    def set_cmap(self, *args, **kwargs):
-        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-        self.cmap = self.view.settings[&#34;cmap&#34;].get()
-        self._cmap_set = True
-
     def plot(self, freq, psd):
-        self._plot_persistent(freq, psd)
+        self._plot_persistent(psd)
 
         self._show_y_location(psd)
         self.update()
 
-    def _plot_persistent(self, freq, psds):
+    def _plot_persistent(self, psds):
         self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
@@ -359,7 +371,7 @@ el.replaceWith(d);
         if not self._cb_drawn:
             # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.ax(&#34;pst&#34;).ax,
+                im, ax=self.view.ax(&#34;pst&#34;).ax, # type: ignore
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
@@ -367,7 +379,29 @@ el.replaceWith(d);
 
         if self._cmap_set:
             self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-            self._cmap_set = False</code></pre>
+            self._cmap_set = False
+
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
+            self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+        else:
+            super().handle_event(event)
+
+    def set_scale(self, scale):
+        prev = self.scale
+        super().set_scale(scale)
+        if not prev == self.scale:
+            self.set_y()
+    def set_ref_level(self, ref):
+        prev = self.ref_level
+        super().set_ref_level(ref)
+        if not prev == self.ref_level:
+            self.set_y()
+    def set_cmap(self, _cmap):
+        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
+        self.cmap = _cmap
+        self._cmap_set = True</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -383,12 +417,12 @@ el.replaceWith(d);
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view, ref_level=0.0, scale=10.0, vbw=5.0, window=&#34;blackman&#34;):
-        self.x = 1001
-        self.y = 600
-        super().__init__(view, ref_level, scale, vbw, window)
+    def __init__(self, view, **kwargs):
+        self.x = kwargs.get(&#34;x&#34;, 1001)
+        self.y = kwargs.get(&#34;y&#34;, 600)
+        self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
+        super().__init__(view, **kwargs)
         # self.view: viewPSD = self.view # type hint
-        self.cmap = &#34;hot&#34;
         self._cmap_set = False
         self._cb_drawn = False
 
@@ -404,8 +438,8 @@ el.replaceWith(d);
         self.set_y()
 
     def update_f(self, f):
-        fmin, fmax, fnum = f
         &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
+        fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
@@ -426,30 +460,13 @@ el.replaceWith(d);
         self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
         self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
 
-    def set_scale(self, *args, **kwargs):
-        prev = self.scale
-        super().set_scale(*args, **kwargs)
-        if not prev == self.scale:
-            self.set_y()
-
-    def set_ref_level(self, *args, **kwargs):
-        prev = self.ref_level
-        super().set_ref_level(*args, **kwargs)
-        if not prev == self.ref_level:
-            self.set_y()
-
-    def set_cmap(self, *args, **kwargs):
-        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-        self.cmap = self.view.settings[&#34;cmap&#34;].get()
-        self._cmap_set = True
-
     def plot(self, freq, psd):
-        self._plot_persistent(freq, psd)
+        self._plot_persistent(psd)
 
         self._show_y_location(psd)
         self.update()
 
-    def _plot_persistent(self, freq, psds):
+    def _plot_persistent(self, psds):
         self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
@@ -464,7 +481,7 @@ el.replaceWith(d);
         if not self._cb_drawn:
             # print(&#34;Adding colorbar&#34;)
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.ax(&#34;pst&#34;).ax,
+                im, ax=self.view.ax(&#34;pst&#34;).ax, # type: ignore
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
@@ -472,24 +489,62 @@ el.replaceWith(d);
 
         if self._cmap_set:
             self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-            self._cmap_set = False</code></pre>
+            self._cmap_set = False
+
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
+            self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+        else:
+            super().handle_event(event)
+
+    def set_scale(self, scale):
+        prev = self.scale
+        super().set_scale(scale)
+        if not prev == self.scale:
+            self.set_y()
+    def set_ref_level(self, ref):
+        prev = self.ref_level
+        super().set_ref_level(ref)
+        if not prev == self.ref_level:
+            self.set_y()
+    def set_cmap(self, _cmap):
+        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
+        self.cmap = _cmap
+        self._cmap_set = True</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.set_cmap"><code class="name flex">
-<span>def <span class="ident">set_cmap</span></span>(<span>self, *args, **kwargs)</span>
+<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.handle_event"><code class="name flex">
+<span>def <span class="ident">handle_event</span></span>(<span>self, event)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_cmap(self, *args, **kwargs):
+<pre><code class="python">def handle_event(self, event):
+    if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
+        self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+    else:
+        super().handle_event(event)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.set_cmap"><code class="name flex">
+<span>def <span class="ident">set_cmap</span></span>(<span>self, _cmap)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_cmap(self, _cmap):
     &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-    self.cmap = self.view.settings[&#34;cmap&#34;].get()
+    self.cmap = _cmap
     self._cmap_set = True</code></pre>
 </details>
 <div class="desc"><p>Set plot color mapping</p></div>
@@ -526,8 +581,8 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def update_f(self, f):
-    fmin, fmax, fnum = f
     &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
+    fmin, fmax, fnum = f
     x_mul = [0.0,0.25,0.5,0.75,1.0]
 
     x_tick = [self.x*m for m in x_mul]
@@ -535,21 +590,19 @@ el.replaceWith(d);
     self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
     self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Set plot xticks and xlabels</p></div>
 </dd>
 </dl>
 <h3>Inherited members</h3>
 <ul class="hlist">
 <li><code><b><a title="pyspecan.controller.tkGUI.base.FreqPlotController" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController">FreqPlotController</a></b></code>:
 <ul class="hlist">
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.plot" href="base.html#pyspecan.controller.tkGUI.base.PlotController.plot">plot</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.reset" href="base.html#pyspecan.controller.tkGUI.base.PlotController.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.plot" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.plot">plot</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_ref_level" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_scale" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_scale">set_scale</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_vbw" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_vbw">set_vbw</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_window" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_window">set_window</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.toggle_settings" href="base.html#pyspecan.controller.tkGUI.base.PlotController.toggle_settings">toggle_settings</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.update" href="base.html#pyspecan.controller.tkGUI.base.PlotController.update">update</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.update" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.update">update</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.y_btm" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.y_btm">y_btm</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.y_top" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.y_top">y_top</a></code></li>
 </ul>
@@ -569,12 +622,18 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI" href="index.html">pyspecan.controller.tkGUI</a></code></li>
 </ul>
 </li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.rt.define_args" href="#pyspecan.controller.tkGUI.rt.define_args">define_args</a></code></li>
+</ul>
+</li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
 <h4><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT" href="#pyspecan.controller.tkGUI.rt.ControllerRT">ControllerRT</a></code></h4>
 <ul class="two-column">
 <li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.cmap" href="#pyspecan.controller.tkGUI.rt.ControllerRT.cmap">cmap</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.handle_event" href="#pyspecan.controller.tkGUI.rt.ControllerRT.handle_event">handle_event</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.set_cmap" href="#pyspecan.controller.tkGUI.rt.ControllerRT.set_cmap">set_cmap</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.set_y" href="#pyspecan.controller.tkGUI.rt.ControllerRT.set_y">set_y</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.update_f" href="#pyspecan.controller.tkGUI.rt.ControllerRT.update_f">update_f</a></code></li>

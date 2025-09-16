@@ -272,22 +272,51 @@ attributes &ndash; see the documentation for details.</p></div>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Reader:
+    __slots__ = (
+        &#34;_path&#34;, &#34;_fmt&#34;,
+        &#34;_fsize&#34;, &#34;cur_samp&#34;, &#34;max_samp&#34;
+    )
     def __init__(self, fmt, path):
-        if path is None:
-            self.path: pathlib.Path = None # type: ignore
-            self.fmt: Format = Format[fmt]
-            self.cur_samp: int = 0
-            self.max_samp: int = -1
-        else:
-            self.set_path(path, fmt)
-
-    def set_path(self, path, fmt: str):
-        if isinstance(path, str):
-            path = pathlib.Path(path)
-        self.fmt = Format[fmt]
-        self.path = path
+        self._path: pathlib.Path = None # type: ignore
+        self._fmt: Format = None # type: ignore
+        self._fsize = 0
         self.cur_samp = 0
-        self.max_samp = path.stat().st_size // self.fmt.size()
+        self.max_samp = -1
+
+        self.set_path(path)
+        self.set_fmt(fmt)
+
+    def show(self, ind=0):
+        print(&#34; &#34;*ind + f&#34;{self.percent():06.2f}% [{self.fmt.name}] {self.path}&#34;)
+        print(&#34; &#34;*ind + f&#34;{self.cur_samp}/{self.max_samp}&#34;)
+
+    def get_path(self):
+        return self._path
+    def set_path(self, path):
+        if path is None or path == &#34;&#34;:
+            return
+        path = pathlib.Path(path)
+
+        if not path.exists():
+            return
+        if not path == self._path:
+            self._fsize = path.stat().st_size
+            if not self._fmt is None:
+                self.max_samp = self._fsize // self.fmt.size()
+        self._path = path
+        self.reset()
+    path = property(get_path, set_path)
+
+    def get_fmt(self):
+        return self._fmt
+    def set_fmt(self, fmt):
+        self._fmt = Format[fmt]
+        if not self._fsize == 0 and not self._fmt is None:
+            self.max_samp = self._fsize // self.fmt.size()
+    fmt = property(get_fmt, set_fmt)
+
+    def reset(self):
+        self.cur_samp = 0
 
     def next(self, count: int):
         count *= 2
@@ -304,9 +333,6 @@ attributes &ndash; see the documentation for details.</p></div>
         self.cur_samp -= count
         samps = self._read(count)
         return samps
-
-    def reset(self):
-        self.cur_samp = 0
 
     def _read(self, count: int):
         &#34;&#34;&#34;Read &lt;count&gt; samples&#34;&#34;&#34;
@@ -331,13 +357,226 @@ attributes &ndash; see the documentation for details.</p></div>
         return float(self.cur_samp/self.max_samp)*100
 
     def __call__(self, count):
-        return self.forward(count)
+        return self.forward(count)</code></pre>
+</details>
+<div class="desc"></div>
+<h3>Instance variables</h3>
+<dl>
+<dt id="pyspecan.model.reader.Reader.cur_samp"><code class="name">var <span class="ident">cur_samp</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Reader:
+    __slots__ = (
+        &#34;_path&#34;, &#34;_fmt&#34;,
+        &#34;_fsize&#34;, &#34;cur_samp&#34;, &#34;max_samp&#34;
+    )
+    def __init__(self, fmt, path):
+        self._path: pathlib.Path = None # type: ignore
+        self._fmt: Format = None # type: ignore
+        self._fsize = 0
+        self.cur_samp = 0
+        self.max_samp = -1
+
+        self.set_path(path)
+        self.set_fmt(fmt)
 
     def show(self, ind=0):
         print(&#34; &#34;*ind + f&#34;{self.percent():06.2f}% [{self.fmt.name}] {self.path}&#34;)
-        print(&#34; &#34;*ind + f&#34;{self.cur_samp}/{self.max_samp}&#34;)</code></pre>
+        print(&#34; &#34;*ind + f&#34;{self.cur_samp}/{self.max_samp}&#34;)
+
+    def get_path(self):
+        return self._path
+    def set_path(self, path):
+        if path is None or path == &#34;&#34;:
+            return
+        path = pathlib.Path(path)
+
+        if not path.exists():
+            return
+        if not path == self._path:
+            self._fsize = path.stat().st_size
+            if not self._fmt is None:
+                self.max_samp = self._fsize // self.fmt.size()
+        self._path = path
+        self.reset()
+    path = property(get_path, set_path)
+
+    def get_fmt(self):
+        return self._fmt
+    def set_fmt(self, fmt):
+        self._fmt = Format[fmt]
+        if not self._fsize == 0 and not self._fmt is None:
+            self.max_samp = self._fsize // self.fmt.size()
+    fmt = property(get_fmt, set_fmt)
+
+    def reset(self):
+        self.cur_samp = 0
+
+    def next(self, count: int):
+        count *= 2
+        if self.cur_samp + count &gt; self.max_samp:
+            raise err.Overflow(f&#34;{self.cur_samp}+{count} &gt; {self.max_samp}&#34;)
+        samps = self._read(count)
+        self.cur_samp += count
+        return samps
+
+    def prev(self, count: int):
+        count *= 2
+        if self.cur_samp - count &lt; 0:
+            raise err.Overflow(f&#34;{self.cur_samp}-{count} &lt; 0&#34;)
+        self.cur_samp -= count
+        samps = self._read(count)
+        return samps
+
+    def _read(self, count: int):
+        &#34;&#34;&#34;Read &lt;count&gt; samples&#34;&#34;&#34;
+        if self.path is None:
+            return
+        samps = self.fmt.read(self.path, count, self.cur_samp)
+        return samps
+
+    def forward(self, count: int):
+        &#34;&#34;&#34;Return &lt;count&gt; samples until EOF&#34;&#34;&#34;
+        while self.cur_samp + count &lt;= self.max_samp:
+            # return self.next(count)
+            yield self.next(count)
+
+    def reverse(self, count: int):
+        while self.cur_samp - count &gt;= 0:
+            # return self.prev(count)
+            yield self.prev(count)
+
+    def percent(self):
+        &#34;&#34;&#34;Return percent of file read&#34;&#34;&#34;
+        return float(self.cur_samp/self.max_samp)*100
+
+    def __call__(self, count):
+        return self.forward(count)</code></pre>
 </details>
 <div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.reader.Reader.fmt"><code class="name">prop <span class="ident">fmt</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_fmt(self):
+    return self._fmt</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.reader.Reader.max_samp"><code class="name">var <span class="ident">max_samp</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Reader:
+    __slots__ = (
+        &#34;_path&#34;, &#34;_fmt&#34;,
+        &#34;_fsize&#34;, &#34;cur_samp&#34;, &#34;max_samp&#34;
+    )
+    def __init__(self, fmt, path):
+        self._path: pathlib.Path = None # type: ignore
+        self._fmt: Format = None # type: ignore
+        self._fsize = 0
+        self.cur_samp = 0
+        self.max_samp = -1
+
+        self.set_path(path)
+        self.set_fmt(fmt)
+
+    def show(self, ind=0):
+        print(&#34; &#34;*ind + f&#34;{self.percent():06.2f}% [{self.fmt.name}] {self.path}&#34;)
+        print(&#34; &#34;*ind + f&#34;{self.cur_samp}/{self.max_samp}&#34;)
+
+    def get_path(self):
+        return self._path
+    def set_path(self, path):
+        if path is None or path == &#34;&#34;:
+            return
+        path = pathlib.Path(path)
+
+        if not path.exists():
+            return
+        if not path == self._path:
+            self._fsize = path.stat().st_size
+            if not self._fmt is None:
+                self.max_samp = self._fsize // self.fmt.size()
+        self._path = path
+        self.reset()
+    path = property(get_path, set_path)
+
+    def get_fmt(self):
+        return self._fmt
+    def set_fmt(self, fmt):
+        self._fmt = Format[fmt]
+        if not self._fsize == 0 and not self._fmt is None:
+            self.max_samp = self._fsize // self.fmt.size()
+    fmt = property(get_fmt, set_fmt)
+
+    def reset(self):
+        self.cur_samp = 0
+
+    def next(self, count: int):
+        count *= 2
+        if self.cur_samp + count &gt; self.max_samp:
+            raise err.Overflow(f&#34;{self.cur_samp}+{count} &gt; {self.max_samp}&#34;)
+        samps = self._read(count)
+        self.cur_samp += count
+        return samps
+
+    def prev(self, count: int):
+        count *= 2
+        if self.cur_samp - count &lt; 0:
+            raise err.Overflow(f&#34;{self.cur_samp}-{count} &lt; 0&#34;)
+        self.cur_samp -= count
+        samps = self._read(count)
+        return samps
+
+    def _read(self, count: int):
+        &#34;&#34;&#34;Read &lt;count&gt; samples&#34;&#34;&#34;
+        if self.path is None:
+            return
+        samps = self.fmt.read(self.path, count, self.cur_samp)
+        return samps
+
+    def forward(self, count: int):
+        &#34;&#34;&#34;Return &lt;count&gt; samples until EOF&#34;&#34;&#34;
+        while self.cur_samp + count &lt;= self.max_samp:
+            # return self.next(count)
+            yield self.next(count)
+
+    def reverse(self, count: int):
+        while self.cur_samp - count &gt;= 0:
+            # return self.prev(count)
+            yield self.prev(count)
+
+    def percent(self):
+        &#34;&#34;&#34;Return percent of file read&#34;&#34;&#34;
+        return float(self.cur_samp/self.max_samp)*100
+
+    def __call__(self, count):
+        return self.forward(count)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.reader.Reader.path"><code class="name">prop <span class="ident">path</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_path(self):
+    return self._path</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
 <h3>Methods</h3>
 <dl>
 <dt id="pyspecan.model.reader.Reader.forward"><code class="name flex">
@@ -355,6 +594,32 @@ attributes &ndash; see the documentation for details.</p></div>
         yield self.next(count)</code></pre>
 </details>
 <div class="desc"><p>Return <count> samples until EOF</p></div>
+</dd>
+<dt id="pyspecan.model.reader.Reader.get_fmt"><code class="name flex">
+<span>def <span class="ident">get_fmt</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_fmt(self):
+    return self._fmt</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.reader.Reader.get_path"><code class="name flex">
+<span>def <span class="ident">get_path</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_path(self):
+    return self._path</code></pre>
+</details>
+<div class="desc"></div>
 </dd>
 <dt id="pyspecan.model.reader.Reader.next"><code class="name flex">
 <span>def <span class="ident">next</span></span>(<span>self, count: int)</span>
@@ -434,21 +699,42 @@ attributes &ndash; see the documentation for details.</p></div>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.reader.Reader.set_path"><code class="name flex">
-<span>def <span class="ident">set_path</span></span>(<span>self, path, fmt: str)</span>
+<dt id="pyspecan.model.reader.Reader.set_fmt"><code class="name flex">
+<span>def <span class="ident">set_fmt</span></span>(<span>self, fmt)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_path(self, path, fmt: str):
-    if isinstance(path, str):
-        path = pathlib.Path(path)
-    self.fmt = Format[fmt]
-    self.path = path
-    self.cur_samp = 0
-    self.max_samp = path.stat().st_size // self.fmt.size()</code></pre>
+<pre><code class="python">def set_fmt(self, fmt):
+    self._fmt = Format[fmt]
+    if not self._fsize == 0 and not self._fmt is None:
+        self.max_samp = self._fsize // self.fmt.size()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.reader.Reader.set_path"><code class="name flex">
+<span>def <span class="ident">set_path</span></span>(<span>self, path)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_path(self, path):
+    if path is None or path == &#34;&#34;:
+        return
+    path = pathlib.Path(path)
+
+    if not path.exists():
+        return
+    if not path == self._path:
+        self._fsize = path.stat().st_size
+        if not self._fmt is None:
+            self.max_samp = self._fsize // self.fmt.size()
+    self._path = path
+    self.reset()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -508,12 +794,19 @@ attributes &ndash; see the documentation for details.</p></div>
 <li>
 <h4><code><a title="pyspecan.model.reader.Reader" href="#pyspecan.model.reader.Reader">Reader</a></code></h4>
 <ul class="two-column">
+<li><code><a title="pyspecan.model.reader.Reader.cur_samp" href="#pyspecan.model.reader.Reader.cur_samp">cur_samp</a></code></li>
+<li><code><a title="pyspecan.model.reader.Reader.fmt" href="#pyspecan.model.reader.Reader.fmt">fmt</a></code></li>
 <li><code><a title="pyspecan.model.reader.Reader.forward" href="#pyspecan.model.reader.Reader.forward">forward</a></code></li>
+<li><code><a title="pyspecan.model.reader.Reader.get_fmt" href="#pyspecan.model.reader.Reader.get_fmt">get_fmt</a></code></li>
+<li><code><a title="pyspecan.model.reader.Reader.get_path" href="#pyspecan.model.reader.Reader.get_path">get_path</a></code></li>
+<li><code><a title="pyspecan.model.reader.Reader.max_samp" href="#pyspecan.model.reader.Reader.max_samp">max_samp</a></code></li>
 <li><code><a title="pyspecan.model.reader.Reader.next" href="#pyspecan.model.reader.Reader.next">next</a></code></li>
+<li><code><a title="pyspecan.model.reader.Reader.path" href="#pyspecan.model.reader.Reader.path">path</a></code></li>
 <li><code><a title="pyspecan.model.reader.Reader.percent" href="#pyspecan.model.reader.Reader.percent">percent</a></code></li>
 <li><code><a title="pyspecan.model.reader.Reader.prev" href="#pyspecan.model.reader.Reader.prev">prev</a></code></li>
 <li><code><a title="pyspecan.model.reader.Reader.reset" href="#pyspecan.model.reader.Reader.reset">reset</a></code></li>
 <li><code><a title="pyspecan.model.reader.Reader.reverse" href="#pyspecan.model.reader.Reader.reverse">reverse</a></code></li>
+<li><code><a title="pyspecan.model.reader.Reader.set_fmt" href="#pyspecan.model.reader.Reader.set_fmt">set_fmt</a></code></li>
 <li><code><a title="pyspecan.model.reader.Reader.set_path" href="#pyspecan.model.reader.Reader.set_path">set_path</a></code></li>
 <li><code><a title="pyspecan.model.reader.Reader.show" href="#pyspecan.model.reader.Reader.show">show</a></code></li>
 </ul>

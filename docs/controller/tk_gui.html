@@ -43,13 +43,40 @@ el.replaceWith(d);
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="pyspecan.controller.tk_gui.define_args"><code class="name flex">
+<span>def <span class="ident">define_args</span></span>(<span>parser: argparse.ArgumentParser)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def define_args(parser: argparse.ArgumentParser):
+    ctrl = parser.add_argument_group(&#34;tkGUI&#34;)
+    ctrl.add_argument(&#34;--theme&#34;, default=&#34;Dark&#34;, choices=[k for k in theme_tk.theme.keys()])
+    ctrl.add_argument(&#34;--sweep&#34;, default=50.0, type=float)
+    from .tkGUI.base import define_args as base_args
+    base_args(ctrl) # type: ignore
+    mode_args = None
+    if config.MODE == Mode.SWEPT:
+        from .tkGUI.swept import define_args as mode_args
+    elif config.MODE == Mode.RT:
+        from .tkGUI.rt import define_args as mode_args
+    if not mode_args is None:
+        mode_args(parser)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
 <dt id="pyspecan.controller.tk_gui.Controller"><code class="flex name class">
 <span>class <span class="ident">Controller</span></span>
-<span>(</span><span>model: <a title="pyspecan.model.model.Model" href="../model/model.html#pyspecan.model.model.Model">Model</a>,<br>view: <a title="pyspecan.view.tk_gui.View" href="../view/tk_gui.html#pyspecan.view.tk_gui.View">View</a>,<br>ref_level,<br>scale,<br>vbw,<br>window)</span>
+<span>(</span><span>model: <a title="pyspecan.model.model.Model" href="../model/model.html#pyspecan.model.model.Model">Model</a>,<br>view: <a title="pyspecan.view.tk_gui.View" href="../view/tk_gui.html#pyspecan.view.tk_gui.View">View</a>,<br>**kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -58,18 +85,18 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class Controller(_Controller):
     &#34;&#34;&#34;tkGUI Controller&#34;&#34;&#34;
-    def __init__(self, model: Model, view: GUI, ref_level, scale, vbw, window):
+    def __init__(self, model: Model, view: GUI, **kwargs):
         super().__init__(model, view)
         self.view: GUI = self.view # type hints
         self.running = False
         self._stop = False
-        self.time_show = 50.0
+        self.time_show = kwargs.get(&#34;sweep&#34;, 50.0)
         self._last_f = None
 
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
-        self.view.sld_samp.scale.config(command=self.set_samp)
+        self.view.sld_samp.scale.config(command=self.handle_event)
 
-        self.view.ent_time.bind(&#34;&lt;Return&gt;&#34;, self.set_time)
+        self.view.ent_time.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
         self.view.var_time.set(str(self.time_show))
         self.view.btn_prev.config(command=self.prev)
         self.view.btn_next.config(command=self.next)
@@ -78,24 +105,22 @@ el.replaceWith(d);
         self.view.btn_reset.config(command=self.reset)
         self.view.var_draw_time.set(f&#34;{0.0:06.3f}s&#34;)
 
-        self.view.btn_file.config(command=self.set_path)
+        self.view.btn_file.config(command=self.handle_btn_file)
         self.view.cb_file_fmt.config(values=list([v.name for v in Format]))
-        self.view.cb_file_fmt.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_dtype)
-        self.view.ent_fs.bind(&#34;&lt;Return&gt;&#34;, self.set_fs)
-        self.view.ent_cf.bind(&#34;&lt;Return&gt;&#34;, self.set_cf)
-
-        self.view.cb_style.config(values=[k for k in theme_tk.theme.keys()])
-        self.view.cb_style.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_theme)
+        self.view.cb_file_fmt.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
+        self.view.ent_fs.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+        self.view.ent_cf.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
 
         self.thread: threading.Thread = None # type: ignore
 
-        self.view.var_style.set(&#34;Dark&#34;)
-        self.set_theme()
+        style = kwargs.get(&#34;theme&#34;, &#34;Dark&#34;)
+
+        theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]
 
         if config.MODE == Mode.SWEPT:
-            self.plot = ControllerSwept(self.view.plot, ref_level, scale, vbw, window)
+            self.plot = ControllerSwept(self.view.plot, **kwargs)
         elif config.MODE == Mode.RT:
-            self.plot = ControllerRT(self.view.plot, ref_level, scale, vbw, window)
+            self.plot = ControllerRT(self.view.plot, **kwargs)
         self.draw()
 
     def start(self):
@@ -143,6 +168,8 @@ el.replaceWith(d);
                 time.sleep(wait)
 
     def _plot(self):
+        if config.MON_MEM:
+            Memory().peak()
         ptime = time.perf_counter()
         if isinstance(self.plot, FreqPlotController):
             vbw = self.plot.vbw
@@ -169,7 +196,6 @@ el.replaceWith(d);
         elif not self.model.f[0] == self._last_f[0] and not len(self.model.f) == self._last_f[2]:
             self._last_f = _update_f()
             self.plot.update_f(self._last_f)
-
 
     def _prev(self):
         valid = self.model.prev()
@@ -206,63 +232,53 @@ el.replaceWith(d);
     def draw_view(self):
         pass
 
-    def set_samp(self, *args, **kwargs):
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.view.sld_samp:
+            self.set_samp(self.view.var_samp.get())
+        elif event.widget == self.view.ent_time:
+            self.set_time(self.view.var_time.get())
+        elif event.widget == self.view.cb_file_fmt:
+            self.set_dtype(self.view.var_file_fmt.get())
+        elif event.widget == self.view.ent_fs:
+            self.set_fs(self.view.var_fs.get())
+        elif event.widget == self.view.ent_cf:
+            self.set_cf(self.view.var_cf.get())
+
+    def handle_btn_file(self):
+        self.set_path(dialog.get_file(False))
+
+    def set_samp(self, samp):
         self.stop()
-        samp = self.view.var_samp.get()
         self.model.reader.cur_samp = samp
         self.draw_tb()
         # print(samp)
-
-    def set_time(self, *args, **kwargs):
-        ts = self.view.var_time.get()
+    def set_time(self, ts):
         try:
             ts = float(ts)
             self.time_show = ts
         except ValueError:
             pass
         self.view.var_time.set(str(self.time_show))
-
-    def set_path(self, *args, **kwargs):
-        path = dialog.get_file(False)
-        if path is None:
-            path = self.model.reader.path
-        fmt = self.view.var_file_fmt.get()
-        self.model.set_path(path, fmt)
+    def set_path(self, path):
+        self.model.reader.path = path
+        print(f&#34;Path set to &#39;{self.model.reader.path}&#39;&#34;)
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
         self.draw_tb()
         self.draw_ctrl()
-
-    def set_dtype(self, *args, **kwargs):
-        dtype = self.view.var_file_fmt.get()
-        path = self.view.var_file.get()
-        self.model.set_path(path, dtype)
+    def set_dtype(self, dtype):
+        self.model.reader.fmt = dtype
         self.draw_tb()
         self.draw_ctrl()
-
-    def set_fs(self, *args, **kwargs):
-        fs = self.view.var_fs.get()
-        try:
-            fs = float(fs)
-            self.model.Fs = fs
-            self.draw_tb()
-        except ValueError:
-            pass
+    def set_fs(self, fs):
+        self.model.Fs = fs
         self.view.var_fs.set(str(self.model.Fs))
+        self.draw_tb()
         self.draw_ctrl()
-
-    def set_cf(self, *args, **kwargs):
-        cf = self.view.var_cf.get()
-        try:
-            cf = float(cf)
-            self.model.cf = cf
-        except ValueError:
-            pass
+    def set_cf(self, cf):
+        self.model.cf = cf
         self.view.var_cf.set(str(self.model.cf))
-        self.draw_ctrl()
-
-    def set_theme(self, *args, **kwargs):
-        style = self.view.var_style.get()
-        theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]</code></pre>
+        self.draw_ctrl()</code></pre>
 </details>
 <div class="desc"><p>tkGUI Controller</p></div>
 <h3>Ancestors</h3>
@@ -332,6 +348,41 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.controller.tk_gui.Controller.handle_btn_file"><code class="name flex">
+<span>def <span class="ident">handle_btn_file</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def handle_btn_file(self):
+    self.set_path(dialog.get_file(False))</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tk_gui.Controller.handle_event"><code class="name flex">
+<span>def <span class="ident">handle_event</span></span>(<span>self, event)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def handle_event(self, event):
+    if event.widget == self.view.sld_samp:
+        self.set_samp(self.view.var_samp.get())
+    elif event.widget == self.view.ent_time:
+        self.set_time(self.view.var_time.get())
+    elif event.widget == self.view.cb_file_fmt:
+        self.set_dtype(self.view.var_file_fmt.get())
+    elif event.widget == self.view.ent_fs:
+        self.set_fs(self.view.var_fs.get())
+    elif event.widget == self.view.ent_cf:
+        self.set_cf(self.view.var_cf.get())</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.controller.tk_gui.Controller.loop"><code class="name flex">
 <span>def <span class="ident">loop</span></span>(<span>self)</span>
 </code></dt>
@@ -398,77 +449,62 @@ el.replaceWith(d);
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.controller.tk_gui.Controller.set_cf"><code class="name flex">
-<span>def <span class="ident">set_cf</span></span>(<span>self, *args, **kwargs)</span>
+<span>def <span class="ident">set_cf</span></span>(<span>self, cf)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_cf(self, *args, **kwargs):
-    cf = self.view.var_cf.get()
-    try:
-        cf = float(cf)
-        self.model.cf = cf
-    except ValueError:
-        pass
+<pre><code class="python">def set_cf(self, cf):
+    self.model.cf = cf
     self.view.var_cf.set(str(self.model.cf))
     self.draw_ctrl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.controller.tk_gui.Controller.set_dtype"><code class="name flex">
-<span>def <span class="ident">set_dtype</span></span>(<span>self, *args, **kwargs)</span>
+<span>def <span class="ident">set_dtype</span></span>(<span>self, dtype)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_dtype(self, *args, **kwargs):
-    dtype = self.view.var_file_fmt.get()
-    path = self.view.var_file.get()
-    self.model.set_path(path, dtype)
+<pre><code class="python">def set_dtype(self, dtype):
+    self.model.reader.fmt = dtype
     self.draw_tb()
     self.draw_ctrl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.controller.tk_gui.Controller.set_fs"><code class="name flex">
-<span>def <span class="ident">set_fs</span></span>(<span>self, *args, **kwargs)</span>
+<span>def <span class="ident">set_fs</span></span>(<span>self, fs)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_fs(self, *args, **kwargs):
-    fs = self.view.var_fs.get()
-    try:
-        fs = float(fs)
-        self.model.Fs = fs
-        self.draw_tb()
-    except ValueError:
-        pass
+<pre><code class="python">def set_fs(self, fs):
+    self.model.Fs = fs
     self.view.var_fs.set(str(self.model.Fs))
+    self.draw_tb()
     self.draw_ctrl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.controller.tk_gui.Controller.set_path"><code class="name flex">
-<span>def <span class="ident">set_path</span></span>(<span>self, *args, **kwargs)</span>
+<span>def <span class="ident">set_path</span></span>(<span>self, path)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_path(self, *args, **kwargs):
-    path = dialog.get_file(False)
-    if path is None:
-        path = self.model.reader.path
-    fmt = self.view.var_file_fmt.get()
-    self.model.set_path(path, fmt)
+<pre><code class="python">def set_path(self, path):
+    self.model.reader.path = path
+    print(f&#34;Path set to &#39;{self.model.reader.path}&#39;&#34;)
     self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
     self.draw_tb()
     self.draw_ctrl()</code></pre>
@@ -476,46 +512,30 @@ el.replaceWith(d);
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.controller.tk_gui.Controller.set_samp"><code class="name flex">
-<span>def <span class="ident">set_samp</span></span>(<span>self, *args, **kwargs)</span>
+<span>def <span class="ident">set_samp</span></span>(<span>self, samp)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_samp(self, *args, **kwargs):
+<pre><code class="python">def set_samp(self, samp):
     self.stop()
-    samp = self.view.var_samp.get()
     self.model.reader.cur_samp = samp
     self.draw_tb()
     # print(samp)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tk_gui.Controller.set_theme"><code class="name flex">
-<span>def <span class="ident">set_theme</span></span>(<span>self, *args, **kwargs)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_theme(self, *args, **kwargs):
-    style = self.view.var_style.get()
-    theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 <dt id="pyspecan.controller.tk_gui.Controller.set_time"><code class="name flex">
-<span>def <span class="ident">set_time</span></span>(<span>self, *args, **kwargs)</span>
+<span>def <span class="ident">set_time</span></span>(<span>self, ts)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_time(self, *args, **kwargs):
-    ts = self.view.var_time.get()
+<pre><code class="python">def set_time(self, ts):
     try:
         ts = float(ts)
         self.time_show = ts
@@ -579,6 +599,11 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller" href="index.html">pyspecan.controller</a></code></li>
 </ul>
 </li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pyspecan.controller.tk_gui.define_args" href="#pyspecan.controller.tk_gui.define_args">define_args</a></code></li>
+</ul>
+</li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
@@ -588,6 +613,8 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tk_gui.Controller.draw_ctrl" href="#pyspecan.controller.tk_gui.Controller.draw_ctrl">draw_ctrl</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.draw_tb" href="#pyspecan.controller.tk_gui.Controller.draw_tb">draw_tb</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.draw_view" href="#pyspecan.controller.tk_gui.Controller.draw_view">draw_view</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.handle_btn_file" href="#pyspecan.controller.tk_gui.Controller.handle_btn_file">handle_btn_file</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.Controller.handle_event" href="#pyspecan.controller.tk_gui.Controller.handle_event">handle_event</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.loop" href="#pyspecan.controller.tk_gui.Controller.loop">loop</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.next" href="#pyspecan.controller.tk_gui.Controller.next">next</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.prev" href="#pyspecan.controller.tk_gui.Controller.prev">prev</a></code></li>
@@ -597,7 +624,6 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tk_gui.Controller.set_fs" href="#pyspecan.controller.tk_gui.Controller.set_fs">set_fs</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.set_path" href="#pyspecan.controller.tk_gui.Controller.set_path">set_path</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.set_samp" href="#pyspecan.controller.tk_gui.Controller.set_samp">set_samp</a></code></li>
-<li><code><a title="pyspecan.controller.tk_gui.Controller.set_theme" href="#pyspecan.controller.tk_gui.Controller.set_theme">set_theme</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.set_time" href="#pyspecan.controller.tk_gui.Controller.set_time">set_time</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.start" href="#pyspecan.controller.tk_gui.Controller.start">start</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.Controller.stop" href="#pyspecan.controller.tk_gui.Controller.stop">stop</a></code></li>

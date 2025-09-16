@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.utils API documentation</title>
+<title>pyspecan.obj.si API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,60 +33,239 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.utils</code></h1>
+<h1 class="title">Module <code>pyspecan.obj.si</code></h1>
 </header>
 <section id="section-intro">
 </section>
 <section>
-<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt><code class="name"><a title="pyspecan.utils.dialog" href="dialog.html">pyspecan.utils.dialog</a></code></dt>
+<dt id="pyspecan.obj.si.Frequency"><code class="flex name class">
+<span>class <span class="ident">Frequency</span></span>
+<span>(</span><span>val: float, mul=None)</span>
+</code></dt>
 <dd>
-<div class="desc"><p>tkinter dialogs</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Frequency(SI):
+    _units = {
+        0: (&#34;Hz&#34;,&#34;&#34;),
+        3: (&#34;kHz&#34;,&#34;k&#34;),
+        6: (&#34;MHz&#34;,&#34;m&#34;),
+        9: (&#34;GHz&#34;,&#34;g&#34;)
+    }</code></pre>
+</details>
+<div class="desc"></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pyspecan.obj.si.SI" href="#pyspecan.obj.si.SI">SI</a></li>
+</ul>
 </dd>
-<dt><code class="name"><a title="pyspecan.utils.matrix" href="matrix.html">pyspecan.utils.matrix</a></code></dt>
+<dt id="pyspecan.obj.si.SI"><code class="flex name class">
+<span>class <span class="ident">SI</span></span>
+<span>(</span><span>val: float, mul=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class SI:
+    __slots__ = (&#34;_val&#34;, &#34;_mul&#34;, &#34;_si&#34;)
+    _units = {
+        0: (&#34;&#34;,&#34;&#34;),
+        3: (&#34;&#34;,&#34;&#34;),
+        6: (&#34;&#34;,&#34;&#34;),
+        9: (&#34;&#34;,&#34;&#34;)
+    }
+    def __init__(self, val: float, mul=None):
+        if mul is None:
+            self._val: float = val
+            self._mul: int = 0
+            self._si: float = 0
+            self._calc()
+        else:
+            self._mul: int = mul
+            self._val: float = val * self._factor()
+            self._si: float = val
+
+    def __str__(self):
+        return self.to_str()
+
+    def __repr__(self):
+        return f&#34;{type(self).__name__} ({self._si}, v{self._val}, m{self._mul})&#34;
+
+    @classmethod
+    def get(cls, val):
+        if isinstance(val, str):
+            return cls.fm_str(val)
+        elif isinstance(val, cls):
+            return val
+        else:
+            return cls(val)
+
+    def to_str(self):
+        fmt = f&#34;{self._si}&#34;
+        unit = self._units[self._mul][1]
+        if not unit == &#34;&#34;:
+            fmt += f&#34;{unit}&#34;
+        return fmt
+
+    @classmethod
+    def fm_str(cls, val: str):
+        for mul, fmt in cls._units.items():
+            if mul == 0:
+                continue
+            if fmt[0] in val:
+                v = val.split(fmt[0])[0]
+                return cls(float(v), mul)
+            elif fmt[1] in val:
+                v = val.split(fmt[1])[0]
+                return cls(float(v), mul)
+        return cls(float(val))
+
+    @property
+    def value(self):
+        return self._si
+
+    @property
+    def raw(self):
+        return self._val
+
+    @raw.setter
+    def raw(self, val):
+        self._val = val
+        self._calc()
+
+    def _factor(self, mul=None):
+        if mul is None:
+            mul = self._mul
+        return 10**mul
+
+    def _calc(self):
+        mul = 0
+        v = abs(self._val)
+        if v &gt; 0:
+            while v &gt; 1000:
+                v = v/1000
+                mul += 3
+        self._mul = mul
+        self._si = self._val / self._factor(self._mul)
+
+    def __add__(self, other):
+        if issubclass(other, SI):
+            return self.raw + other.raw # type: ignore
+        else:
+            return self.raw + other
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def __sub__(self, other):
+        if isinstance(other, SI):
+            return self.raw - other.raw # type: ignore
+        else:
+            return self.raw - other
+    def __rsub__(self, other):
+        if isinstance(other, SI):
+            return other.raw - self.raw
+        else:
+            return other - self.raw
+    def __mul__(self, other):
+        if isinstance(other, SI):
+            return self.raw * other.raw # type: ignore
+        else:
+            return self.raw * other
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+    def __truediv__(self, other):
+        if isinstance(other, SI):
+            return self.raw / other.raw # type: ignore
+        else:
+            return self.raw / other
+    def __rtruediv__(self, other):
+        if isinstance(other, SI):
+            return other.raw / self.raw # type: ignore
+        else:
+            return other / self.raw</code></pre>
+</details>
+<div class="desc"></div>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="pyspecan.obj.si.Frequency" href="#pyspecan.obj.si.Frequency">Frequency</a></li>
+</ul>
+<h3>Static methods</h3>
+<dl>
+<dt id="pyspecan.obj.si.SI.fm_str"><code class="name flex">
+<span>def <span class="ident">fm_str</span></span>(<span>val: str)</span>
+</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt><code class="name"><a title="pyspecan.utils.monitor" href="monitor.html">pyspecan.utils.monitor</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.utils.pmf" href="pmf.html">pyspecan.utils.pmf</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.utils.psd" href="psd.html">pyspecan.utils.psd</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.utils.save" href="save.html">pyspecan.utils.save</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.utils.stft" href="stft.html">pyspecan.utils.stft</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.utils.time" href="time.html">pyspecan.utils.time</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.utils.vbw" href="vbw.html">pyspecan.utils.vbw</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.utils.window" href="window.html">pyspecan.utils.window</a></code></dt>
+<dt id="pyspecan.obj.si.SI.get"><code class="name flex">
+<span>def <span class="ident">get</span></span>(<span>val)</span>
+</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
+<h3>Instance variables</h3>
+<dl>
+<dt id="pyspecan.obj.si.SI.raw"><code class="name">prop <span class="ident">raw</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def raw(self):
+    return self._val</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.obj.si.SI.value"><code class="name">prop <span class="ident">value</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def value(self):
+    return self._si</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.obj.si.SI.to_str"><code class="name flex">
+<span>def <span class="ident">to_str</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def to_str(self):
+    fmt = f&#34;{self._si}&#34;
+    unit = self._units[self._mul][1]
+    if not unit == &#34;&#34;:
+        fmt += f&#34;{unit}&#34;
+    return fmt</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+</dl>
 </section>
 </article>
 <nav id="sidebar">
@@ -96,21 +275,24 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan" href="../index.html">pyspecan</a></code></li>
+<li><code><a title="pyspecan.obj" href="index.html">pyspecan.obj</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
-<li><code><a title="pyspecan.utils.dialog" href="dialog.html">pyspecan.utils.dialog</a></code></li>
-<li><code><a title="pyspecan.utils.matrix" href="matrix.html">pyspecan.utils.matrix</a></code></li>
-<li><code><a title="pyspecan.utils.monitor" href="monitor.html">pyspecan.utils.monitor</a></code></li>
-<li><code><a title="pyspecan.utils.pmf" href="pmf.html">pyspecan.utils.pmf</a></code></li>
-<li><code><a title="pyspecan.utils.psd" href="psd.html">pyspecan.utils.psd</a></code></li>
-<li><code><a title="pyspecan.utils.save" href="save.html">pyspecan.utils.save</a></code></li>
-<li><code><a title="pyspecan.utils.stft" href="stft.html">pyspecan.utils.stft</a></code></li>
-<li><code><a title="pyspecan.utils.time" href="time.html">pyspecan.utils.time</a></code></li>
-<li><code><a title="pyspecan.utils.vbw" href="vbw.html">pyspecan.utils.vbw</a></code></li>
-<li><code><a title="pyspecan.utils.window" href="window.html">pyspecan.utils.window</a></code></li>
+<li>
+<h4><code><a title="pyspecan.obj.si.Frequency" href="#pyspecan.obj.si.Frequency">Frequency</a></code></h4>
+</li>
+<li>
+<h4><code><a title="pyspecan.obj.si.SI" href="#pyspecan.obj.si.SI">SI</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.obj.si.SI.fm_str" href="#pyspecan.obj.si.SI.fm_str">fm_str</a></code></li>
+<li><code><a title="pyspecan.obj.si.SI.get" href="#pyspecan.obj.si.SI.get">get</a></code></li>
+<li><code><a title="pyspecan.obj.si.SI.raw" href="#pyspecan.obj.si.SI.raw">raw</a></code></li>
+<li><code><a title="pyspecan.obj.si.SI.to_str" href="#pyspecan.obj.si.SI.to_str">to_str</a></code></li>
+<li><code><a title="pyspecan.obj.si.SI.value" href="#pyspecan.obj.si.SI.value">value</a></code></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
