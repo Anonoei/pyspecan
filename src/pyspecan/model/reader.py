@@ -41,22 +41,51 @@ class Format(Enum):
         return [inst.name for inst in cls]
 
 class Reader:
+    __slots__ = (
+        "_path", "_fmt",
+        "_fsize", "cur_samp", "max_samp"
+    )
     def __init__(self, fmt, path):
-        if path is None:
-            self.path: pathlib.Path = None # type: ignore
-            self.fmt: Format = Format[fmt]
-            self.cur_samp: int = 0
-            self.max_samp: int = -1
-        else:
-            self.set_path(path, fmt)
-
-    def set_path(self, path, fmt: str):
-        if isinstance(path, str):
-            path = pathlib.Path(path)
-        self.fmt = Format[fmt]
-        self.path = path
+        self._path: pathlib.Path = None # type: ignore
+        self._fmt: Format = None # type: ignore
+        self._fsize = 0
         self.cur_samp = 0
-        self.max_samp = path.stat().st_size // self.fmt.size()
+        self.max_samp = -1
+
+        self.set_path(path)
+        self.set_fmt(fmt)
+
+    def show(self, ind=0):
+        print(" "*ind + f"{self.percent():06.2f}% [{self.fmt.name}] {self.path}")
+        print(" "*ind + f"{self.cur_samp}/{self.max_samp}")
+
+    def get_path(self):
+        return self._path
+    def set_path(self, path):
+        if path is None or path == "":
+            return
+        path = pathlib.Path(path)
+
+        if not path.exists():
+            return
+        if not path == self._path:
+            self._fsize = path.stat().st_size
+            if not self._fmt is None:
+                self.max_samp = self._fsize // self.fmt.size()
+        self._path = path
+        self.reset()
+    path = property(get_path, set_path)
+
+    def get_fmt(self):
+        return self._fmt
+    def set_fmt(self, fmt):
+        self._fmt = Format[fmt]
+        if not self._fsize == 0 and not self._fmt is None:
+            self.max_samp = self._fsize // self.fmt.size()
+    fmt = property(get_fmt, set_fmt)
+
+    def reset(self):
+        self.cur_samp = 0
 
     def next(self, count: int):
         count *= 2
@@ -73,9 +102,6 @@ class Reader:
         self.cur_samp -= count
         samps = self._read(count)
         return samps
-
-    def reset(self):
-        self.cur_samp = 0
 
     def _read(self, count: int):
         """Read <count> samples"""
@@ -101,7 +127,3 @@ class Reader:
 
     def __call__(self, count):
         return self.forward(count)
-
-    def show(self, ind=0):
-        print(" "*ind + f"{self.percent():06.2f}% [{self.fmt.name}] {self.path}")
-        print(" "*ind + f"{self.cur_samp}/{self.max_samp}")

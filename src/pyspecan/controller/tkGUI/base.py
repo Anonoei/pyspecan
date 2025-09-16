@@ -49,18 +49,21 @@ class FreqPlotController(PlotController):
         self.ref_level = ref_level
 
         self.view.settings["scale"].set(str(self.scale))
-        self.view.wg_sets["scale"].bind("<Return>", self.set_scale)
+        self.view.wg_sets["scale"].bind("<Return>", self.handle_event)
         self.view.settings["ref_level"].set(str(self.ref_level))
-        self.view.wg_sets["ref_level"].bind("<Return>", self.set_ref_level)
+        self.view.wg_sets["ref_level"].bind("<Return>", self.handle_event)
         self.view.settings["vbw"].set(str(self.vbw))
-        self.view.wg_sets["vbw"].bind("<Return>", self.set_vbw)
+        self.view.wg_sets["vbw"].bind("<Return>", self.handle_event)
         self.view.settings["window"].set(self.window)
         self.view.wg_sets["window"].configure(values=[k for k in WindowLUT.keys()])
-        self.view.wg_sets["window"].bind("<<ComboboxSelected>>", self.set_window)
-        self.set_ref_level()
+        self.view.wg_sets["window"].bind("<<ComboboxSelected>>", self.handle_event)
+        self.set_ref_level(self.view.settings["ref_level"].get())
 
     def update(self):
         self.view.plotter.canvas.draw()
+
+    def plot(self, freq, psd):
+        raise NotImplementedError()
 
     @property
     def y_top(self):
@@ -70,43 +73,6 @@ class FreqPlotController(PlotController):
     def y_btm(self):
         """Return plot minimum amplitude"""
         return self.ref_level - (10*self.scale)
-
-    def set_scale(self, *args, **kwargs):
-        """set plot scale"""
-        scale = self.view.settings["scale"].get()
-        try:
-            scale = float(scale)
-            self.scale = scale
-        except ValueError:
-            scale = self.scale
-        self.view.settings["scale"].set(str(self.scale))
-
-    def set_ref_level(self, *args, **kwargs):
-        """Set plot ref level"""
-        ref = self.view.settings["ref_level"].get()
-        try:
-            ref = float(ref)
-            self.ref_level = ref
-        except ValueError:
-            ref = self.ref_level
-        self.view.settings["ref_level"].set(str(self.ref_level))
-
-    def set_vbw(self, *args, **kwargs):
-        """Set plot vbw"""
-        smooth = self.view.settings["vbw"].get()
-        try:
-            smooth = float(smooth)
-            self.vbw = smooth
-        except ValueError:
-            smooth = self.vbw
-        self.view.settings["vbw"].set(str(self.vbw))
-
-    def set_window(self, *args, **kwargs):
-        """Set plot window function"""
-        self.window = self.view.settings["window"].get()
-
-    def plot(self, freq, psd):
-        raise NotImplementedError()
 
     def _show_y_location(self, psd):
         if np.all(psd < self.y_btm):
@@ -119,3 +85,42 @@ class FreqPlotController(PlotController):
         else:
             if self.view.lbl_hi.winfo_ismapped():
                 self.view.lbl_hi.place_forget()
+
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.view.wg_sets["scale"]:
+            self.set_scale(self.view.settings["scale"].get())
+        elif event.widget == self.view.wg_sets["ref_level"]:
+            self.set_ref_level(self.view.settings["ref_level"].get())
+        elif event.widget == self.view.wg_sets["vbw"]:
+            self.set_vbw(self.view.settings["vbw"].get())
+        elif event.widget == self.view.wg_sets["window"]:
+            self.set_window(self.view.settings["window"].get())
+
+    def set_scale(self, scale):
+        """set plot scale"""
+        try:
+            scale = float(scale)
+            self.scale = scale
+        except ValueError:
+            scale = self.scale
+        self.view.settings["scale"].set(str(self.scale))
+    def set_ref_level(self, ref):
+        """Set plot ref level"""
+        try:
+            ref = float(ref)
+            self.ref_level = ref
+        except ValueError:
+            ref = self.ref_level
+        self.view.settings["ref_level"].set(str(self.ref_level))
+    def set_vbw(self, smooth):
+        """Set plot vbw"""
+        try:
+            smooth = float(smooth)
+            self.vbw = smooth
+        except ValueError:
+            smooth = self.vbw
+        self.view.settings["vbw"].set(str(self.vbw))
+    def set_window(self, window):
+        """Set plot window function"""
+        self.window = window

@@ -36,8 +36,8 @@ class ControllerRT(FreqPlotController):
         self.set_y()
 
     def update_f(self, f):
-        fmin, fmax, fnum = f
         """Set plot xticks and xlabels"""
+        fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
         x_tick = [self.x*m for m in x_mul]
@@ -58,30 +58,13 @@ class ControllerRT(FreqPlotController):
         self.view.ax("pst").ax.set_yticks(y_tick, y_text)
         self.view.ax("pst").set_ylim(0, self.y)
 
-    def set_scale(self, *args, **kwargs):
-        prev = self.scale
-        super().set_scale(*args, **kwargs)
-        if not prev == self.scale:
-            self.set_y()
-
-    def set_ref_level(self, *args, **kwargs):
-        prev = self.ref_level
-        super().set_ref_level(*args, **kwargs)
-        if not prev == self.ref_level:
-            self.set_y()
-
-    def set_cmap(self, *args, **kwargs):
-        """Set plot color mapping"""
-        self.cmap = self.view.settings["cmap"].get()
-        self._cmap_set = True
-
     def plot(self, freq, psd):
-        self._plot_persistent(freq, psd)
+        self._plot_persistent(psd)
 
         self._show_y_location(psd)
         self.update()
 
-    def _plot_persistent(self, freq, psds):
+    def _plot_persistent(self, psds):
         self.view.ax("pst").ax.set_title("Persistent")
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
@@ -96,7 +79,7 @@ class ControllerRT(FreqPlotController):
         if not self._cb_drawn:
             # print("Adding colorbar")
             cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.ax("pst").ax,
+                im, ax=self.view.ax("pst").ax, # type: ignore
                 pad=0.005, fraction=0.05
             )
             self.view.plotter.canvas.draw()
@@ -105,3 +88,25 @@ class ControllerRT(FreqPlotController):
         if self._cmap_set:
             self.view.ax("pst").set_ylim(0, self.y)
             self._cmap_set = False
+
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.view.wg_sets["cmap"]:
+            self.set_cmap(self.view.settings["cmap"].get())
+        else:
+            super().handle_event(event)
+
+    def set_scale(self, scale):
+        prev = self.scale
+        super().set_scale(scale)
+        if not prev == self.scale:
+            self.set_y()
+    def set_ref_level(self, ref):
+        prev = self.ref_level
+        super().set_ref_level(ref)
+        if not prev == self.ref_level:
+            self.set_y()
+    def set_cmap(self, _cmap):
+        """Set plot color mapping"""
+        self.cmap = _cmap
+        self._cmap_set = True

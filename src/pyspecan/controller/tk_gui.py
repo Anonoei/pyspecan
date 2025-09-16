@@ -11,6 +11,7 @@ from ..config import config, Mode
 
 from ..utils import dialog
 from ..utils.time import strfmt_td
+from ..obj import Frequency
 
 from ..model.model import Model
 from ..model.reader import Format
@@ -39,9 +40,9 @@ class Controller(_Controller):
         self._last_f = None
 
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
-        self.view.sld_samp.scale.config(command=self.set_samp)
+        self.view.sld_samp.scale.config(command=self.handle_event)
 
-        self.view.ent_time.bind("<Return>", self.set_time)
+        self.view.ent_time.bind("<Return>", self.handle_event)
         self.view.var_time.set(str(self.time_show))
         self.view.btn_prev.config(command=self.prev)
         self.view.btn_next.config(command=self.next)
@@ -50,11 +51,11 @@ class Controller(_Controller):
         self.view.btn_reset.config(command=self.reset)
         self.view.var_draw_time.set(f"{0.0:06.3f}s")
 
-        self.view.btn_file.config(command=self.set_path)
+        self.view.btn_file.config(command=self.handle_btn_file)
         self.view.cb_file_fmt.config(values=list([v.name for v in Format]))
-        self.view.cb_file_fmt.bind("<<ComboboxSelected>>", self.set_dtype)
-        self.view.ent_fs.bind("<Return>", self.set_fs)
-        self.view.ent_cf.bind("<Return>", self.set_cf)
+        self.view.cb_file_fmt.bind("<<ComboboxSelected>>", self.handle_event)
+        self.view.ent_fs.bind("<Return>", self.handle_event)
+        self.view.ent_cf.bind("<Return>", self.handle_event)
 
         self.view.cb_style.config(values=[k for k in theme_tk.theme.keys()])
         self.view.cb_style.bind("<<ComboboxSelected>>", self.set_theme)
@@ -62,7 +63,7 @@ class Controller(_Controller):
         self.thread: threading.Thread = None # type: ignore
 
         self.view.var_style.set("Dark")
-        self.set_theme()
+        self.set_theme(self.view.var_style.get())
 
         if config.MODE == Mode.SWEPT:
             self.plot = ControllerSwept(self.view.plot, ref_level, scale, vbw, window)
@@ -144,7 +145,6 @@ class Controller(_Controller):
             self._last_f = _update_f()
             self.plot.update_f(self._last_f)
 
-
     def _prev(self):
         valid = self.model.prev()
         tplot = None
@@ -180,60 +180,54 @@ class Controller(_Controller):
     def draw_view(self):
         pass
 
-    def set_samp(self, *args, **kwargs):
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.view.sld_samp:
+            self.set_samp(self.view.var_samp.get())
+        elif event.widget == self.view.ent_time:
+            self.set_time(self.view.var_time.get())
+        elif event.widget == self.view.cb_file_fmt:
+            self.set_dtype(self.view.var_file_fmt.get())
+        elif event.widget == self.view.ent_fs:
+            self.set_fs(self.view.var_fs.get())
+        elif event.widget == self.view.ent_cf:
+            self.set_cf(self.view.var_cf.get())
+        elif event.widget == self.view.cb_style:
+            self.set_theme(self.view.var_style.get())
+
+    def handle_btn_file(self):
+        self.set_path(dialog.get_file(False))
+
+    def set_samp(self, samp):
         self.stop()
-        samp = self.view.var_samp.get()
         self.model.reader.cur_samp = samp
         self.draw_tb()
         # print(samp)
-
-    def set_time(self, *args, **kwargs):
-        ts = self.view.var_time.get()
+    def set_time(self, ts):
         try:
             ts = float(ts)
             self.time_show = ts
         except ValueError:
             pass
         self.view.var_time.set(str(self.time_show))
-
-    def set_path(self, *args, **kwargs):
-        path = dialog.get_file(False)
-        if path is None:
-            path = self.model.reader.path
-        fmt = self.view.var_file_fmt.get()
-        self.model.set_path(path, fmt)
+    def set_path(self, path):
+        self.model.reader.path = path
+        print(f"Path set to '{self.model.reader.path}'")
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
         self.draw_tb()
         self.draw_ctrl()
-
-    def set_dtype(self, *args, **kwargs):
-        dtype = self.view.var_file_fmt.get()
-        path = self.view.var_file.get()
-        self.model.set_path(path, dtype)
+    def set_dtype(self, dtype):
+        self.model.reader.fmt = dtype
         self.draw_tb()
         self.draw_ctrl()
-
-    def set_fs(self, *args, **kwargs):
-        fs = self.view.var_fs.get()
-        try:
-            fs = float(fs)
-            self.model.Fs = fs
-            self.draw_tb()
-        except ValueError:
-            pass
+    def set_fs(self, fs):
+        self.model.Fs = fs
         self.view.var_fs.set(str(self.model.Fs))
+        self.draw_tb()
         self.draw_ctrl()
-
-    def set_cf(self, *args, **kwargs):
-        cf = self.view.var_cf.get()
-        try:
-            cf = float(cf)
-            self.model.cf = cf
-        except ValueError:
-            pass
+    def set_cf(self, cf):
+        self.model.cf = cf
         self.view.var_cf.set(str(self.model.cf))
         self.draw_ctrl()
-
-    def set_theme(self, *args, **kwargs):
-        style = self.view.var_style.get()
+    def set_theme(self, style):
         theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]
