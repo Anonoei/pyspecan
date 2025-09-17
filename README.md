@@ -17,11 +17,9 @@ tkGUI, RT mode
 - GUI, swept: `python3 -m pyspecan`
 - GUI, RT: `python3 -m pyspecan -m RT`
 
-## Scripts
-- `pyspecan`: GUI, swept
-- `pyspecan-rt`: GUI, RT
-- `pyspecan-cui`: CUI, swept
-- `pyspecan-cui-rt`: CUI, RT
+## Script
+- GUI, swept: `pyspecan`
+- GUI, RT: `pyspecan -m RT`
 
 # Install
 1. Run `python3 -m pip install pyspecan`
