@@ -43,7 +43,7 @@ def _fill(matrix):
     # matrix[np.min(matrix[:,None]):np.max(matrix[:,None]),None] += 1
     return matrix
 
-def dot(x, y, psds, yt, yb):
+def dot(x: int, y: int, psds, yt: float, yb: float):
     """Dot Matrix
     Each PSD's x/y mapped to histogram x/y
     """
@@ -63,11 +63,9 @@ def dot(x, y, psds, yt, yb):
     x_idx = np.floor(np.arange(0, psds.shape[0])*x_ratio).astype(int)
     y_idx = np.floor((psds+y_off)*y_ratio).astype(int)
 
-    y_idx = np.clip(y_idx, -1, y)
+    y_idx = np.clip(y_idx, 0, y-1)
 
     y_val = np.ones_like(y_idx)
-    y_val[y_idx == -1] = 0
-    y_val[y_idx == y] = 0
 
     for i in range(psds.shape[1]):
         hist[y_idx[:,i], x_idx] += y_val[:,i]
