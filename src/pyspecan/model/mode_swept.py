@@ -8,10 +8,6 @@ def args_swept(parser: argparse.ArgumentParser):
     define_args(parser)
 
 class ModelSwept(Model):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.block_size = self._nfft
-
     def psd(self, vbw=None, win="blackman"): # type: ignore
         if self._samples is None:
             return None
@@ -21,3 +17,19 @@ class ModelSwept(Model):
             psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
             self._psd = psd
         return self._psd
+
+    def next(self):
+        if self.sweep_time <= 0.0:
+            return super().next()
+        if super().next():
+            self.reader.cur_samp += int(self.Fs * (self.sweep_time/1000))
+            return True
+        return False
+
+    def prev(self):
+        if self.sweep_time <= 0.0:
+            return super().prev()
+        if super().prev():
+            self.reader.cur_samp -= int(self.Fs * (self.sweep_time/1000))
+            return True
+        return False

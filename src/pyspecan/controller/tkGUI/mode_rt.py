@@ -1,5 +1,7 @@
 """Controller for RT mode"""
 import argparse
+import time
+
 import numpy as np
 
 from ...utils import matrix
@@ -27,6 +29,21 @@ class ControllerRT(Controller):
         self.plot = PlotControllerRT(self, self.view.plot, **kwargs)
         self.draw()
 
+
+    def loop(self):
+        while self.running:
+            time_show = self.time_show/1000 # convert ms to s
+            valid, ptime = self._next()
+            if not valid or ptime is None:
+                break
+            wait = time_show-ptime
+            if wait > 0:
+                self.view.lbl_msg.configure(text="")
+                time.sleep(wait)
+            else:
+                # self.model.skip_time(-wait)
+                self.view.lbl_msg.configure(text="OVERFLOW")
+
 class PlotControllerRT(FreqPlotController):
     """Controller for ViewRT"""
     __slots__ = (
@@ -42,9 +59,12 @@ class PlotControllerRT(FreqPlotController):
         self._cmap_set = False
         self._cb_drawn = False
 
+        self.view.settings["overlap"].set(f"{self.parent.model.overlap:.2f}")
+        self.view.wg_sets["overlap"].bind("<Return>", self.handle_event)
+
         self.view.settings["cmap"].set(self.cmap)
         self.view.wg_sets["cmap"].configure(values=[k for k in cmap.keys()])
-        self.view.wg_sets["cmap"].bind("<<ComboboxSelected>>", self.set_cmap)
+        self.view.wg_sets["cmap"].bind("<<ComboboxSelected>>", self.handle_event)
 
         self.view.ax("pst").ax.set_autoscale_on(False)
         self.view.ax("pst").ax.locator_params(axis="x", nbins=5)
@@ -82,7 +102,7 @@ class PlotControllerRT(FreqPlotController):
         self.update()
 
     def _plot_persistent(self, psds):
-        self.view.ax("pst").ax.set_title("Persistent")
+        self.view.ax("pst").ax.set_title(f"Persistent - {psds.shape[1]} FFTs")
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
@@ -110,6 +130,8 @@ class PlotControllerRT(FreqPlotController):
     def handle_event(self, event):
         if event.widget == self.view.wg_sets["cmap"]:
             self.set_cmap(self.view.settings["cmap"].get())
+        elif event.widget == self.view.wg_sets["overlap"]:
+            self.set_overlap(self.view.settings["overlap"].get())
         else:
             super().handle_event(event)
 
@@ -127,3 +149,11 @@ class PlotControllerRT(FreqPlotController):
         """Set plot color mapping"""
         self.cmap = _cmap
         self._cmap_set = True
+
+    def set_overlap(self, overlap):
+        try:
+            overlap = float(overlap)
+            self.parent.model.overlap = overlap
+        except ValueError:
+            ref = self.ref_level
+        self.view.settings["ref_level"].set(f"{self.parent.model.overlap:.2f}")

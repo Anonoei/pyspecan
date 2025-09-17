@@ -61,9 +61,14 @@ class View(_View):
 
         col += 1
         ttk.Label(parent, text="Sweep").grid(row=0,column=col)
-        self.var_time = tk.StringVar(parent)
-        self.ent_time = ttk.Entry(parent, textvariable=self.var_time, width=5)
-        self.ent_time.grid(row=1,column=col, padx=2, pady=2)
+        self.var_sweep = tk.StringVar(parent)
+        self.ent_sweep = ttk.Entry(parent, textvariable=self.var_sweep, width=8)
+        self.ent_sweep.grid(row=1,column=col, padx=2, pady=2)
+        col += 1
+        ttk.Label(parent, text="Show").grid(row=0,column=col)
+        self.var_show = tk.StringVar(parent)
+        self.ent_show = ttk.Entry(parent, textvariable=self.var_show, width=8)
+        self.ent_show.grid(row=1,column=col, padx=2, pady=2)
 
         col += 1
         ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
@@ -85,6 +90,10 @@ class View(_View):
         col += 1
         ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
 
+        col += 1
+        self.lbl_msg = ttk.Label(parent, text="")
+        self.lbl_msg.grid(row=0,column=col, rowspan=2, sticky=tk.E)
+        parent.grid_columnconfigure(col, weight=1)
         col += 1
         self.var_draw_time = tk.StringVar(parent)
         self.lbl_draw_time = ttk.Label(parent, textvariable=self.var_draw_time)

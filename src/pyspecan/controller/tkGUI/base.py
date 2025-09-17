@@ -27,6 +27,7 @@ def define_args(parser):
     ctrl = parser.add_argument_group("tkGUI")
     ctrl.add_argument("--theme", default="Dark", choices=[k for k in theme_tk.theme.keys()])
     ctrl.add_argument("--sweep", default=50.0, type=float)
+    ctrl.add_argument("--show", default=50.0, type=float)
     return ctrl
 
 class Controller(_Controller):
@@ -36,15 +37,19 @@ class Controller(_Controller):
         self.view: GUI = self.view # type hints
         self.running = False
         self._stop = False
-        self.time_show = kwargs.get("sweep", 50.0)
+        self.time_show = kwargs.get("show", 50.0)
+        self.model.set_sweep_time(kwargs.get("sweep", 50.0))
         self._last_f = None
         self.plot: FreqPlotController = None # type: ignore
 
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
         self.view.sld_samp.scale.config(command=self.handle_sld_samp)
 
-        self.view.ent_time.bind("<Return>", self.handle_event)
-        self.view.var_time.set(str(self.time_show))
+        self.view.ent_sweep.bind("<Return>", self.handle_event)
+        self.view.var_sweep.set(f"{self.model.sweep_time:02.3f}")
+        self.view.ent_show.bind("<Return>", self.handle_event)
+        self.view.var_show.set(f"{self.time_show:02.3f}")
+
         self.view.btn_prev.config(command=self.prev)
         self.view.btn_next.config(command=self.next)
         self.view.btn_start.config(command=self.start)
@@ -98,17 +103,18 @@ class Controller(_Controller):
         return self._next()
 
     def loop(self):
-        time_show = self.time_show/1000 # convert ms to s
         while self.running:
+            time_show = self.time_show/1000 # convert ms to s
             valid, ptime = self._next()
             if not valid or ptime is None:
                 break
             wait = time_show-ptime
             if wait > 0:
-                # print(f"Loop waiting for {wait*1000:.1f}ms")
+                self.view.lbl_msg.configure(text="")
                 time.sleep(wait)
             else:
                 self.model.skip_time(-wait)
+                self.view.lbl_msg.configure(text="OVERFLOW")
 
     def _plot(self):
         if config.MON_MEM:
@@ -165,6 +171,9 @@ class Controller(_Controller):
         self.view.var_time_cur.set(strfmt_td(dt.timedelta(seconds=self.model.cur_time())))
         self.view.var_time_tot.set(strfmt_td(dt.timedelta(seconds=self.model.tot_time())))
 
+        self.view.var_sweep.set(f"{self.model.sweep_time:02.3f}")
+        self.view.var_show.set(f"{self.time_show:02.3f}")
+
     def draw_ctrl(self):
         self.view.var_file.set(str(self.model.reader.path))
         self.view.var_file_fmt.set(str(self.model.reader.fmt.name))
@@ -177,8 +186,10 @@ class Controller(_Controller):
 
     # --- GUI bind events and setters --- #
     def handle_event(self, event):
-        if event.widget == self.view.ent_time:
-            self.set_time(self.view.var_time.get())
+        if event.widget == self.view.ent_sweep:
+            self.set_time_sweep(self.view.var_sweep.get())
+        elif event.widget == self.view.ent_show:
+            self.set_time_show(self.view.var_show.get())
         elif event.widget == self.view.cb_file_fmt:
             self.set_dtype(self.view.var_file_fmt.get())
         elif event.widget == self.view.ent_fs:
@@ -197,13 +208,19 @@ class Controller(_Controller):
         self.model.reader.cur_samp = samp
         self.draw_tb()
         # print(samp)
-    def set_time(self, ts):
+    def set_time_sweep(self, ts):
+        try:
+            self.model.set_sweep_time(float(ts))
+        except ValueError:
+            pass
+        self.view.var_sweep.set(f"{self.model.sweep_time:02.3f}")
+    def set_time_show(self, ts):
         try:
             ts = float(ts)
             self.time_show = ts
         except ValueError:
             pass
-        self.view.var_time.set(str(self.time_show))
+        self.view.var_show.set(f"{self.time_show:02.3f}")
     def set_path(self, path):
         self.model.reader.path = path
         print(f"Path set to '{self.model.reader.path}'")

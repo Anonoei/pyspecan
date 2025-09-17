@@ -6,15 +6,15 @@ from ..utils import stft
 
 def args_rt(parser: argparse.ArgumentParser):
     define_args(parser)
-    parser.add_argument("--overlap", default=0.8, type=float)
-    parser.add_argument("--fftnum", default=4, type=int)
+    parser.add_argument("--overlap", default=0.6, type=float)
+    parser.add_argument("--block_max", default=102400, type=int)
 
 class ModelRT(Model):
-    __slots__ = ("_overlap", "_fftnum")
+    __slots__ = ("_overlap", "_block_max")
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._overlap = kwargs.get("overlap", 0.8)
-        self._fftnum = kwargs.get("fftnum", 4)
+        self._overlap = kwargs.get("overlap", 0.6)
+        self._block_max = kwargs.get("block_max", 65536)
         self.update_blocksize()
 
     def psd(self, vbw=None, win="blackman"): # type: ignore
@@ -28,11 +28,12 @@ class ModelRT(Model):
         return self._psd
 
     def update_blocksize(self):
-        self._block_size = self._nfft*self._fftnum
-
-    def set_nfft(self, nfft):
-        super().set_nfft(nfft)
-        self.update_blocksize()
+        print(f"Updating block size - st: {self._sweep_time}")
+        self.block_size = int(self.Fs * (self._sweep_time/1000))
+        if self.block_size > self._block_max:
+            self.block_size = self._block_max
+            super().set_sweep_time((self._block_size/self.Fs)*1000)
+        print(f"Set block_size to {self._block_size}")
 
     def get_overlap(self):
         return self._overlap
@@ -42,9 +43,10 @@ class ModelRT(Model):
         self._overlap = float(overlap)
     overlap = property(get_overlap, set_overlap)
 
-    def get_fftnum(self):
-        return self._overlap
-    def set_fftnum(self, fftnum):
-        self._fftnum = int(fftnum)
+    def set_sweep_time(self, ts):
+        super().set_sweep_time(ts)
         self.update_blocksize()
-    fftnum = property(get_fftnum, set_fftnum)
+
+    def set_fs(self, fs):
+        super().set_fs(fs)
+        self.update_blocksize()
