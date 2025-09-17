@@ -1,0 +1,781 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>pyspecan.model.base API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>pyspecan.model.base</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="pyspecan.model.base.define_args"><code class="name flex">
+<span>def <span class="ident">define_args</span></span>(<span>parser)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def define_args(parser):
+    parser.add_argument(&#34;-f&#34;, &#34;--path&#34;, default=None, help=&#34;file path&#34;)
+    parser.add_argument(&#34;-d&#34;, &#34;--fmt&#34;, choices=Format.choices(), default=Format.cf32.name, help=&#34;data format&#34;)
+
+    parser.add_argument(&#34;-fs&#34;, &#34;--Fs&#34;, default=1, type=Frequency.get, help=&#34;sample rate&#34;)
+    parser.add_argument(&#34;-cf&#34;, &#34;--cf&#34;, default=0, type=Frequency.get, help=&#34;center frequency&#34;)
+    parser.add_argument(&#34;-n&#34;, &#34;--nfft&#34;, default=1024, help=&#34;FFT size&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="pyspecan.model.base.Model"><code class="flex name class">
+<span>class <span class="ident">Model</span></span>
+<span>(</span><span>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Model:
+    __slots__ = (
+        &#34;mode&#34;, &#34;reader&#34;,
+        &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
+        &#34;_block_size&#34;, &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;
+    )
+    def __init__(self, **kwargs):
+        path = kwargs.get(&#34;path&#34;, None)
+        fmt = kwargs.get(&#34;fmt&#34;, None)
+        Fs = kwargs.get(&#34;Fs&#34;, 1)
+        cf = kwargs.get(&#34;cf&#34;, 1)
+        nfft = kwargs.get(&#34;nfft&#34;, 1024)
+
+        self.reader = Reader(fmt, path)
+        self._Fs = Frequency.get(Fs)
+        self._cf = Frequency.get(cf)
+
+        self._nfft = int(nfft)
+
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+        self._samples = np.empty(self._nfft, dtype=np.complex64)
+        self._psd = np.empty(self._nfft, dtype=np.float32)
+        self._block_size = 0
+
+    def show(self, ind=0):
+        print(&#34; &#34;*ind + &#34;Reader:&#34;)
+        self.reader.show(ind+2)
+
+    def reset(self):
+        self.reader.reset()
+
+    @property
+    def samples(self):
+        return self._samples
+
+    def psd(self, vbw=None, win=&#34;blackman&#34;) -&gt; np.ndarray:
+        ...
+
+    def next(self):
+        try:
+            samples = self.reader.next(self._block_size)
+        except err.Overflow:
+            return False
+        self._samples = samples
+        self._psd = None
+        return True
+
+    def prev(self):
+        try:
+            samples = self.reader.prev(self._block_size)
+        except err.Overflow:
+            return False
+        self._samples = samples
+        self._psd = None
+        return True
+
+    def cur_time(self):
+        return self.reader.cur_samp/self.Fs
+
+    def tot_time(self):
+        return self.reader.max_samp/self.Fs
+
+    def get_fs(self):
+        return self._Fs
+    def set_fs(self, fs):
+        self._Fs = Frequency.get(fs)
+    Fs = property(get_fs, set_fs)
+
+    def get_cf(self):
+        return self._cf
+    def set_cf(self, cf):
+        self._cf = Frequency.get(cf)
+    cf = property(get_cf, set_cf)
+
+    def get_nfft(self):
+        return self._nfft
+    def set_nfft(self, nfft):
+        self._nfft = int(nfft)
+    nfft = property(get_nfft, set_nfft)
+
+    def get_block_size(self):
+        return self._block_size
+    def set_block_size(self, size):
+        self._block_size = size
+    block_size = property(get_block_size, set_block_size)</code></pre>
+</details>
+<div class="desc"></div>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="pyspecan.model.mode_rt.ModelRT" href="mode_rt.html#pyspecan.model.mode_rt.ModelRT">ModelRT</a></li>
+<li><a title="pyspecan.model.mode_swept.ModelSwept" href="mode_swept.html#pyspecan.model.mode_swept.ModelSwept">ModelSwept</a></li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="pyspecan.model.base.Model.Fs"><code class="name">prop <span class="ident">Fs</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_fs(self):
+    return self._Fs</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.block_size"><code class="name">prop <span class="ident">block_size</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_block_size(self):
+    return self._block_size</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.cf"><code class="name">prop <span class="ident">cf</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_cf(self):
+    return self._cf</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.f"><code class="name">var <span class="ident">f</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Model:
+    __slots__ = (
+        &#34;mode&#34;, &#34;reader&#34;,
+        &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
+        &#34;_block_size&#34;, &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;
+    )
+    def __init__(self, **kwargs):
+        path = kwargs.get(&#34;path&#34;, None)
+        fmt = kwargs.get(&#34;fmt&#34;, None)
+        Fs = kwargs.get(&#34;Fs&#34;, 1)
+        cf = kwargs.get(&#34;cf&#34;, 1)
+        nfft = kwargs.get(&#34;nfft&#34;, 1024)
+
+        self.reader = Reader(fmt, path)
+        self._Fs = Frequency.get(Fs)
+        self._cf = Frequency.get(cf)
+
+        self._nfft = int(nfft)
+
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+        self._samples = np.empty(self._nfft, dtype=np.complex64)
+        self._psd = np.empty(self._nfft, dtype=np.float32)
+        self._block_size = 0
+
+    def show(self, ind=0):
+        print(&#34; &#34;*ind + &#34;Reader:&#34;)
+        self.reader.show(ind+2)
+
+    def reset(self):
+        self.reader.reset()
+
+    @property
+    def samples(self):
+        return self._samples
+
+    def psd(self, vbw=None, win=&#34;blackman&#34;) -&gt; np.ndarray:
+        ...
+
+    def next(self):
+        try:
+            samples = self.reader.next(self._block_size)
+        except err.Overflow:
+            return False
+        self._samples = samples
+        self._psd = None
+        return True
+
+    def prev(self):
+        try:
+            samples = self.reader.prev(self._block_size)
+        except err.Overflow:
+            return False
+        self._samples = samples
+        self._psd = None
+        return True
+
+    def cur_time(self):
+        return self.reader.cur_samp/self.Fs
+
+    def tot_time(self):
+        return self.reader.max_samp/self.Fs
+
+    def get_fs(self):
+        return self._Fs
+    def set_fs(self, fs):
+        self._Fs = Frequency.get(fs)
+    Fs = property(get_fs, set_fs)
+
+    def get_cf(self):
+        return self._cf
+    def set_cf(self, cf):
+        self._cf = Frequency.get(cf)
+    cf = property(get_cf, set_cf)
+
+    def get_nfft(self):
+        return self._nfft
+    def set_nfft(self, nfft):
+        self._nfft = int(nfft)
+    nfft = property(get_nfft, set_nfft)
+
+    def get_block_size(self):
+        return self._block_size
+    def set_block_size(self, size):
+        self._block_size = size
+    block_size = property(get_block_size, set_block_size)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.mode"><code class="name">var <span class="ident">mode</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Model:
+    __slots__ = (
+        &#34;mode&#34;, &#34;reader&#34;,
+        &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
+        &#34;_block_size&#34;, &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;
+    )
+    def __init__(self, **kwargs):
+        path = kwargs.get(&#34;path&#34;, None)
+        fmt = kwargs.get(&#34;fmt&#34;, None)
+        Fs = kwargs.get(&#34;Fs&#34;, 1)
+        cf = kwargs.get(&#34;cf&#34;, 1)
+        nfft = kwargs.get(&#34;nfft&#34;, 1024)
+
+        self.reader = Reader(fmt, path)
+        self._Fs = Frequency.get(Fs)
+        self._cf = Frequency.get(cf)
+
+        self._nfft = int(nfft)
+
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+        self._samples = np.empty(self._nfft, dtype=np.complex64)
+        self._psd = np.empty(self._nfft, dtype=np.float32)
+        self._block_size = 0
+
+    def show(self, ind=0):
+        print(&#34; &#34;*ind + &#34;Reader:&#34;)
+        self.reader.show(ind+2)
+
+    def reset(self):
+        self.reader.reset()
+
+    @property
+    def samples(self):
+        return self._samples
+
+    def psd(self, vbw=None, win=&#34;blackman&#34;) -&gt; np.ndarray:
+        ...
+
+    def next(self):
+        try:
+            samples = self.reader.next(self._block_size)
+        except err.Overflow:
+            return False
+        self._samples = samples
+        self._psd = None
+        return True
+
+    def prev(self):
+        try:
+            samples = self.reader.prev(self._block_size)
+        except err.Overflow:
+            return False
+        self._samples = samples
+        self._psd = None
+        return True
+
+    def cur_time(self):
+        return self.reader.cur_samp/self.Fs
+
+    def tot_time(self):
+        return self.reader.max_samp/self.Fs
+
+    def get_fs(self):
+        return self._Fs
+    def set_fs(self, fs):
+        self._Fs = Frequency.get(fs)
+    Fs = property(get_fs, set_fs)
+
+    def get_cf(self):
+        return self._cf
+    def set_cf(self, cf):
+        self._cf = Frequency.get(cf)
+    cf = property(get_cf, set_cf)
+
+    def get_nfft(self):
+        return self._nfft
+    def set_nfft(self, nfft):
+        self._nfft = int(nfft)
+    nfft = property(get_nfft, set_nfft)
+
+    def get_block_size(self):
+        return self._block_size
+    def set_block_size(self, size):
+        self._block_size = size
+    block_size = property(get_block_size, set_block_size)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.nfft"><code class="name">prop <span class="ident">nfft</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_nfft(self):
+    return self._nfft</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.reader"><code class="name">var <span class="ident">reader</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Model:
+    __slots__ = (
+        &#34;mode&#34;, &#34;reader&#34;,
+        &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
+        &#34;_block_size&#34;, &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;
+    )
+    def __init__(self, **kwargs):
+        path = kwargs.get(&#34;path&#34;, None)
+        fmt = kwargs.get(&#34;fmt&#34;, None)
+        Fs = kwargs.get(&#34;Fs&#34;, 1)
+        cf = kwargs.get(&#34;cf&#34;, 1)
+        nfft = kwargs.get(&#34;nfft&#34;, 1024)
+
+        self.reader = Reader(fmt, path)
+        self._Fs = Frequency.get(Fs)
+        self._cf = Frequency.get(cf)
+
+        self._nfft = int(nfft)
+
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+        self._samples = np.empty(self._nfft, dtype=np.complex64)
+        self._psd = np.empty(self._nfft, dtype=np.float32)
+        self._block_size = 0
+
+    def show(self, ind=0):
+        print(&#34; &#34;*ind + &#34;Reader:&#34;)
+        self.reader.show(ind+2)
+
+    def reset(self):
+        self.reader.reset()
+
+    @property
+    def samples(self):
+        return self._samples
+
+    def psd(self, vbw=None, win=&#34;blackman&#34;) -&gt; np.ndarray:
+        ...
+
+    def next(self):
+        try:
+            samples = self.reader.next(self._block_size)
+        except err.Overflow:
+            return False
+        self._samples = samples
+        self._psd = None
+        return True
+
+    def prev(self):
+        try:
+            samples = self.reader.prev(self._block_size)
+        except err.Overflow:
+            return False
+        self._samples = samples
+        self._psd = None
+        return True
+
+    def cur_time(self):
+        return self.reader.cur_samp/self.Fs
+
+    def tot_time(self):
+        return self.reader.max_samp/self.Fs
+
+    def get_fs(self):
+        return self._Fs
+    def set_fs(self, fs):
+        self._Fs = Frequency.get(fs)
+    Fs = property(get_fs, set_fs)
+
+    def get_cf(self):
+        return self._cf
+    def set_cf(self, cf):
+        self._cf = Frequency.get(cf)
+    cf = property(get_cf, set_cf)
+
+    def get_nfft(self):
+        return self._nfft
+    def set_nfft(self, nfft):
+        self._nfft = int(nfft)
+    nfft = property(get_nfft, set_nfft)
+
+    def get_block_size(self):
+        return self._block_size
+    def set_block_size(self, size):
+        self._block_size = size
+    block_size = property(get_block_size, set_block_size)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.samples"><code class="name">prop <span class="ident">samples</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def samples(self):
+    return self._samples</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.model.base.Model.cur_time"><code class="name flex">
+<span>def <span class="ident">cur_time</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cur_time(self):
+    return self.reader.cur_samp/self.Fs</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.get_block_size"><code class="name flex">
+<span>def <span class="ident">get_block_size</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_block_size(self):
+    return self._block_size</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.get_cf"><code class="name flex">
+<span>def <span class="ident">get_cf</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_cf(self):
+    return self._cf</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.get_fs"><code class="name flex">
+<span>def <span class="ident">get_fs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_fs(self):
+    return self._Fs</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.get_nfft"><code class="name flex">
+<span>def <span class="ident">get_nfft</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_nfft(self):
+    return self._nfft</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.next"><code class="name flex">
+<span>def <span class="ident">next</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def next(self):
+    try:
+        samples = self.reader.next(self._block_size)
+    except err.Overflow:
+        return False
+    self._samples = samples
+    self._psd = None
+    return True</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.prev"><code class="name flex">
+<span>def <span class="ident">prev</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def prev(self):
+    try:
+        samples = self.reader.prev(self._block_size)
+    except err.Overflow:
+        return False
+    self._samples = samples
+    self._psd = None
+    return True</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.psd"><code class="name flex">
+<span>def <span class="ident">psd</span></span>(<span>self, vbw=None, win='blackman') ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def psd(self, vbw=None, win=&#34;blackman&#34;) -&gt; np.ndarray:
+    ...</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.reset"><code class="name flex">
+<span>def <span class="ident">reset</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def reset(self):
+    self.reader.reset()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.set_block_size"><code class="name flex">
+<span>def <span class="ident">set_block_size</span></span>(<span>self, size)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_block_size(self, size):
+    self._block_size = size</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.set_cf"><code class="name flex">
+<span>def <span class="ident">set_cf</span></span>(<span>self, cf)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_cf(self, cf):
+    self._cf = Frequency.get(cf)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.set_fs"><code class="name flex">
+<span>def <span class="ident">set_fs</span></span>(<span>self, fs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_fs(self, fs):
+    self._Fs = Frequency.get(fs)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.set_nfft"><code class="name flex">
+<span>def <span class="ident">set_nfft</span></span>(<span>self, nfft)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_nfft(self, nfft):
+    self._nfft = int(nfft)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.show"><code class="name flex">
+<span>def <span class="ident">show</span></span>(<span>self, ind=0)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def show(self, ind=0):
+    print(&#34; &#34;*ind + &#34;Reader:&#34;)
+    self.reader.show(ind+2)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.tot_time"><code class="name flex">
+<span>def <span class="ident">tot_time</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def tot_time(self):
+    return self.reader.max_samp/self.Fs</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pyspecan.model" href="index.html">pyspecan.model</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pyspecan.model.base.define_args" href="#pyspecan.model.base.define_args">define_args</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="pyspecan.model.base.Model" href="#pyspecan.model.base.Model">Model</a></code></h4>
+<ul class="two-column">
+<li><code><a title="pyspecan.model.base.Model.Fs" href="#pyspecan.model.base.Model.Fs">Fs</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.block_size" href="#pyspecan.model.base.Model.block_size">block_size</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.cf" href="#pyspecan.model.base.Model.cf">cf</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.cur_time" href="#pyspecan.model.base.Model.cur_time">cur_time</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.f" href="#pyspecan.model.base.Model.f">f</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.get_block_size" href="#pyspecan.model.base.Model.get_block_size">get_block_size</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.get_cf" href="#pyspecan.model.base.Model.get_cf">get_cf</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.get_fs" href="#pyspecan.model.base.Model.get_fs">get_fs</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.get_nfft" href="#pyspecan.model.base.Model.get_nfft">get_nfft</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.mode" href="#pyspecan.model.base.Model.mode">mode</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.next" href="#pyspecan.model.base.Model.next">next</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.nfft" href="#pyspecan.model.base.Model.nfft">nfft</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.prev" href="#pyspecan.model.base.Model.prev">prev</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.psd" href="#pyspecan.model.base.Model.psd">psd</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.reader" href="#pyspecan.model.base.Model.reader">reader</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.reset" href="#pyspecan.model.base.Model.reset">reset</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.samples" href="#pyspecan.model.base.Model.samples">samples</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.set_block_size" href="#pyspecan.model.base.Model.set_block_size">set_block_size</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.set_cf" href="#pyspecan.model.base.Model.set_cf">set_cf</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.set_fs" href="#pyspecan.model.base.Model.set_fs">set_fs</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.set_nfft" href="#pyspecan.model.base.Model.set_nfft">set_nfft</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.show" href="#pyspecan.model.base.Model.show">show</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.tot_time" href="#pyspecan.model.base.Model.tot_time">tot_time</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>

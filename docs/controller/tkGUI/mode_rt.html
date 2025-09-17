@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.tkGUI.rt API documentation</title>
+<title>pyspecan.controller.tkGUI.mode_rt API documentation</title>
 <meta name="description" content="Controller for RT mode">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.tkGUI.rt</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.tkGUI.mode_rt</code></h1>
 </header>
 <section id="section-intro">
 <p>Controller for RT mode</p>
@@ -45,16 +45,18 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.define_args"><code class="name flex">
-<span>def <span class="ident">define_args</span></span>(<span>parser: argparse.ArgumentParser)</span>
+<dt id="pyspecan.controller.tkGUI.mode_rt.args_rt"><code class="name flex">
+<span>def <span class="ident">args_rt</span></span>(<span>parser: argparse.ArgumentParser)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def define_args(parser: argparse.ArgumentParser):
-    mode = parser.add_argument_group(&#34;RT mode&#34;)
+<pre><code class="python">def args_rt(parser: argparse.ArgumentParser):
+    ctrl = base_args(parser)
+    freq_args(parser)
+    mode = ctrl.add_argument_group(&#34;RT mode&#34;)
     mode.add_argument(&#34;--x&#34;, default=1001, type=int, help=&#34;histogram x pixels&#34;)
     mode.add_argument(&#34;--y&#34;, default=600, type=int, help=&#34;histogram y pixels&#34;)
     mode.add_argument(&#34;--cmap&#34;, default=&#34;hot&#34;, choices=[k for k in cmap.keys()], help=&#34;histogram color map&#34;)</code></pre>
@@ -66,26 +68,48 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT"><code class="flex name class">
+<dt id="pyspecan.controller.tkGUI.mode_rt.ControllerRT"><code class="flex name class">
 <span>class <span class="ident">ControllerRT</span></span>
-<span>(</span><span>view, **kwargs)</span>
+<span>(</span><span>*args, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerRT(FreqPlotController):
+<pre><code class="python">class ControllerRT(Controller):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.plot = PlotControllerRT(self, self.view.plot, **kwargs)
+        self.draw()</code></pre>
+</details>
+<div class="desc"><p>tkGUI Controller</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.tkGUI.base.Controller" href="base.html#pyspecan.controller.tkGUI.base.Controller">Controller</a></li>
+<li><a title="pyspecan.controller.base.Controller" href="../base.html#pyspecan.controller.base.Controller">Controller</a></li>
+</ul>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT"><code class="flex name class">
+<span>class <span class="ident">PlotControllerRT</span></span>
+<span>(</span><span>parent, view, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PlotControllerRT(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewRT&#34;&#34;&#34;
     __slots__ = (
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view, **kwargs):
+    def __init__(self, parent, view, **kwargs):
         self.x = kwargs.get(&#34;x&#34;, 1001)
         self.y = kwargs.get(&#34;y&#34;, 600)
         self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
-        super().__init__(view, **kwargs)
+        super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
         self._cb_drawn = False
@@ -180,28 +204,28 @@ el.replaceWith(d);
 <div class="desc"><p>Controller for ViewRT</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.base.FreqPlotController" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController">FreqPlotController</a></li>
-<li>pyspecan.controller.tkGUI.base._PlotController</li>
+<li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></li>
+<li>pyspecan.controller.tkGUI.plot_base._PlotController</li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerRT(FreqPlotController):
+<pre><code class="python">class PlotControllerRT(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewRT&#34;&#34;&#34;
     __slots__ = (
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view, **kwargs):
+    def __init__(self, parent, view, **kwargs):
         self.x = kwargs.get(&#34;x&#34;, 1001)
         self.y = kwargs.get(&#34;y&#34;, 600)
         self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
-        super().__init__(view, **kwargs)
+        super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
         self._cb_drawn = False
@@ -295,23 +319,23 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.x"><code class="name">var <span class="ident">x</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.x"><code class="name">var <span class="ident">x</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerRT(FreqPlotController):
+<pre><code class="python">class PlotControllerRT(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewRT&#34;&#34;&#34;
     __slots__ = (
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view, **kwargs):
+    def __init__(self, parent, view, **kwargs):
         self.x = kwargs.get(&#34;x&#34;, 1001)
         self.y = kwargs.get(&#34;y&#34;, 600)
         self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
-        super().__init__(view, **kwargs)
+        super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
         self._cb_drawn = False
@@ -405,23 +429,23 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.y"><code class="name">var <span class="ident">y</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.y"><code class="name">var <span class="ident">y</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerRT(FreqPlotController):
+<pre><code class="python">class PlotControllerRT(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewRT&#34;&#34;&#34;
     __slots__ = (
         &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
-    def __init__(self, view, **kwargs):
+    def __init__(self, parent, view, **kwargs):
         self.x = kwargs.get(&#34;x&#34;, 1001)
         self.y = kwargs.get(&#34;y&#34;, 600)
         self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
-        super().__init__(view, **kwargs)
+        super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
         self._cb_drawn = False
@@ -518,7 +542,7 @@ el.replaceWith(d);
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.handle_event"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.handle_event"><code class="name flex">
 <span>def <span class="ident">handle_event</span></span>(<span>self, event)</span>
 </code></dt>
 <dd>
@@ -534,7 +558,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.set_cmap"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_cmap"><code class="name flex">
 <span>def <span class="ident">set_cmap</span></span>(<span>self, _cmap)</span>
 </code></dt>
 <dd>
@@ -549,7 +573,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Set plot color mapping</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.set_y"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_y"><code class="name flex">
 <span>def <span class="ident">set_y</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -572,7 +596,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Set plot yticks and ylabels</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.ControllerRT.update_f"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.update_f"><code class="name flex">
 <span>def <span class="ident">update_f</span></span>(<span>self, f)</span>
 </code></dt>
 <dd>
@@ -595,16 +619,16 @@ el.replaceWith(d);
 </dl>
 <h3>Inherited members</h3>
 <ul class="hlist">
-<li><code><b><a title="pyspecan.controller.tkGUI.base.FreqPlotController" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController">FreqPlotController</a></b></code>:
+<li><code><b><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></b></code>:
 <ul class="hlist">
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.plot" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.plot">plot</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_ref_level" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_scale" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_scale">set_scale</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_vbw" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_vbw">set_vbw</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_window" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_window">set_window</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.update" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.update">update</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.y_btm" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.y_btm">y_btm</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.y_top" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.y_top">y_top</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot">plot</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale">set_scale</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
 </ul>
 </li>
 </ul>
@@ -624,21 +648,24 @@ el.replaceWith(d);
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.rt.define_args" href="#pyspecan.controller.tkGUI.rt.define_args">define_args</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.args_rt" href="#pyspecan.controller.tkGUI.mode_rt.args_rt">args_rt</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT" href="#pyspecan.controller.tkGUI.rt.ControllerRT">ControllerRT</a></code></h4>
+<h4><code><a title="pyspecan.controller.tkGUI.mode_rt.ControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.ControllerRT">ControllerRT</a></code></h4>
+</li>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT">PlotControllerRT</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.cmap" href="#pyspecan.controller.tkGUI.rt.ControllerRT.cmap">cmap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.handle_event" href="#pyspecan.controller.tkGUI.rt.ControllerRT.handle_event">handle_event</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.set_cmap" href="#pyspecan.controller.tkGUI.rt.ControllerRT.set_cmap">set_cmap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.set_y" href="#pyspecan.controller.tkGUI.rt.ControllerRT.set_y">set_y</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.update_f" href="#pyspecan.controller.tkGUI.rt.ControllerRT.update_f">update_f</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.x" href="#pyspecan.controller.tkGUI.rt.ControllerRT.x">x</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.ControllerRT.y" href="#pyspecan.controller.tkGUI.rt.ControllerRT.y">y</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.cmap" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.cmap">cmap</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.handle_event" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.handle_event">handle_event</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_cmap" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_cmap">set_cmap</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_y" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_y">set_y</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.update_f" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.update_f">update_f</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.x" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.x">x</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.y" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.y">y</a></code></li>
 </ul>
 </li>
 </ul>

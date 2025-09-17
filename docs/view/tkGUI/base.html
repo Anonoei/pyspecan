@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
 <title>pyspecan.view.tkGUI.base API documentation</title>
-<meta name="description" content="Base Views for tkGUI View plots">
+<meta name="description" content="Create a GUI view">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -36,7 +36,7 @@ el.replaceWith(d);
 <h1 class="title">Module <code>pyspecan.view.tkGUI.base</code></h1>
 </header>
 <section id="section-intro">
-<p>Base Views for tkGUI View plots</p>
+<p>Create a GUI view</p>
 </section>
 <section>
 </section>
@@ -47,855 +47,260 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.view.tkGUI.base.GUIBlitPlot"><code class="flex name class">
-<span>class <span class="ident">GUIBlitPlot</span></span>
-<span>(</span><span>view, root, fig)</span>
+<dt id="pyspecan.view.tkGUI.base.View"><code class="flex name class">
+<span>class <span class="ident">View</span></span>
+<span>(</span><span>root=&lt;tkinter.Tk object .&gt;, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class GUIBlitPlot(GUIPlot):
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.plot.mpl BlitPlot&#34;&#34;&#34;
-    def __init__(self, view, root, fig):
-        super().__init__(view, root, fig, BlitPlot)</code></pre>
+<pre><code class="python">class View(_View):
+    &#34;&#34;&#34;Parent tkGUI view class&#34;&#34;&#34;
+    def __init__(self, root=tk.Tk(), **kwargs):
+        self.root = root
+        self.plot: GUIFreqPlot = None # type: ignore
+
+        theme_mpl.get(kwargs.get(&#34;theme&#34;, &#34;Dark&#34;))() # Set matplotlib theme
+
+        # self.style = ttk.Style(root)
+        self.root.title(f&#34;pyspecan&#34;)
+        self.root.protocol(&#34;WM_DELETE_WINDOW&#34;, self.quit)
+
+        self._main = ttk.Frame(self.root)
+        self._main.pack(expand=True, fill=tk.BOTH)
+
+        self.fr_tb = ttk.Frame(self._main, height=20)
+        self.draw_tb(self.fr_tb)
+        self.fr_tb.pack(side=tk.TOP, fill=tk.X)
+
+        self.main = ttk.PanedWindow(self._main, orient=tk.HORIZONTAL)
+        self.main.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        self.fr_view = ttk.Frame(self.main)
+
+        self.fr_ctrl = ttk.Frame(self.main, width=100)
+        self.draw_ctrl(self.fr_ctrl)
+        self.main.add(self.fr_ctrl)
+
+        self.main.add(self.fr_view)
+
+    def draw_tb(self, parent):
+        &#34;&#34;&#34;Draw toolbar frame&#34;&#34;&#34;
+        col = 0
+        self.var_samp = tk.IntVar(parent)
+        self.sld_samp = widgets.Scale(
+            parent, variable=self.var_samp, length=150
+        )
+        ttk.LabeledScale
+        self.sld_samp.grid(row=0,rowspan=2,column=col, sticky=tk.NSEW)
+        col += 1
+        self.var_time_cur = tk.StringVar(parent)
+        self.var_time_tot = tk.StringVar(parent)
+        self.lbl_time_cur = ttk.Label(parent, textvariable=self.var_time_cur)
+        self.lbl_time_cur.grid(row=0,column=col)
+        self.lbl_time_tot = ttk.Label(parent, textvariable=self.var_time_tot)
+        self.lbl_time_tot.grid(row=1,column=col)
+        col += 1
+        ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
+
+        col += 1
+        ttk.Label(parent, text=&#34;Sweep&#34;).grid(row=0,column=col)
+        self.var_time = tk.StringVar(parent)
+        self.ent_time = ttk.Entry(parent, textvariable=self.var_time, width=5)
+        self.ent_time.grid(row=1,column=col, padx=2, pady=2)
+
+        col += 1
+        ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
+        col += 1
+        self.btn_prev = ttk.Button(parent, text=&#34;Prev&#34;)
+        self.btn_prev.grid(row=0,rowspan=2,column=col, padx=2,pady=2)
+        col += 1
+        self.btn_next = ttk.Button(parent, text=&#34;Next&#34;)
+        self.btn_next.grid(row=0,rowspan=2,column=col, padx=2,pady=2)
+        col += 1
+        self.btn_start = ttk.Button(parent, text=&#34;Start&#34;)
+        self.btn_start.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
+        col += 1
+        self.btn_stop = ttk.Button(parent, text=&#34;Stop&#34;, state=tk.DISABLED)
+        self.btn_stop.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
+        col += 1
+        self.btn_reset = ttk.Button(parent, text=&#34;Reset&#34;)
+        self.btn_reset.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
+        col += 1
+        ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
+
+        col += 1
+        self.var_draw_time = tk.StringVar(parent)
+        self.lbl_draw_time = ttk.Label(parent, textvariable=self.var_draw_time)
+        ttk.Label(parent, text=&#34;Draw&#34;).grid(row=0,column=col, sticky=tk.E)
+        self.lbl_draw_time.grid(row=1,column=col, sticky=tk.E)
+        parent.grid_columnconfigure(col, weight=1)
+
+    def draw_ctrl(self, parent):
+        &#34;&#34;&#34;Draw control frame&#34;&#34;&#34;
+        # Model
+        root = ttk.Frame(parent) # File reader
+        root.columnconfigure(2, weight=1)
+        row = 0
+        self.var_file = tk.StringVar(root)
+        self.btn_file = ttk.Button(root, text=&#34;File&#34;)
+        self.btn_file.grid(row=row,column=0, sticky=tk.W)
+        self.ent_file = ttk.Entry(root, textvariable=self.var_file, state=tk.DISABLED, width=10)
+        self.ent_file.grid(row=row,column=1,columnspan=2, sticky=tk.NSEW)
+        row += 1
+        ttk.Label(root, text=&#34;Format:&#34;).grid(row=row,column=0,sticky=tk.W)
+        self.var_file_fmt = tk.StringVar(root)
+        self.cb_file_fmt = ttk.Combobox(root, textvariable=self.var_file_fmt, width=5)
+        self.cb_file_fmt.grid(row=row,column=1, sticky=tk.W)
+        root.pack(padx=2,pady=2, fill=tk.X)
+
+        root = ttk.Frame(parent) # File params
+        row = 0
+        self.var_fs = tk.StringVar(root)
+        ttk.Label(root, text=&#34;Sample rate:&#34;).grid(row=row,column=0, sticky=tk.W)
+        self.ent_fs = ttk.Entry(root, textvariable=self.var_fs, width=10)
+        self.ent_fs.grid(row=row,column=1, sticky=tk.W)
+        row += 1
+        self.var_cf = tk.StringVar(root)
+        ttk.Label(root, text=&#34;Center freq:&#34;).grid(row=row,column=0, sticky=tk.W)
+        self.ent_cf = ttk.Entry(root, textvariable=self.var_cf, width=10)
+        self.ent_cf.grid(row=row,column=1, sticky=tk.W)
+        root.pack(padx=2,pady=2, fill=tk.X)
+
+    def mainloop(self):
+        self.root.mainloop()
+
+    def quit(self):
+        self.root.quit()
+        self.root.destroy()</code></pre>
 </details>
-<div class="desc"><p>tkinter wrapper for pyspecan.plot.mpl BlitPlot</p></div>
+<div class="desc"><p>Parent tkGUI view class</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.base.GUIPlot" href="#pyspecan.view.tkGUI.base.GUIPlot">GUIPlot</a></li>
+<li><a title="pyspecan.view.base.View" href="../base.html#pyspecan.view.base.View">View</a></li>
 </ul>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.base.GUIFreqPlot" href="#pyspecan.view.tkGUI.base.GUIFreqPlot">GUIFreqPlot</a></li>
+<li><a title="pyspecan.view.tkGUI.mode_rt.ViewRT" href="mode_rt.html#pyspecan.view.tkGUI.mode_rt.ViewRT">ViewRT</a></li>
+<li><a title="pyspecan.view.tkGUI.mode_swept.ViewSwept" href="mode_swept.html#pyspecan.view.tkGUI.mode_swept.ViewSwept">ViewSwept</a></li>
 </ul>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pyspecan.view.tkGUI.base.GUIPlot" href="#pyspecan.view.tkGUI.base.GUIPlot">GUIPlot</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.draw_settings" href="#pyspecan.view.tkGUI.base.GUIPlot.draw_settings">draw_settings</a></code></li>
-</ul>
-</li>
-</ul>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIFreqPlot"><code class="flex name class">
-<span>class <span class="ident">GUIFreqPlot</span></span>
-<span>(</span><span>view, root, fig)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIFreqPlot(GUIBlitPlot):
-    &#34;&#34;&#34;Frequency domain view helpers&#34;&#34;&#34;
-    __slots__ = (&#34;lbl_lo&#34;, &#34;lbl_hi&#34;)
-    def __init__(self, view, root, fig):
-        super().__init__(view, root, fig)
-
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
-
-    def draw_settings(self, parent, row=0):
-        var_scale = tk.StringVar(self.fr_sets)
-        ent_scale = ttk.Entry(self.fr_sets, textvariable=var_scale, width=10)
-
-        var_ref_level = tk.StringVar(self.fr_sets)
-        ent_ref_level = ttk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
-
-        var_vbw = tk.StringVar(self.fr_sets)
-        ent_vbw = ttk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
-
-        var_window = tk.StringVar(self.fr_sets)
-        cb_window = ttk.Combobox(self.fr_sets, textvariable=var_window, width=9)
-
-        self.wg_sets[&#34;scale&#34;] = ent_scale
-        self.settings[&#34;scale&#34;] = var_scale
-        self.wg_sets[&#34;ref_level&#34;] = ent_ref_level
-        self.settings[&#34;ref_level&#34;] = var_ref_level
-        self.wg_sets[&#34;vbw&#34;] = ent_vbw
-        self.settings[&#34;vbw&#34;] = var_vbw
-        self.wg_sets[&#34;window&#34;] = cb_window
-        self.settings[&#34;window&#34;] = var_window
-
-        ttk.Label(parent, text=&#34;Scale/Div&#34;).grid(row=row, column=0)
-        ent_scale.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;Ref Level&#34;).grid(row=row, column=0)
-        ent_ref_level.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;VBW&#34;).grid(row=row, column=0)
-        ent_vbw.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;Window&#34;).grid(row=row, column=0)
-        cb_window.grid(row=row, column=1)
-        row += 1
-        return row</code></pre>
-</details>
-<div class="desc"><p>Frequency domain view helpers</p></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.base.GUIBlitPlot" href="#pyspecan.view.tkGUI.base.GUIBlitPlot">GUIBlitPlot</a></li>
-<li><a title="pyspecan.view.tkGUI.base.GUIPlot" href="#pyspecan.view.tkGUI.base.GUIPlot">GUIPlot</a></li>
-</ul>
-<h3>Subclasses</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.rt.ViewRT" href="rt.html#pyspecan.view.tkGUI.rt.ViewRT">ViewRT</a></li>
-<li><a title="pyspecan.view.tkGUI.swept.ViewSwept" href="swept.html#pyspecan.view.tkGUI.swept.ViewSwept">ViewSwept</a></li>
-</ul>
-<h3>Instance variables</h3>
-<dl>
-<dt id="pyspecan.view.tkGUI.base.GUIFreqPlot.lbl_hi"><code class="name">var <span class="ident">lbl_hi</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIFreqPlot(GUIBlitPlot):
-    &#34;&#34;&#34;Frequency domain view helpers&#34;&#34;&#34;
-    __slots__ = (&#34;lbl_lo&#34;, &#34;lbl_hi&#34;)
-    def __init__(self, view, root, fig):
-        super().__init__(view, root, fig)
-
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
-
-    def draw_settings(self, parent, row=0):
-        var_scale = tk.StringVar(self.fr_sets)
-        ent_scale = ttk.Entry(self.fr_sets, textvariable=var_scale, width=10)
-
-        var_ref_level = tk.StringVar(self.fr_sets)
-        ent_ref_level = ttk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
-
-        var_vbw = tk.StringVar(self.fr_sets)
-        ent_vbw = ttk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
-
-        var_window = tk.StringVar(self.fr_sets)
-        cb_window = ttk.Combobox(self.fr_sets, textvariable=var_window, width=9)
-
-        self.wg_sets[&#34;scale&#34;] = ent_scale
-        self.settings[&#34;scale&#34;] = var_scale
-        self.wg_sets[&#34;ref_level&#34;] = ent_ref_level
-        self.settings[&#34;ref_level&#34;] = var_ref_level
-        self.wg_sets[&#34;vbw&#34;] = ent_vbw
-        self.settings[&#34;vbw&#34;] = var_vbw
-        self.wg_sets[&#34;window&#34;] = cb_window
-        self.settings[&#34;window&#34;] = var_window
-
-        ttk.Label(parent, text=&#34;Scale/Div&#34;).grid(row=row, column=0)
-        ent_scale.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;Ref Level&#34;).grid(row=row, column=0)
-        ent_ref_level.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;VBW&#34;).grid(row=row, column=0)
-        ent_vbw.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;Window&#34;).grid(row=row, column=0)
-        cb_window.grid(row=row, column=1)
-        row += 1
-        return row</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIFreqPlot.lbl_lo"><code class="name">var <span class="ident">lbl_lo</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIFreqPlot(GUIBlitPlot):
-    &#34;&#34;&#34;Frequency domain view helpers&#34;&#34;&#34;
-    __slots__ = (&#34;lbl_lo&#34;, &#34;lbl_hi&#34;)
-    def __init__(self, view, root, fig):
-        super().__init__(view, root, fig)
-
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
-
-    def draw_settings(self, parent, row=0):
-        var_scale = tk.StringVar(self.fr_sets)
-        ent_scale = ttk.Entry(self.fr_sets, textvariable=var_scale, width=10)
-
-        var_ref_level = tk.StringVar(self.fr_sets)
-        ent_ref_level = ttk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
-
-        var_vbw = tk.StringVar(self.fr_sets)
-        ent_vbw = ttk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
-
-        var_window = tk.StringVar(self.fr_sets)
-        cb_window = ttk.Combobox(self.fr_sets, textvariable=var_window, width=9)
-
-        self.wg_sets[&#34;scale&#34;] = ent_scale
-        self.settings[&#34;scale&#34;] = var_scale
-        self.wg_sets[&#34;ref_level&#34;] = ent_ref_level
-        self.settings[&#34;ref_level&#34;] = var_ref_level
-        self.wg_sets[&#34;vbw&#34;] = ent_vbw
-        self.settings[&#34;vbw&#34;] = var_vbw
-        self.wg_sets[&#34;window&#34;] = cb_window
-        self.settings[&#34;window&#34;] = var_window
-
-        ttk.Label(parent, text=&#34;Scale/Div&#34;).grid(row=row, column=0)
-        ent_scale.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;Ref Level&#34;).grid(row=row, column=0)
-        ent_ref_level.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;VBW&#34;).grid(row=row, column=0)
-        ent_vbw.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;Window&#34;).grid(row=row, column=0)
-        cb_window.grid(row=row, column=1)
-        row += 1
-        return row</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-</dl>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pyspecan.view.tkGUI.base.GUIBlitPlot" href="#pyspecan.view.tkGUI.base.GUIBlitPlot">GUIBlitPlot</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pyspecan.view.tkGUI.base.GUIBlitPlot.draw_settings" href="#pyspecan.view.tkGUI.base.GUIPlot.draw_settings">draw_settings</a></code></li>
-</ul>
-</li>
-</ul>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot"><code class="flex name class">
-<span>class <span class="ident">GUIPlot</span></span>
-<span>(</span><span>view,<br>root,<br>fig: matplotlib.figure.Figure,<br>plotter=pyspecan.backend.mpl.plot._Plot)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"><p>tkinter wrapper for pyspecan.backend.mpl.plot</p></div>
-<h3>Subclasses</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.base.GUIBlitPlot" href="#pyspecan.view.tkGUI.base.GUIBlitPlot">GUIBlitPlot</a></li>
-</ul>
-<h3>Instance variables</h3>
-<dl>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.btn_toggle"><code class="name">var <span class="ident">btn_toggle</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.fig"><code class="name">prop <span class="ident">fig</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">@property
-def fig(self):
-    return self.plotter.fig</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.fr_canv"><code class="name">var <span class="ident">fr_canv</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.fr_main"><code class="name">var <span class="ident">fr_main</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.fr_sets"><code class="name">var <span class="ident">fr_sets</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.plotter"><code class="name">var <span class="ident">plotter</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.ready"><code class="name">var <span class="ident">ready</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.settings"><code class="name">var <span class="ident">settings</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.view"><code class="name">var <span class="ident">view</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.wg_sets"><code class="name">var <span class="ident">wg_sets</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class GUIPlot:
-    &#34;&#34;&#34;tkinter wrapper for pyspecan.backend.mpl.plot&#34;&#34;&#34;
-    __slots__ = (
-        &#34;view&#34;, &#34;_root&#34;, &#34;plotter&#34;, &#34;settings&#34;, &#34;ready&#34;,
-        &#34;fr_main&#34;, &#34;fr_canv&#34;, &#34;fr_sets&#34;, &#34;btn_toggle&#34;,
-        &#34;wg_sets&#34;,
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
-
-        self.fr_main = ttk.Frame(root)
-
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
-
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-
-        self.btn_toggle = ttk.Button(self.fr_canv, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
-
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
-
-    def draw_settings(self, parent, row=0):
-        &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-        raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-</dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.add_ax"><code class="name flex">
-<span>def <span class="ident">add_ax</span></span>(<span>self, *args, **kwargs)</span>
+<dt id="pyspecan.view.tkGUI.base.View.draw_ctrl"><code class="name flex">
+<span>def <span class="ident">draw_ctrl</span></span>(<span>self, parent)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def add_ax(self, *args, **kwargs):
-    return self.plotter.add_ax(*args,**kwargs)</code></pre>
+<pre><code class="python">def draw_ctrl(self, parent):
+    &#34;&#34;&#34;Draw control frame&#34;&#34;&#34;
+    # Model
+    root = ttk.Frame(parent) # File reader
+    root.columnconfigure(2, weight=1)
+    row = 0
+    self.var_file = tk.StringVar(root)
+    self.btn_file = ttk.Button(root, text=&#34;File&#34;)
+    self.btn_file.grid(row=row,column=0, sticky=tk.W)
+    self.ent_file = ttk.Entry(root, textvariable=self.var_file, state=tk.DISABLED, width=10)
+    self.ent_file.grid(row=row,column=1,columnspan=2, sticky=tk.NSEW)
+    row += 1
+    ttk.Label(root, text=&#34;Format:&#34;).grid(row=row,column=0,sticky=tk.W)
+    self.var_file_fmt = tk.StringVar(root)
+    self.cb_file_fmt = ttk.Combobox(root, textvariable=self.var_file_fmt, width=5)
+    self.cb_file_fmt.grid(row=row,column=1, sticky=tk.W)
+    root.pack(padx=2,pady=2, fill=tk.X)
+
+    root = ttk.Frame(parent) # File params
+    row = 0
+    self.var_fs = tk.StringVar(root)
+    ttk.Label(root, text=&#34;Sample rate:&#34;).grid(row=row,column=0, sticky=tk.W)
+    self.ent_fs = ttk.Entry(root, textvariable=self.var_fs, width=10)
+    self.ent_fs.grid(row=row,column=1, sticky=tk.W)
+    row += 1
+    self.var_cf = tk.StringVar(root)
+    ttk.Label(root, text=&#34;Center freq:&#34;).grid(row=row,column=0, sticky=tk.W)
+    self.ent_cf = ttk.Entry(root, textvariable=self.var_cf, width=10)
+    self.ent_cf.grid(row=row,column=1, sticky=tk.W)
+    root.pack(padx=2,pady=2, fill=tk.X)</code></pre>
 </details>
-<div class="desc"></div>
+<div class="desc"><p>Draw control frame</p></div>
 </dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.ax"><code class="name flex">
-<span>def <span class="ident">ax</span></span>(<span>self, name)</span>
+<dt id="pyspecan.view.tkGUI.base.View.draw_tb"><code class="name flex">
+<span>def <span class="ident">draw_tb</span></span>(<span>self, parent)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def ax(self, name):
-    return self.plotter.ax(name)</code></pre>
+<pre><code class="python">def draw_tb(self, parent):
+    &#34;&#34;&#34;Draw toolbar frame&#34;&#34;&#34;
+    col = 0
+    self.var_samp = tk.IntVar(parent)
+    self.sld_samp = widgets.Scale(
+        parent, variable=self.var_samp, length=150
+    )
+    ttk.LabeledScale
+    self.sld_samp.grid(row=0,rowspan=2,column=col, sticky=tk.NSEW)
+    col += 1
+    self.var_time_cur = tk.StringVar(parent)
+    self.var_time_tot = tk.StringVar(parent)
+    self.lbl_time_cur = ttk.Label(parent, textvariable=self.var_time_cur)
+    self.lbl_time_cur.grid(row=0,column=col)
+    self.lbl_time_tot = ttk.Label(parent, textvariable=self.var_time_tot)
+    self.lbl_time_tot.grid(row=1,column=col)
+    col += 1
+    ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
+
+    col += 1
+    ttk.Label(parent, text=&#34;Sweep&#34;).grid(row=0,column=col)
+    self.var_time = tk.StringVar(parent)
+    self.ent_time = ttk.Entry(parent, textvariable=self.var_time, width=5)
+    self.ent_time.grid(row=1,column=col, padx=2, pady=2)
+
+    col += 1
+    ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
+    col += 1
+    self.btn_prev = ttk.Button(parent, text=&#34;Prev&#34;)
+    self.btn_prev.grid(row=0,rowspan=2,column=col, padx=2,pady=2)
+    col += 1
+    self.btn_next = ttk.Button(parent, text=&#34;Next&#34;)
+    self.btn_next.grid(row=0,rowspan=2,column=col, padx=2,pady=2)
+    col += 1
+    self.btn_start = ttk.Button(parent, text=&#34;Start&#34;)
+    self.btn_start.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
+    col += 1
+    self.btn_stop = ttk.Button(parent, text=&#34;Stop&#34;, state=tk.DISABLED)
+    self.btn_stop.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
+    col += 1
+    self.btn_reset = ttk.Button(parent, text=&#34;Reset&#34;)
+    self.btn_reset.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
+    col += 1
+    ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
+
+    col += 1
+    self.var_draw_time = tk.StringVar(parent)
+    self.lbl_draw_time = ttk.Label(parent, textvariable=self.var_draw_time)
+    ttk.Label(parent, text=&#34;Draw&#34;).grid(row=0,column=col, sticky=tk.E)
+    self.lbl_draw_time.grid(row=1,column=col, sticky=tk.E)
+    parent.grid_columnconfigure(col, weight=1)</code></pre>
 </details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.view.tkGUI.base.GUIPlot.draw_settings"><code class="name flex">
-<span>def <span class="ident">draw_settings</span></span>(<span>self, parent, row=0)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def draw_settings(self, parent, row=0):
-    &#34;&#34;&#34;Initialize settings panel&#34;&#34;&#34;
-    raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"><p>Initialize settings panel</p></div>
+<div class="desc"><p>Draw toolbar frame</p></div>
 </dd>
 </dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="pyspecan.view.base.View" href="../base.html#pyspecan.view.base.View">View</a></b></code>:
+<ul class="hlist">
+<li><code><a title="pyspecan.view.base.View.mainloop" href="../base.html#pyspecan.view.base.View.mainloop">mainloop</a></code></li>
+<li><code><a title="pyspecan.view.base.View.quit" href="../base.html#pyspecan.view.base.View.quit">quit</a></code></li>
+</ul>
+</li>
+</ul>
 </dd>
 </dl>
 </section>
@@ -913,31 +318,10 @@ def fig(self):
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.view.tkGUI.base.GUIBlitPlot" href="#pyspecan.view.tkGUI.base.GUIBlitPlot">GUIBlitPlot</a></code></h4>
-</li>
-<li>
-<h4><code><a title="pyspecan.view.tkGUI.base.GUIFreqPlot" href="#pyspecan.view.tkGUI.base.GUIFreqPlot">GUIFreqPlot</a></code></h4>
+<h4><code><a title="pyspecan.view.tkGUI.base.View" href="#pyspecan.view.tkGUI.base.View">View</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.view.tkGUI.base.GUIFreqPlot.lbl_hi" href="#pyspecan.view.tkGUI.base.GUIFreqPlot.lbl_hi">lbl_hi</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIFreqPlot.lbl_lo" href="#pyspecan.view.tkGUI.base.GUIFreqPlot.lbl_lo">lbl_lo</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="pyspecan.view.tkGUI.base.GUIPlot" href="#pyspecan.view.tkGUI.base.GUIPlot">GUIPlot</a></code></h4>
-<ul class="two-column">
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.add_ax" href="#pyspecan.view.tkGUI.base.GUIPlot.add_ax">add_ax</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.ax" href="#pyspecan.view.tkGUI.base.GUIPlot.ax">ax</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.btn_toggle" href="#pyspecan.view.tkGUI.base.GUIPlot.btn_toggle">btn_toggle</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.draw_settings" href="#pyspecan.view.tkGUI.base.GUIPlot.draw_settings">draw_settings</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.fig" href="#pyspecan.view.tkGUI.base.GUIPlot.fig">fig</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.fr_canv" href="#pyspecan.view.tkGUI.base.GUIPlot.fr_canv">fr_canv</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.fr_main" href="#pyspecan.view.tkGUI.base.GUIPlot.fr_main">fr_main</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.fr_sets" href="#pyspecan.view.tkGUI.base.GUIPlot.fr_sets">fr_sets</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.plotter" href="#pyspecan.view.tkGUI.base.GUIPlot.plotter">plotter</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.ready" href="#pyspecan.view.tkGUI.base.GUIPlot.ready">ready</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.settings" href="#pyspecan.view.tkGUI.base.GUIPlot.settings">settings</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.view" href="#pyspecan.view.tkGUI.base.GUIPlot.view">view</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.GUIPlot.wg_sets" href="#pyspecan.view.tkGUI.base.GUIPlot.wg_sets">wg_sets</a></code></li>
+<li><code><a title="pyspecan.view.tkGUI.base.View.draw_ctrl" href="#pyspecan.view.tkGUI.base.View.draw_ctrl">draw_ctrl</a></code></li>
+<li><code><a title="pyspecan.view.tkGUI.base.View.draw_tb" href="#pyspecan.view.tkGUI.base.View.draw_tb">draw_tb</a></code></li>
 </ul>
 </li>
 </ul>

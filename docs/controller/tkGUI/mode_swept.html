@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.tkGUI.swept API documentation</title>
+<title>pyspecan.controller.tkGUI.mode_swept API documentation</title>
 <meta name="description" content="Controller for SWEPT mode">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.tkGUI.swept</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.tkGUI.mode_swept</code></h1>
 </header>
 <section id="section-intro">
 <p>Controller for SWEPT mode</p>
@@ -45,16 +45,18 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.swept.define_args"><code class="name flex">
-<span>def <span class="ident">define_args</span></span>(<span>parser: argparse.ArgumentParser)</span>
+<dt id="pyspecan.controller.tkGUI.mode_swept.args_swept"><code class="name flex">
+<span>def <span class="ident">args_swept</span></span>(<span>parser: argparse.ArgumentParser)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def define_args(parser: argparse.ArgumentParser):
-    mode = parser.add_argument_group(&#34;SWEPT mode&#34;)
+<pre><code class="python">def args_swept(parser: argparse.ArgumentParser):
+    ctrl = base_args(parser)
+    freq_args(parser)
+    mode = ctrl.add_argument_group(&#34;SWEPT mode&#34;)
     mode.add_argument(&#34;--psd&#34;, action=&#34;store_false&#34;, help=&#34;show psd&#34;)
     mode.add_argument(&#34;--spg&#34;, action=&#34;store_true&#34;, help=&#34;show spectrogram&#34;)</code></pre>
 </details>
@@ -65,25 +67,47 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept"><code class="flex name class">
+<dt id="pyspecan.controller.tkGUI.mode_swept.ControllerSwept"><code class="flex name class">
 <span>class <span class="ident">ControllerSwept</span></span>
-<span>(</span><span>view, **kwargs)</span>
+<span>(</span><span>*args, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerSwept(FreqPlotController):
+<pre><code class="python">class ControllerSwept(Controller):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.plot = PlotControllerSwept(self, self.view.plot, **kwargs)
+        self.draw()</code></pre>
+</details>
+<div class="desc"><p>tkGUI Controller</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.tkGUI.base.Controller" href="base.html#pyspecan.controller.tkGUI.base.Controller">Controller</a></li>
+<li><a title="pyspecan.controller.base.Controller" href="../base.html#pyspecan.controller.base.Controller">Controller</a></li>
+</ul>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept"><code class="flex name class">
+<span>class <span class="ident">PlotControllerSwept</span></span>
+<span>(</span><span>parent, view, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PlotControllerSwept(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewSwept&#34;&#34;&#34;
     __slots__ = (
         &#34;show_psd&#34;, &#34;show_spg&#34;,
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view, **kwargs):
-        super().__init__(view, **kwargs)
-        self.view: ViewSwept = self.view # type: ignore
+    def __init__(self, parent, view, **kwargs):
+        super().__init__(parent, view, **kwargs)
+        self.view: PlotSwept = self.view # type: ignore
         self.show_psd = int(kwargs.get(&#34;psd&#34;, True))
         self.show_spg = int(kwargs.get(&#34;spg&#34;, False))
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -101,7 +125,7 @@ el.replaceWith(d);
         self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
-        self.psds = np.zeros((self.max_count, 1024), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
         self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
@@ -115,7 +139,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, 1024))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -268,27 +292,27 @@ el.replaceWith(d);
 <div class="desc"><p>Controller for ViewSwept</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.base.FreqPlotController" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController">FreqPlotController</a></li>
-<li>pyspecan.controller.tkGUI.base._PlotController</li>
+<li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></li>
+<li>pyspecan.controller.tkGUI.plot_base._PlotController</li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.max_count"><code class="name">var <span class="ident">max_count</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.max_count"><code class="name">var <span class="ident">max_count</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerSwept(FreqPlotController):
+<pre><code class="python">class PlotControllerSwept(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewSwept&#34;&#34;&#34;
     __slots__ = (
         &#34;show_psd&#34;, &#34;show_spg&#34;,
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view, **kwargs):
-        super().__init__(view, **kwargs)
-        self.view: ViewSwept = self.view # type: ignore
+    def __init__(self, parent, view, **kwargs):
+        super().__init__(parent, view, **kwargs)
+        self.view: PlotSwept = self.view # type: ignore
         self.show_psd = int(kwargs.get(&#34;psd&#34;, True))
         self.show_spg = int(kwargs.get(&#34;spg&#34;, False))
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -306,7 +330,7 @@ el.replaceWith(d);
         self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
-        self.psds = np.zeros((self.max_count, 1024), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
         self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
@@ -320,7 +344,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, 1024))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -472,22 +496,22 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.psd_max"><code class="name">var <span class="ident">psd_max</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.psd_max"><code class="name">var <span class="ident">psd_max</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerSwept(FreqPlotController):
+<pre><code class="python">class PlotControllerSwept(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewSwept&#34;&#34;&#34;
     __slots__ = (
         &#34;show_psd&#34;, &#34;show_spg&#34;,
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view, **kwargs):
-        super().__init__(view, **kwargs)
-        self.view: ViewSwept = self.view # type: ignore
+    def __init__(self, parent, view, **kwargs):
+        super().__init__(parent, view, **kwargs)
+        self.view: PlotSwept = self.view # type: ignore
         self.show_psd = int(kwargs.get(&#34;psd&#34;, True))
         self.show_spg = int(kwargs.get(&#34;spg&#34;, False))
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -505,7 +529,7 @@ el.replaceWith(d);
         self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
-        self.psds = np.zeros((self.max_count, 1024), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
         self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
@@ -519,7 +543,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, 1024))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -671,22 +695,22 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.psd_min"><code class="name">var <span class="ident">psd_min</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.psd_min"><code class="name">var <span class="ident">psd_min</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerSwept(FreqPlotController):
+<pre><code class="python">class PlotControllerSwept(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewSwept&#34;&#34;&#34;
     __slots__ = (
         &#34;show_psd&#34;, &#34;show_spg&#34;,
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view, **kwargs):
-        super().__init__(view, **kwargs)
-        self.view: ViewSwept = self.view # type: ignore
+    def __init__(self, parent, view, **kwargs):
+        super().__init__(parent, view, **kwargs)
+        self.view: PlotSwept = self.view # type: ignore
         self.show_psd = int(kwargs.get(&#34;psd&#34;, True))
         self.show_spg = int(kwargs.get(&#34;spg&#34;, False))
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -704,7 +728,7 @@ el.replaceWith(d);
         self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
-        self.psds = np.zeros((self.max_count, 1024), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
         self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
@@ -718,7 +742,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, 1024))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -870,22 +894,22 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.psds"><code class="name">var <span class="ident">psds</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.psds"><code class="name">var <span class="ident">psds</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerSwept(FreqPlotController):
+<pre><code class="python">class PlotControllerSwept(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewSwept&#34;&#34;&#34;
     __slots__ = (
         &#34;show_psd&#34;, &#34;show_spg&#34;,
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view, **kwargs):
-        super().__init__(view, **kwargs)
-        self.view: ViewSwept = self.view # type: ignore
+    def __init__(self, parent, view, **kwargs):
+        super().__init__(parent, view, **kwargs)
+        self.view: PlotSwept = self.view # type: ignore
         self.show_psd = int(kwargs.get(&#34;psd&#34;, True))
         self.show_spg = int(kwargs.get(&#34;spg&#34;, False))
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -903,7 +927,7 @@ el.replaceWith(d);
         self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
-        self.psds = np.zeros((self.max_count, 1024), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
         self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
@@ -917,7 +941,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, 1024))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -1069,22 +1093,22 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.show_psd"><code class="name">var <span class="ident">show_psd</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.show_psd"><code class="name">var <span class="ident">show_psd</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerSwept(FreqPlotController):
+<pre><code class="python">class PlotControllerSwept(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewSwept&#34;&#34;&#34;
     __slots__ = (
         &#34;show_psd&#34;, &#34;show_spg&#34;,
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view, **kwargs):
-        super().__init__(view, **kwargs)
-        self.view: ViewSwept = self.view # type: ignore
+    def __init__(self, parent, view, **kwargs):
+        super().__init__(parent, view, **kwargs)
+        self.view: PlotSwept = self.view # type: ignore
         self.show_psd = int(kwargs.get(&#34;psd&#34;, True))
         self.show_spg = int(kwargs.get(&#34;spg&#34;, False))
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -1102,7 +1126,7 @@ el.replaceWith(d);
         self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
-        self.psds = np.zeros((self.max_count, 1024), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
         self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
@@ -1116,7 +1140,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, 1024))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -1268,22 +1292,22 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.show_spg"><code class="name">var <span class="ident">show_spg</span></code></dt>
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.show_spg"><code class="name">var <span class="ident">show_spg</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ControllerSwept(FreqPlotController):
+<pre><code class="python">class PlotControllerSwept(FreqPlotController):
     &#34;&#34;&#34;Controller for ViewSwept&#34;&#34;&#34;
     __slots__ = (
         &#34;show_psd&#34;, &#34;show_spg&#34;,
         &#34;psd_min&#34;, &#34;psd_max&#34;,
         &#34;max_count&#34;, &#34;psds&#34;
     )
-    def __init__(self, view, **kwargs):
-        super().__init__(view, **kwargs)
-        self.view: ViewSwept = self.view # type: ignore
+    def __init__(self, parent, view, **kwargs):
+        super().__init__(parent, view, **kwargs)
+        self.view: PlotSwept = self.view # type: ignore
         self.show_psd = int(kwargs.get(&#34;psd&#34;, True))
         self.show_spg = int(kwargs.get(&#34;spg&#34;, False))
         self.view.settings[&#34;show_psd&#34;].set(self.show_psd)
@@ -1301,7 +1325,7 @@ el.replaceWith(d);
         self.view.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
-        self.psds = np.zeros((self.max_count, 1024), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
         self.view.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
@@ -1315,7 +1339,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, 1024))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -1470,7 +1494,7 @@ el.replaceWith(d);
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.reset"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.reset"><code class="name flex">
 <span>def <span class="ident">reset</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -1481,12 +1505,12 @@ el.replaceWith(d);
 <pre><code class="python">def reset(self):
     self.psd_min = None
     self.psd_max = None
-    self.psds = np.zeros((self.max_count, 1024))
+    self.psds = np.zeros((self.max_count, self.parent.model.nfft))
     self.psds[:,:] = -np.inf</code></pre>
 </details>
 <div class="desc"><p>Reset plot view</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.set_y"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.set_y"><code class="name flex">
 <span>def <span class="ident">set_y</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -1501,7 +1525,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Set plot ylimits</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_psd_max"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_psd_max"><code class="name flex">
 <span>def <span class="ident">toggle_psd_max</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -1523,7 +1547,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Toggle PSD max-hold visibility</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_psd_min"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_psd_min"><code class="name flex">
 <span>def <span class="ident">toggle_psd_min</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -1545,7 +1569,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Toggle PSD min-hold visibility</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_psd"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_psd"><code class="name flex">
 <span>def <span class="ident">toggle_show_psd</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -1561,7 +1585,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Toggle PSD plot visibility</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_spg"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_spg"><code class="name flex">
 <span>def <span class="ident">toggle_show_spg</span></span>(<span>self, *args, **kwargs)</span>
 </code></dt>
 <dd>
@@ -1577,7 +1601,7 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Toggle spectrogram plot visibility</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.swept.ControllerSwept.update_f"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.update_f"><code class="name flex">
 <span>def <span class="ident">update_f</span></span>(<span>self, f)</span>
 </code></dt>
 <dd>
@@ -1602,16 +1626,16 @@ el.replaceWith(d);
 </dl>
 <h3>Inherited members</h3>
 <ul class="hlist">
-<li><code><b><a title="pyspecan.controller.tkGUI.base.FreqPlotController" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController">FreqPlotController</a></b></code>:
+<li><code><b><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></b></code>:
 <ul class="hlist">
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.plot" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.plot">plot</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_ref_level" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_scale" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_scale">set_scale</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_vbw" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_vbw">set_vbw</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.set_window" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.set_window">set_window</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.update" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.update">update</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.y_btm" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.y_btm">y_btm</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.FreqPlotController.y_top" href="base.html#pyspecan.controller.tkGUI.base.FreqPlotController.y_top">y_top</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot">plot</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale">set_scale</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
 </ul>
 </li>
 </ul>
@@ -1631,27 +1655,30 @@ el.replaceWith(d);
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.swept.define_args" href="#pyspecan.controller.tkGUI.swept.define_args">define_args</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.args_swept" href="#pyspecan.controller.tkGUI.mode_swept.args_swept">args_swept</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept" href="#pyspecan.controller.tkGUI.swept.ControllerSwept">ControllerSwept</a></code></h4>
+<h4><code><a title="pyspecan.controller.tkGUI.mode_swept.ControllerSwept" href="#pyspecan.controller.tkGUI.mode_swept.ControllerSwept">ControllerSwept</a></code></h4>
+</li>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept">PlotControllerSwept</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.max_count" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.max_count">max_count</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.psd_max" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.psd_max">psd_max</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.psd_min" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.psd_min">psd_min</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.psds" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.psds">psds</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.reset" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.reset">reset</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.set_y" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.set_y">set_y</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.show_psd" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.show_psd">show_psd</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.show_spg" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.show_spg">show_spg</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_psd_max" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_psd_max">toggle_psd_max</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_psd_min" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_psd_min">toggle_psd_min</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_psd" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_psd">toggle_show_psd</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_spg" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.toggle_show_spg">toggle_show_spg</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.swept.ControllerSwept.update_f" href="#pyspecan.controller.tkGUI.swept.ControllerSwept.update_f">update_f</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.max_count" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.max_count">max_count</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.psd_max" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.psd_max">psd_max</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.psd_min" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.psd_min">psd_min</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.psds" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.psds">psds</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.reset" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.set_y" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.set_y">set_y</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.show_psd" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.show_psd">show_psd</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.show_spg" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.show_spg">show_spg</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_psd_max" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_psd_max">toggle_psd_max</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_psd_min" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_psd_min">toggle_psd_min</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_psd" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_psd">toggle_show_psd</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_spg" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_spg">toggle_show_spg</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.update_f" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.update_f">update_f</a></code></li>
 </ul>
 </li>
 </ul>

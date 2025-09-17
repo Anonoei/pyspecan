@@ -60,32 +60,6 @@ el.replaceWith(d);
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
     def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
-        file = kwargs.get(&#34;file&#34;, config.SENTINEL)
-        if file is not config.SENTINEL:
-            del kwargs[&#34;file&#34;]
-        else:
-            file = None
-        fmt = kwargs.get(&#34;dtype&#34;, config.SENTINEL)
-        if fmt is not config.SENTINEL:
-            del kwargs[&#34;dtype&#34;]
-        else:
-            fmt = &#34;cf32&#34;
-        Fs = kwargs.get(&#34;Fs&#34;, config.SENTINEL)
-        if Fs is not config.SENTINEL:
-            del kwargs[&#34;Fs&#34;]
-        else:
-            Fs = 1
-        cf = kwargs.get(&#34;cf&#34;, config.SENTINEL)
-        if cf is not config.SENTINEL:
-            del kwargs[&#34;cf&#34;]
-        else:
-            cf = 0
-        nfft = kwargs.get(&#34;nfft&#34;, config.SENTINEL)
-        if nfft is not config.SENTINEL:
-            del kwargs[&#34;nfft&#34;]
-        else:
-            nfft = 1024
-
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -103,18 +77,10 @@ el.replaceWith(d);
             if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
 
-        config.MODE = mode # set global mode
+        self.model: Model = GetModel(mode)(**kwargs)
 
-        Fs = Frequency.get(Fs)
-        cf = Frequency.get(cf)
-
-        self.model = Model(file, fmt, nfft, Fs, cf)
-
-        v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v()
-
-        ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, **kwargs)
+        self.view = GetView(view, mode)(**kwargs)
+        self.controller = GetController(view, mode)(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()
@@ -144,32 +110,6 @@ el.replaceWith(d);
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
     def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
-        file = kwargs.get(&#34;file&#34;, config.SENTINEL)
-        if file is not config.SENTINEL:
-            del kwargs[&#34;file&#34;]
-        else:
-            file = None
-        fmt = kwargs.get(&#34;dtype&#34;, config.SENTINEL)
-        if fmt is not config.SENTINEL:
-            del kwargs[&#34;dtype&#34;]
-        else:
-            fmt = &#34;cf32&#34;
-        Fs = kwargs.get(&#34;Fs&#34;, config.SENTINEL)
-        if Fs is not config.SENTINEL:
-            del kwargs[&#34;Fs&#34;]
-        else:
-            Fs = 1
-        cf = kwargs.get(&#34;cf&#34;, config.SENTINEL)
-        if cf is not config.SENTINEL:
-            del kwargs[&#34;cf&#34;]
-        else:
-            cf = 0
-        nfft = kwargs.get(&#34;nfft&#34;, config.SENTINEL)
-        if nfft is not config.SENTINEL:
-            del kwargs[&#34;nfft&#34;]
-        else:
-            nfft = 1024
-
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -187,18 +127,10 @@ el.replaceWith(d);
             if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
 
-        config.MODE = mode # set global mode
+        self.model: Model = GetModel(mode)(**kwargs)
 
-        Fs = Frequency.get(Fs)
-        cf = Frequency.get(cf)
-
-        self.model = Model(file, fmt, nfft, Fs, cf)
-
-        v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v()
-
-        ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, **kwargs)
+        self.view = GetView(view, mode)(**kwargs)
+        self.controller = GetController(view, mode)(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()
@@ -227,32 +159,6 @@ el.replaceWith(d);
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
     def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
-        file = kwargs.get(&#34;file&#34;, config.SENTINEL)
-        if file is not config.SENTINEL:
-            del kwargs[&#34;file&#34;]
-        else:
-            file = None
-        fmt = kwargs.get(&#34;dtype&#34;, config.SENTINEL)
-        if fmt is not config.SENTINEL:
-            del kwargs[&#34;dtype&#34;]
-        else:
-            fmt = &#34;cf32&#34;
-        Fs = kwargs.get(&#34;Fs&#34;, config.SENTINEL)
-        if Fs is not config.SENTINEL:
-            del kwargs[&#34;Fs&#34;]
-        else:
-            Fs = 1
-        cf = kwargs.get(&#34;cf&#34;, config.SENTINEL)
-        if cf is not config.SENTINEL:
-            del kwargs[&#34;cf&#34;]
-        else:
-            cf = 0
-        nfft = kwargs.get(&#34;nfft&#34;, config.SENTINEL)
-        if nfft is not config.SENTINEL:
-            del kwargs[&#34;nfft&#34;]
-        else:
-            nfft = 1024
-
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -270,18 +176,10 @@ el.replaceWith(d);
             if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
 
-        config.MODE = mode # set global mode
+        self.model: Model = GetModel(mode)(**kwargs)
 
-        Fs = Frequency.get(Fs)
-        cf = Frequency.get(cf)
-
-        self.model = Model(file, fmt, nfft, Fs, cf)
-
-        v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v()
-
-        ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, **kwargs)
+        self.view = GetView(view, mode)(**kwargs)
+        self.controller = GetController(view, mode)(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()
@@ -310,32 +208,6 @@ el.replaceWith(d);
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
     def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
-        file = kwargs.get(&#34;file&#34;, config.SENTINEL)
-        if file is not config.SENTINEL:
-            del kwargs[&#34;file&#34;]
-        else:
-            file = None
-        fmt = kwargs.get(&#34;dtype&#34;, config.SENTINEL)
-        if fmt is not config.SENTINEL:
-            del kwargs[&#34;dtype&#34;]
-        else:
-            fmt = &#34;cf32&#34;
-        Fs = kwargs.get(&#34;Fs&#34;, config.SENTINEL)
-        if Fs is not config.SENTINEL:
-            del kwargs[&#34;Fs&#34;]
-        else:
-            Fs = 1
-        cf = kwargs.get(&#34;cf&#34;, config.SENTINEL)
-        if cf is not config.SENTINEL:
-            del kwargs[&#34;cf&#34;]
-        else:
-            cf = 0
-        nfft = kwargs.get(&#34;nfft&#34;, config.SENTINEL)
-        if nfft is not config.SENTINEL:
-            del kwargs[&#34;nfft&#34;]
-        else:
-            nfft = 1024
-
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -353,18 +225,10 @@ el.replaceWith(d);
             if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
 
-        config.MODE = mode # set global mode
+        self.model: Model = GetModel(mode)(**kwargs)
 
-        Fs = Frequency.get(Fs)
-        cf = Frequency.get(cf)
-
-        self.model = Model(file, fmt, nfft, Fs, cf)
-
-        v = importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).View
-        self.view = v()
-
-        ctrl = importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).Controller
-        self.controller = ctrl(self.model, self.view, **kwargs)
+        self.view = GetView(view, mode)(**kwargs)
+        self.controller = GetController(view, mode)(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.obj.si API documentation</title>
+<title>pyspecan.model.mode_rt API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.obj.si</code></h1>
+<h1 class="title">Module <code>pyspecan.model.mode_rt</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -42,224 +42,204 @@ el.replaceWith(d);
 <section>
 </section>
 <section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="pyspecan.model.mode_rt.args_rt"><code class="name flex">
+<span>def <span class="ident">args_rt</span></span>(<span>parser: argparse.ArgumentParser)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def args_rt(parser: argparse.ArgumentParser):
+    define_args(parser)
+    parser.add_argument(&#34;--overlap&#34;, default=0.8, type=float)
+    parser.add_argument(&#34;--fftnum&#34;, default=4, type=int)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
 </section>
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.obj.si.Frequency"><code class="flex name class">
-<span>class <span class="ident">Frequency</span></span>
-<span>(</span><span>val: float, mul=None)</span>
+<dt id="pyspecan.model.mode_rt.ModelRT"><code class="flex name class">
+<span>class <span class="ident">ModelRT</span></span>
+<span>(</span><span>**kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Frequency(SI):
-    _units = {
-        0: (&#34;Hz&#34;,&#34;&#34;),
-        3: (&#34;kHz&#34;,&#34;k&#34;),
-        6: (&#34;MHz&#34;,&#34;m&#34;),
-        9: (&#34;GHz&#34;,&#34;g&#34;)
-    }</code></pre>
+<pre><code class="python">class ModelRT(Model):
+    __slots__ = (&#34;_overlap&#34;, &#34;_fftnum&#34;)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._overlap = kwargs.get(&#34;overlap&#34;, 0.8)
+        self._fftnum = kwargs.get(&#34;fftnum&#34;, 4)
+        self.update_blocksize()
+
+    def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
+        if self._samples is None:
+            return None
+        if self._psd is None:
+            psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
+            self._psd = psd
+        return self._psd
+
+    def update_blocksize(self):
+        self._block_size = self._nfft*self._fftnum
+
+    def set_nfft(self, nfft):
+        super().set_nfft(nfft)
+        self.update_blocksize()
+
+    def get_overlap(self):
+        return self._overlap
+    def set_overlap(self, overlap):
+        if overlap &lt;= 0.0 or overlap &gt; 1.0:
+            raise ValueError
+        self._overlap = float(overlap)
+    overlap = property(get_overlap, set_overlap)
+
+    def get_fftnum(self):
+        return self._overlap
+    def set_fftnum(self, fftnum):
+        self._fftnum = int(fftnum)
+        self.update_blocksize()
+    fftnum = property(get_fftnum, set_fftnum)</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.obj.si.SI" href="#pyspecan.obj.si.SI">SI</a></li>
+<li><a title="pyspecan.model.base.Model" href="base.html#pyspecan.model.base.Model">Model</a></li>
 </ul>
-</dd>
-<dt id="pyspecan.obj.si.SI"><code class="flex name class">
-<span>class <span class="ident">SI</span></span>
-<span>(</span><span>val: float, mul=None)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class SI:
-    __slots__ = (&#34;_val&#34;, &#34;_mul&#34;, &#34;_si&#34;)
-    _units = {
-        0: (&#34;&#34;,&#34;&#34;),
-        3: (&#34;&#34;,&#34;&#34;),
-        6: (&#34;&#34;,&#34;&#34;),
-        9: (&#34;&#34;,&#34;&#34;)
-    }
-    def __init__(self, val: float, mul=None):
-        if mul is None:
-            self._val: float = val
-            self._mul: int = 0
-            self._si: float = 0
-            self._calc()
-        else:
-            self._mul: int = mul
-            self._val: float = val * self._factor()
-            self._si: float = val
-
-    def __str__(self):
-        return self.to_str()
-
-    def __repr__(self):
-        return f&#34;{type(self).__name__} ({self._si}, v{self._val}, m{self._mul})&#34;
-
-    @classmethod
-    def get(cls, val):
-        if isinstance(val, str):
-            return cls.fm_str(val)
-        elif isinstance(val, cls):
-            return val
-        else:
-            return cls(val)
-
-    def to_str(self):
-        fmt = f&#34;{self._si:.3f}&#34;
-        unit = self._units[self._mul][1]
-        if not unit == &#34;&#34;:
-            fmt += f&#34;{unit}&#34;
-        return fmt
-
-    @classmethod
-    def fm_str(cls, val: str):
-        for mul, fmt in cls._units.items():
-            if mul == 0:
-                continue
-            if fmt[0] in val:
-                v = val.split(fmt[0])[0]
-                return cls(float(v), mul)
-            elif fmt[1] in val:
-                v = val.split(fmt[1])[0]
-                return cls(float(v), mul)
-        return cls(float(val))
-
-    @property
-    def value(self):
-        return self._si
-
-    @property
-    def raw(self):
-        return self._val
-
-    @raw.setter
-    def raw(self, val):
-        self._val = val
-        self._calc()
-
-    def _factor(self, mul=None):
-        if mul is None:
-            mul = self._mul
-        return 10**mul
-
-    def _calc(self):
-        mul = 0
-        v = abs(self._val)
-        if v &gt; 0:
-            while v &gt; 1000:
-                v = v/1000
-                mul += 3
-        self._mul = mul
-        self._si = self._val / self._factor(self._mul)
-
-    def __add__(self, other):
-        if issubclass(other, SI):
-            return self.raw + other.raw # type: ignore
-        else:
-            return self.raw + other
-    def __radd__(self, other):
-        return self.__add__(other)
-
-    def __sub__(self, other):
-        if isinstance(other, SI):
-            return self.raw - other.raw # type: ignore
-        else:
-            return self.raw - other
-    def __rsub__(self, other):
-        if isinstance(other, SI):
-            return other.raw - self.raw
-        else:
-            return other - self.raw
-    def __mul__(self, other):
-        if isinstance(other, SI):
-            return self.raw * other.raw # type: ignore
-        else:
-            return self.raw * other
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-    def __truediv__(self, other):
-        if isinstance(other, SI):
-            return self.raw / other.raw # type: ignore
-        else:
-            return self.raw / other
-    def __rtruediv__(self, other):
-        if isinstance(other, SI):
-            return other.raw / self.raw # type: ignore
-        else:
-            return other / self.raw</code></pre>
-</details>
-<div class="desc"></div>
-<h3>Subclasses</h3>
-<ul class="hlist">
-<li><a title="pyspecan.obj.si.Frequency" href="#pyspecan.obj.si.Frequency">Frequency</a></li>
-</ul>
-<h3>Static methods</h3>
-<dl>
-<dt id="pyspecan.obj.si.SI.fm_str"><code class="name flex">
-<span>def <span class="ident">fm_str</span></span>(<span>val: str)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.obj.si.SI.get"><code class="name flex">
-<span>def <span class="ident">get</span></span>(<span>val)</span>
-</code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-</dl>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.obj.si.SI.raw"><code class="name">prop <span class="ident">raw</span></code></dt>
+<dt id="pyspecan.model.mode_rt.ModelRT.fftnum"><code class="name">prop <span class="ident">fftnum</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">@property
-def raw(self):
-    return self._val</code></pre>
+<pre><code class="python">def get_fftnum(self):
+    return self._overlap</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.obj.si.SI.value"><code class="name">prop <span class="ident">value</span></code></dt>
+<dt id="pyspecan.model.mode_rt.ModelRT.overlap"><code class="name">prop <span class="ident">overlap</span></code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">@property
-def value(self):
-    return self._si</code></pre>
+<pre><code class="python">def get_overlap(self):
+    return self._overlap</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.obj.si.SI.to_str"><code class="name flex">
-<span>def <span class="ident">to_str</span></span>(<span>self)</span>
+<dt id="pyspecan.model.mode_rt.ModelRT.get_fftnum"><code class="name flex">
+<span>def <span class="ident">get_fftnum</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def to_str(self):
-    fmt = f&#34;{self._si:.3f}&#34;
-    unit = self._units[self._mul][1]
-    if not unit == &#34;&#34;:
-        fmt += f&#34;{unit}&#34;
-    return fmt</code></pre>
+<pre><code class="python">def get_fftnum(self):
+    return self._overlap</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode_rt.ModelRT.get_overlap"><code class="name flex">
+<span>def <span class="ident">get_overlap</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_overlap(self):
+    return self._overlap</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode_rt.ModelRT.psd"><code class="name flex">
+<span>def <span class="ident">psd</span></span>(<span>self, vbw=None, win='blackman')</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
+    if self._samples is None:
+        return None
+    if self._psd is None:
+        psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
+        self._psd = psd
+    return self._psd</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode_rt.ModelRT.set_fftnum"><code class="name flex">
+<span>def <span class="ident">set_fftnum</span></span>(<span>self, fftnum)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_fftnum(self, fftnum):
+    self._fftnum = int(fftnum)
+    self.update_blocksize()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode_rt.ModelRT.set_nfft"><code class="name flex">
+<span>def <span class="ident">set_nfft</span></span>(<span>self, nfft)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_nfft(self, nfft):
+    super().set_nfft(nfft)
+    self.update_blocksize()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode_rt.ModelRT.set_overlap"><code class="name flex">
+<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_overlap(self, overlap):
+    if overlap &lt;= 0.0 or overlap &gt; 1.0:
+        raise ValueError
+    self._overlap = float(overlap)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode_rt.ModelRT.update_blocksize"><code class="name flex">
+<span>def <span class="ident">update_blocksize</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_blocksize(self):
+    self._block_size = self._nfft*self._fftnum</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -275,22 +255,28 @@ def value(self):
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.obj" href="index.html">pyspecan.obj</a></code></li>
+<li><code><a title="pyspecan.model" href="index.html">pyspecan.model</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pyspecan.model.mode_rt.args_rt" href="#pyspecan.model.mode_rt.args_rt">args_rt</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.obj.si.Frequency" href="#pyspecan.obj.si.Frequency">Frequency</a></code></h4>
-</li>
-<li>
-<h4><code><a title="pyspecan.obj.si.SI" href="#pyspecan.obj.si.SI">SI</a></code></h4>
-<ul class="">
-<li><code><a title="pyspecan.obj.si.SI.fm_str" href="#pyspecan.obj.si.SI.fm_str">fm_str</a></code></li>
-<li><code><a title="pyspecan.obj.si.SI.get" href="#pyspecan.obj.si.SI.get">get</a></code></li>
-<li><code><a title="pyspecan.obj.si.SI.raw" href="#pyspecan.obj.si.SI.raw">raw</a></code></li>
-<li><code><a title="pyspecan.obj.si.SI.to_str" href="#pyspecan.obj.si.SI.to_str">to_str</a></code></li>
-<li><code><a title="pyspecan.obj.si.SI.value" href="#pyspecan.obj.si.SI.value">value</a></code></li>
+<h4><code><a title="pyspecan.model.mode_rt.ModelRT" href="#pyspecan.model.mode_rt.ModelRT">ModelRT</a></code></h4>
+<ul class="two-column">
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.fftnum" href="#pyspecan.model.mode_rt.ModelRT.fftnum">fftnum</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.get_fftnum" href="#pyspecan.model.mode_rt.ModelRT.get_fftnum">get_fftnum</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.get_overlap" href="#pyspecan.model.mode_rt.ModelRT.get_overlap">get_overlap</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.overlap" href="#pyspecan.model.mode_rt.ModelRT.overlap">overlap</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.psd" href="#pyspecan.model.mode_rt.ModelRT.psd">psd</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_fftnum" href="#pyspecan.model.mode_rt.ModelRT.set_fftnum">set_fftnum</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_nfft" href="#pyspecan.model.mode_rt.ModelRT.set_nfft">set_nfft</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_overlap" href="#pyspecan.model.mode_rt.ModelRT.set_overlap">set_overlap</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.update_blocksize" href="#pyspecan.model.mode_rt.ModelRT.update_blocksize">update_blocksize</a></code></li>
 </ul>
 </li>
 </ul>

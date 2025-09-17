@@ -221,8 +221,8 @@ def path(self):
     SENTINEL = object()
     MODE: Mode = Mode.NONE
 
-    MON_MEM = False
-    PROFILE = False
+    MON_MEM: bool = False
+    PROFILE: bool = False
     PROFILE_PATH = [None, &#34;pyspecan.prof&#34;][1]
 
     def __new__(cls):
@@ -241,11 +241,11 @@ def path(self):
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.config.config.MON_MEM"><code class="name">var <span class="ident">MON_MEM</span></code></dt>
+<dt id="pyspecan.config.config.MON_MEM"><code class="name">var <span class="ident">MON_MEM</span> : bool</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.config.config.PROFILE"><code class="name">var <span class="ident">PROFILE</span></code></dt>
+<dt id="pyspecan.config.config.PROFILE"><code class="name">var <span class="ident">PROFILE</span> : bool</code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
