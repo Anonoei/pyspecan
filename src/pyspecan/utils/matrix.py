@@ -66,6 +66,8 @@ def dot(x: int, y: int, psds, yt: float, yb: float):
     y_idx = np.clip(y_idx, 0, y-1)
 
     y_val = np.ones_like(y_idx)
+    y_val[y_idx == 0] = 0
+    y_val[y_idx >= y-1] = 0
 
     for i in range(psds.shape[1]):
         hist[y_idx[:,i], x_idx] += y_val[:,i]
