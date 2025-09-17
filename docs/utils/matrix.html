@@ -73,14 +73,14 @@ el.replaceWith(d);
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.utils.matrix.dot"><code class="name flex">
-<span>def <span class="ident">dot</span></span>(<span>x, y, psds, yt, yb)</span>
+<span>def <span class="ident">dot</span></span>(<span>x: int, y: int, psds, yt: float, yb: float)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def dot(x, y, psds, yt, yb):
+<pre><code class="python">def dot(x: int, y: int, psds, yt: float, yb: float):
     &#34;&#34;&#34;Dot Matrix
     Each PSD&#39;s x/y mapped to histogram x/y
     &#34;&#34;&#34;
@@ -100,11 +100,11 @@ el.replaceWith(d);
     x_idx = np.floor(np.arange(0, psds.shape[0])*x_ratio).astype(int)
     y_idx = np.floor((psds+y_off)*y_ratio).astype(int)
 
-    y_idx = np.clip(y_idx, -1, y)
+    y_idx = np.clip(y_idx, 0, y-1)
 
     y_val = np.ones_like(y_idx)
-    y_val[y_idx == -1] = 0
-    y_val[y_idx == y] = 0
+    y_val[y_idx == 0] = 0
+    y_val[y_idx &gt;= y-1] = 0
 
     for i in range(psds.shape[1]):
         hist[y_idx[:,i], x_idx] += y_val[:,i]
