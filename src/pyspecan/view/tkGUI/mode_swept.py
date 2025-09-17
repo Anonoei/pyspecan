@@ -10,6 +10,7 @@ from .plot_base import GUIFreqPlot
 class ViewSwept(View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.root.title(f"pyspecan | Swept")
         self.plot = PlotSwept(self, self.fr_view)
 
 class PlotSwept(GUIFreqPlot):

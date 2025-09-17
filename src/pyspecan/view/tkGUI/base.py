@@ -19,7 +19,7 @@ class View(_View):
         theme_mpl.get(kwargs.get("theme", "Dark"))() # Set matplotlib theme
 
         # self.style = ttk.Style(root)
-        self.root.title(f"pyspecan | {config.MODE.value}")
+        self.root.title(f"pyspecan")
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
 
         self._main = ttk.Frame(self.root)

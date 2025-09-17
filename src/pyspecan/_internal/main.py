@@ -55,27 +55,3 @@ def main():
     parser.add_argument("-v", "--view", type=str, default=View.tkGUI.name, choices=View.choices())
     parser.add_argument("-m", "--mode", type=str.upper, default=Mode.SWEPT.name, choices=Mode.choices())
     _main(_process_args(parser))
-
-def main_cli_swept():
-    args = define_args().parse_args()
-    args.view = View.CUI.name
-    args.mode = Mode.SWEPT.name
-    SpecAn(**vars(args))
-
-def main_cli_rt():
-    args = define_args().parse_args()
-    args.view = View.CUI.name
-    args.mode = Mode.RT.name
-    SpecAn(**vars(args))
-
-def main_gui_swept():
-    args = define_args().parse_args()
-    args.view = View.tkGUI.name
-    args.mode = Mode.SWEPT.name
-    SpecAn(**vars(args))
-
-def main_gui_rt():
-    args = define_args().parse_args()
-    args.view = View.tkGUI.name
-    args.mode = Mode.RT.name
-    SpecAn(**vars(args))

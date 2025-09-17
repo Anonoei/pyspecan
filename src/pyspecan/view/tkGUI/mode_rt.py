@@ -10,6 +10,7 @@ from .plot_base import GUIFreqPlot
 class ViewRT(View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.root.title(f"pyspecan | Real-Time")
         self.plot = PlotRT(self, self.fr_view)
 
 class PlotRT(GUIFreqPlot):
