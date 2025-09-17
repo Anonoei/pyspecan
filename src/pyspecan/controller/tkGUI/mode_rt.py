@@ -54,7 +54,6 @@ class PlotControllerRT(FreqPlotController):
         self.set_y()
 
     def update_f(self, f):
-        """Set plot xticks and xlabels"""
         fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 

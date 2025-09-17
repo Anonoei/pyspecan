@@ -163,7 +163,6 @@ class PlotControllerSwept(FreqPlotController):
         self.update()
 
     def plot(self, freq, psd):
-        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:

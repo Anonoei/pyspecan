@@ -10,6 +10,6 @@ def psd(samples, Fs=1.0, vbw=None, win="blackman"):
     _psd = _psd**2 / (N*Fs)
     _psd = 10.0*np.log10(_psd)
     _psd = np.fft.fftshift(_psd)
-    if not vbw is None:
+    if vbw is not None:
         _psd = _vbw(_psd, vbw)
     return _psd

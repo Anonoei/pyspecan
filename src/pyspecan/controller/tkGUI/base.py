@@ -38,6 +38,7 @@ class Controller(_Controller):
         self._stop = False
         self.time_show = kwargs.get("sweep", 50.0)
         self._last_f = None
+        self.plot: FreqPlotController = None # type: ignore
 
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
         self.view.sld_samp.scale.config(command=self.handle_sld_samp)
@@ -106,6 +107,8 @@ class Controller(_Controller):
             if wait > 0:
                 # print(f"Loop waiting for {wait*1000:.1f}ms")
                 time.sleep(wait)
+            else:
+                self.model.skip_time(-wait)
 
     def _plot(self):
         if config.MON_MEM:
@@ -124,7 +127,7 @@ class Controller(_Controller):
         ptime = (time.perf_counter() - ptime)
         self.view.var_draw_time.set(f"{ptime:06.3f}s")
         self.draw_tb()
-        # print(f"Plotted in {ptime*1000:.1f}ms")
+        # print(f"Plotted in {ptime*1000:.1f}ms / {self.time_show}")
         return ptime
 
     def _check_f(self):

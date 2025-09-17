@@ -78,6 +78,11 @@ class Model:
     def tot_time(self):
         return self.reader.max_samp/self.Fs
 
+    def skip_time(self, s):
+        samps = int(self.Fs * s)
+        # print(f"Skipping {s:.3f}s, {samps} ({samps/self.reader.max_samp*100:.2f}%)")
+        self.reader.cur_samp += samps
+
     def get_fs(self):
         return self._Fs
     def set_fs(self, fs):

@@ -16,6 +16,8 @@ class ModelSwept(Model):
         if self._samples is None:
             return None
         if self._psd is None:
+            if vbw is not None and vbw <= 0.0:
+                vbw = None
             psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
             self._psd = psd
         return self._psd

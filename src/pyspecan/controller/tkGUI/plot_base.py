@@ -71,6 +71,9 @@ class FreqPlotController(_PlotController):
     def update(self):
         self.view.plotter.canvas.draw()
 
+    def update_f(self, f):
+        """Set plot xticks and xlabels"""
+
     def plot(self, freq, psd):
         raise NotImplementedError()
 
@@ -126,6 +129,8 @@ class FreqPlotController(_PlotController):
         """Set plot vbw"""
         try:
             smooth = float(smooth)
+            if smooth <= 0.0:
+                smooth = 0.0
             self.vbw = smooth
         except ValueError:
             smooth = self.vbw
