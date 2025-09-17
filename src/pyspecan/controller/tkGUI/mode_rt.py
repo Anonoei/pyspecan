@@ -24,7 +24,7 @@ def args_rt(parser: argparse.ArgumentParser):
 class ControllerRT(Controller):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.plot = PlotControllerRT(self.view.plot, **kwargs)
+        self.plot = PlotControllerRT(self, self.view.plot, **kwargs)
         self.draw()
 
 class PlotControllerRT(FreqPlotController):
@@ -33,11 +33,11 @@ class PlotControllerRT(FreqPlotController):
         "x", "y", "cmap",
         "_cmap_set", "_cb_drawn"
     )
-    def __init__(self, view, **kwargs):
+    def __init__(self, parent, view, **kwargs):
         self.x = kwargs.get("x", 1001)
         self.y = kwargs.get("y", 600)
         self.cmap = kwargs.get("cmap", "hot")
-        super().__init__(view, **kwargs)
+        super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
         self._cb_drawn = False

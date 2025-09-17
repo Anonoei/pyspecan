@@ -23,7 +23,7 @@ def args_swept(parser: argparse.ArgumentParser):
 class ControllerSwept(Controller):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.plot = PlotControllerSwept(self.view.plot, **kwargs)
+        self.plot = PlotControllerSwept(self, self.view.plot, **kwargs)
         self.draw()
 
 class PlotControllerSwept(FreqPlotController):
@@ -33,8 +33,8 @@ class PlotControllerSwept(FreqPlotController):
         "psd_min", "psd_max",
         "max_count", "psds"
     )
-    def __init__(self, view, **kwargs):
-        super().__init__(view, **kwargs)
+    def __init__(self, parent, view, **kwargs):
+        super().__init__(parent, view, **kwargs)
         self.view: PlotSwept = self.view # type: ignore
         self.show_psd = int(kwargs.get("psd", True))
         self.show_spg = int(kwargs.get("spg", False))
@@ -53,7 +53,7 @@ class PlotControllerSwept(FreqPlotController):
         self.view.plotter.ax("psd").ax.grid(True, alpha=0.2)
         # Spectrogram
         self.max_count = 100
-        self.psds = np.zeros((self.max_count, 1024), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
         self.__init_spectrogram()
         self.view.plotter.ax("spg").ax.set_autoscale_on(False)
@@ -67,7 +67,7 @@ class PlotControllerSwept(FreqPlotController):
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, 1024))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):

@@ -19,8 +19,9 @@ def define_args(parser: argparse.ArgumentParser):
 
 class _PlotController:
     """Controller for view.tkGUI.GUIPlot"""
-    __slots__ = ("view",)
-    def __init__(self, view: GUIPlot):
+    __slots__ = ("parent", "view")
+    def __init__(self, parent, view: GUIPlot):
+        self.parent = parent
         self.view = view
         self.view.btn_toggle.configure(command=self.toggle_settings)
 
@@ -48,8 +49,8 @@ class _PlotController:
 class FreqPlotController(_PlotController):
     """Controller for view.tkGUI.GUIFreqPlot"""
     __slots__ = ("window", "vbw", "scale", "ref_level")
-    def __init__(self, view: GUIFreqPlot, **kwargs):
-        super().__init__(view)
+    def __init__(self, parent, view: GUIFreqPlot, **kwargs):
+        super().__init__(parent, view)
         self.view: GUIFreqPlot = self.view # type hint
         self.window =  kwargs.get("window", "blackman")
         self.vbw = kwargs.get("vbw", 10.0)

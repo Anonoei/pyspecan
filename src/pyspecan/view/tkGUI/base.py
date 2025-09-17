@@ -8,10 +8,13 @@ from ...config import config
 from ...backend.tk import widgets
 from ...backend.mpl import theme as theme_mpl
 
+from .plot_base import GUIFreqPlot
+
 class View(_View):
     """Parent tkGUI view class"""
     def __init__(self, root=tk.Tk(), **kwargs):
         self.root = root
+        self.plot: GUIFreqPlot = None # type: ignore
 
         theme_mpl.get(kwargs.get("theme", "Dark"))() # Set matplotlib theme
 
