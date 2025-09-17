@@ -1,111 +1,128 @@
-"""Base Views for tkGUI View plots"""
+"""Create a GUI view"""
 import tkinter as tk
-from tkinter import ttk
+import tkinter.ttk as ttk
 
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-# from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+from ..base import View as _View
+from ...config import config
 
-from ...backend.mpl.plot import _Plot, Plot, BlitPlot
+from ...backend.tk import widgets
+from ...backend.mpl import theme as theme_mpl
 
+class View(_View):
+    """Parent tkGUI view class"""
+    def __init__(self, root=tk.Tk(), **kwargs):
+        self.root = root
 
-class GUIPlot:
-    """tkinter wrapper for pyspecan.backend.mpl.plot"""
-    __slots__ = (
-        "view", "_root", "plotter", "settings", "ready",
-        "fr_main", "fr_canv", "fr_sets", "btn_toggle",
-        "wg_sets",
-    )
-    def __init__(self, view, root, fig: Figure, plotter=_Plot):
-        if plotter is _Plot:
-            plotter = Plot
-        self.view = view
-        self._root = root
-        self.settings = {}
-        self.ready = False
+        theme_mpl.get(kwargs.get("theme", "Dark"))() # Set matplotlib theme
 
-        self.fr_main = ttk.Frame(root)
+        # self.style = ttk.Style(root)
+        self.root.title(f"pyspecan | {config.MODE.value}")
+        self.root.protocol("WM_DELETE_WINDOW", self.quit)
 
-        self.fr_sets = ttk.Frame(self.fr_main)
-        self.wg_sets = {}
-        self.draw_settings(self.fr_sets)
-        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
-        self.fr_sets.pack_forget()
+        self._main = ttk.Frame(self.root)
+        self._main.pack(expand=True, fill=tk.BOTH)
 
-        self.fr_canv = ttk.Frame(self.fr_main)
-        self.fr_canv.pack(fill=tk.BOTH, expand=True)
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
-        self.plotter = plotter(fig)
-        # toolbar = NavigationToolbar2Tk(canvas, root)
-        # toolbar.update()
-        self.plotter.canvas.draw()
-        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
+        self.fr_tb = ttk.Frame(self._main, height=20)
+        self.draw_tb(self.fr_tb)
+        self.fr_tb.pack(side=tk.TOP, fill=tk.X)
 
-        self.btn_toggle = ttk.Button(self.fr_canv, text="Settings", style="Settings.TButton")
-        self.btn_toggle.place(relx=0.0, rely=0.0, width=50, height=25)
+        self.main = ttk.PanedWindow(self._main, orient=tk.HORIZONTAL)
+        self.main.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        self.fr_main.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.fr_view = ttk.Frame(self.main)
 
-    @property
-    def fig(self):
-        return self.plotter.fig
-    def ax(self, name):
-        return self.plotter.ax(name)
-    def add_ax(self, *args, **kwargs):
-        return self.plotter.add_ax(*args,**kwargs)
+        self.fr_ctrl = ttk.Frame(self.main, width=100)
+        self.draw_ctrl(self.fr_ctrl)
+        self.main.add(self.fr_ctrl)
 
-    def draw_settings(self, parent, row=0):
-        """Initialize settings panel"""
-        raise NotImplementedError()
+        self.main.add(self.fr_view)
 
-class GUIBlitPlot(GUIPlot):
-    """tkinter wrapper for pyspecan.plot.mpl BlitPlot"""
-    def __init__(self, view, root, fig):
-        super().__init__(view, root, fig, BlitPlot)
+    def draw_tb(self, parent):
+        """Draw toolbar frame"""
+        col = 0
+        self.var_samp = tk.IntVar(parent)
+        self.sld_samp = widgets.Scale(
+            parent, variable=self.var_samp, length=150
+        )
+        ttk.LabeledScale
+        self.sld_samp.grid(row=0,rowspan=2,column=col, sticky=tk.NSEW)
+        col += 1
+        self.var_time_cur = tk.StringVar(parent)
+        self.var_time_tot = tk.StringVar(parent)
+        self.lbl_time_cur = ttk.Label(parent, textvariable=self.var_time_cur)
+        self.lbl_time_cur.grid(row=0,column=col)
+        self.lbl_time_tot = ttk.Label(parent, textvariable=self.var_time_tot)
+        self.lbl_time_tot.grid(row=1,column=col)
+        col += 1
+        ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
 
+        col += 1
+        ttk.Label(parent, text="Sweep").grid(row=0,column=col)
+        self.var_time = tk.StringVar(parent)
+        self.ent_time = ttk.Entry(parent, textvariable=self.var_time, width=5)
+        self.ent_time.grid(row=1,column=col, padx=2, pady=2)
 
-class GUIFreqPlot(GUIBlitPlot):
-    """Frequency domain view helpers"""
-    __slots__ = ("lbl_lo", "lbl_hi")
-    def __init__(self, view, root, fig):
-        super().__init__(view, root, fig)
+        col += 1
+        ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
+        col += 1
+        self.btn_prev = ttk.Button(parent, text="Prev")
+        self.btn_prev.grid(row=0,rowspan=2,column=col, padx=2,pady=2)
+        col += 1
+        self.btn_next = ttk.Button(parent, text="Next")
+        self.btn_next.grid(row=0,rowspan=2,column=col, padx=2,pady=2)
+        col += 1
+        self.btn_start = ttk.Button(parent, text="Start")
+        self.btn_start.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
+        col += 1
+        self.btn_stop = ttk.Button(parent, text="Stop", state=tk.DISABLED)
+        self.btn_stop.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
+        col += 1
+        self.btn_reset = ttk.Button(parent, text="Reset")
+        self.btn_reset.grid(row=0,rowspan=2,column=col, padx=2,pady=2, sticky=tk.NS)
+        col += 1
+        ttk.Separator(parent, orient=tk.VERTICAL).grid(row=0,rowspan=2,column=col, padx=5, sticky=tk.NS)
 
-        self.lbl_lo = ttk.Label(self.fr_canv, text="V")
-        self.lbl_hi = ttk.Label(self.fr_canv, text="^")
+        col += 1
+        self.var_draw_time = tk.StringVar(parent)
+        self.lbl_draw_time = ttk.Label(parent, textvariable=self.var_draw_time)
+        ttk.Label(parent, text="Draw").grid(row=0,column=col, sticky=tk.E)
+        self.lbl_draw_time.grid(row=1,column=col, sticky=tk.E)
+        parent.grid_columnconfigure(col, weight=1)
 
-    def draw_settings(self, parent, row=0):
-        var_scale = tk.StringVar(self.fr_sets)
-        ent_scale = ttk.Entry(self.fr_sets, textvariable=var_scale, width=10)
-
-        var_ref_level = tk.StringVar(self.fr_sets)
-        ent_ref_level = ttk.Entry(self.fr_sets, textvariable=var_ref_level, width=10)
-
-        var_vbw = tk.StringVar(self.fr_sets)
-        ent_vbw = ttk.Entry(self.fr_sets, textvariable=var_vbw, width=10)
-
-        var_window = tk.StringVar(self.fr_sets)
-        cb_window = ttk.Combobox(self.fr_sets, textvariable=var_window, width=9)
-
-        self.wg_sets["scale"] = ent_scale
-        self.settings["scale"] = var_scale
-        self.wg_sets["ref_level"] = ent_ref_level
-        self.settings["ref_level"] = var_ref_level
-        self.wg_sets["vbw"] = ent_vbw
-        self.settings["vbw"] = var_vbw
-        self.wg_sets["window"] = cb_window
-        self.settings["window"] = var_window
-
-        ttk.Label(parent, text="Scale/Div").grid(row=row, column=0)
-        ent_scale.grid(row=row, column=1)
+    def draw_ctrl(self, parent):
+        """Draw control frame"""
+        # Model
+        root = ttk.Frame(parent) # File reader
+        root.columnconfigure(2, weight=1)
+        row = 0
+        self.var_file = tk.StringVar(root)
+        self.btn_file = ttk.Button(root, text="File")
+        self.btn_file.grid(row=row,column=0, sticky=tk.W)
+        self.ent_file = ttk.Entry(root, textvariable=self.var_file, state=tk.DISABLED, width=10)
+        self.ent_file.grid(row=row,column=1,columnspan=2, sticky=tk.NSEW)
         row += 1
-        ttk.Label(parent, text="Ref Level").grid(row=row, column=0)
-        ent_ref_level.grid(row=row, column=1)
+        ttk.Label(root, text="Format:").grid(row=row,column=0,sticky=tk.W)
+        self.var_file_fmt = tk.StringVar(root)
+        self.cb_file_fmt = ttk.Combobox(root, textvariable=self.var_file_fmt, width=5)
+        self.cb_file_fmt.grid(row=row,column=1, sticky=tk.W)
+        root.pack(padx=2,pady=2, fill=tk.X)
+
+        root = ttk.Frame(parent) # File params
+        row = 0
+        self.var_fs = tk.StringVar(root)
+        ttk.Label(root, text="Sample rate:").grid(row=row,column=0, sticky=tk.W)
+        self.ent_fs = ttk.Entry(root, textvariable=self.var_fs, width=10)
+        self.ent_fs.grid(row=row,column=1, sticky=tk.W)
         row += 1
-        ttk.Label(parent, text="VBW").grid(row=row, column=0)
-        ent_vbw.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text="Window").grid(row=row, column=0)
-        cb_window.grid(row=row, column=1)
-        row += 1
-        return row
+        self.var_cf = tk.StringVar(root)
+        ttk.Label(root, text="Center freq:").grid(row=row,column=0, sticky=tk.W)
+        self.ent_cf = ttk.Entry(root, textvariable=self.var_cf, width=10)
+        self.ent_cf.grid(row=row,column=1, sticky=tk.W)
+        root.pack(padx=2,pady=2, fill=tk.X)
+
+    def mainloop(self):
+        self.root.mainloop()
+
+    def quit(self):
+        self.root.quit()
+        self.root.destroy()

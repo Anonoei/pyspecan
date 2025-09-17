@@ -2,18 +2,32 @@
 import argparse
 import numpy as np
 
-from .base import FreqPlotController
-
 from ...utils import matrix
 from ...backend.mpl.color import cmap
 
-def define_args(parser: argparse.ArgumentParser):
-    mode = parser.add_argument_group("RT mode")
+from ...view.tkGUI.mode_rt import ViewRT, PlotRT
+
+from .base import Controller
+from .base import define_args as base_args
+from .plot_base import define_args as freq_args
+
+from .plot_base import FreqPlotController
+
+def args_rt(parser: argparse.ArgumentParser):
+    ctrl = base_args(parser)
+    freq_args(parser)
+    mode = ctrl.add_argument_group("RT mode")
     mode.add_argument("--x", default=1001, type=int, help="histogram x pixels")
     mode.add_argument("--y", default=600, type=int, help="histogram y pixels")
     mode.add_argument("--cmap", default="hot", choices=[k for k in cmap.keys()], help="histogram color map")
 
-class ControllerRT(FreqPlotController):
+class ControllerRT(Controller):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.plot = PlotControllerRT(self.view.plot, **kwargs)
+        self.draw()
+
+class PlotControllerRT(FreqPlotController):
     """Controller for ViewRT"""
     __slots__ = (
         "x", "y", "cmap",

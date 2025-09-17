@@ -1,14 +1,18 @@
-"""GUI view SWEPT mode plots"""
 import tkinter as tk
 from tkinter import ttk
 
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 
-# from ...plot.mpl.base import BlitPlot
-from .base import GUIFreqPlot
+from .base import View
+from .plot_base import GUIFreqPlot
 
-class ViewSwept(GUIFreqPlot):
+class ViewSwept(View):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.plot = PlotSwept(self, self.fr_view)
+
+class PlotSwept(GUIFreqPlot):
     """Manager for SWEPT mode plots"""
     def __init__(self, view, root):
         fig = plt.figure(figsize=(5,5), layout="constrained")

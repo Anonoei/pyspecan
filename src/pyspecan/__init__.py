@@ -20,6 +20,6 @@ from . import err
 from . import obj
 from . import utils
 
-from .model.model import Model
+# from .model.base import Model
 
 from .specan import SpecAn

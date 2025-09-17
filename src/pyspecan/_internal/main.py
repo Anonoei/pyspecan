@@ -1,26 +1,15 @@
 import argparse
-import importlib
 import sys
 
 from .. import err
 from ..specan import SpecAn
 
 from ..config import config, Mode, View
-from ..model.reader import Format
-
-from ..utils.window import WindowLUT
-
-from ..obj import Frequency
+from ..model.model import ModelArgs
+from ..controller.controller import ControllerArgs
 
 def define_args():
     parser = argparse.ArgumentParser("pyspecan", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-f", "--file", default=None, help="file path")
-    parser.add_argument("-d", "--dtype", choices=Format.choices(), default=Format.cf32.name, help="data format")
-
-    parser.add_argument("-fs", "--Fs", default=1, type=Frequency.get, help="sample rate")
-    parser.add_argument("-cf", "--cf", default=0, type=Frequency.get, help="center frequency")
-    parser.add_argument("-n", "--nfft", default=1024, help="FFT size")
-
     mon = parser.add_argument_group("developer toggles")
     mon.add_argument("--mon_mem", action="store_true")
     mon.add_argument("--profile", action="store_true")
@@ -47,14 +36,13 @@ def _process_args(parser):
     if view == View.NONE:
         raise err.UnknownOption(f"Unknown view {args.view}")
 
-    config.MODE = mode
     if args.mon_mem:
         config.MON_MEM = True
     if args.profile:
         config.PROFILE = True
 
-    ctrl_args = importlib.import_module(f".controller.{view.path}", "pyspecan").define_args
-    ctrl_args(parser)
+    ModelArgs(mode)(parser)
+    ControllerArgs(view, mode)(parser)
 
     args = parser.parse_args()
     if run_help:
