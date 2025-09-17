@@ -81,7 +81,22 @@ el.replaceWith(d);
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.plot = PlotControllerRT(self, self.view.plot, **kwargs)
-        self.draw()</code></pre>
+        self.draw()
+
+
+    def loop(self):
+        while self.running:
+            time_show = self.time_show/1000 # convert ms to s
+            valid, ptime = self._next()
+            if not valid or ptime is None:
+                break
+            wait = time_show-ptime
+            if wait &gt; 0:
+                self.view.lbl_msg.configure(text=&#34;&#34;)
+                time.sleep(wait)
+            else:
+                # self.model.skip_time(-wait)
+                self.view.lbl_msg.configure(text=&#34;OVERFLOW&#34;)</code></pre>
 </details>
 <div class="desc"><p>tkGUI Controller</p></div>
 <h3>Ancestors</h3>
@@ -89,6 +104,33 @@ el.replaceWith(d);
 <li><a title="pyspecan.controller.tkGUI.base.Controller" href="base.html#pyspecan.controller.tkGUI.base.Controller">Controller</a></li>
 <li><a title="pyspecan.controller.base.Controller" href="../base.html#pyspecan.controller.base.Controller">Controller</a></li>
 </ul>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ControllerRT.loop"><code class="name flex">
+<span>def <span class="ident">loop</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def loop(self):
+    while self.running:
+        time_show = self.time_show/1000 # convert ms to s
+        valid, ptime = self._next()
+        if not valid or ptime is None:
+            break
+        wait = time_show-ptime
+        if wait &gt; 0:
+            self.view.lbl_msg.configure(text=&#34;&#34;)
+            time.sleep(wait)
+        else:
+            # self.model.skip_time(-wait)
+            self.view.lbl_msg.configure(text=&#34;OVERFLOW&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
 </dd>
 <dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT"><code class="flex name class">
 <span>class <span class="ident">PlotControllerRT</span></span>
@@ -114,9 +156,12 @@ el.replaceWith(d);
         self._cmap_set = False
         self._cb_drawn = False
 
+        self.view.settings[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)
+        self.view.wg_sets[&#34;overlap&#34;].bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+
         self.view.settings[&#34;cmap&#34;].set(self.cmap)
         self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
-        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_cmap)
+        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
         self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
@@ -126,7 +171,6 @@ el.replaceWith(d);
         self.set_y()
 
     def update_f(self, f):
-        &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
         fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
@@ -155,7 +199,7 @@ el.replaceWith(d);
         self.update()
 
     def _plot_persistent(self, psds):
-        self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
+        self.view.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psds.shape[1]} FFTs&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
@@ -183,6 +227,8 @@ el.replaceWith(d);
     def handle_event(self, event):
         if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
             self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+        elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
+            self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
         else:
             super().handle_event(event)
 
@@ -199,7 +245,15 @@ el.replaceWith(d);
     def set_cmap(self, _cmap):
         &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
         self.cmap = _cmap
-        self._cmap_set = True</code></pre>
+        self._cmap_set = True
+
+    def set_overlap(self, overlap):
+        try:
+            overlap = float(overlap)
+            self.parent.model.overlap = overlap
+        except ValueError:
+            ref = self.ref_level
+        self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
 </details>
 <div class="desc"><p>Controller for ViewRT</p></div>
 <h3>Ancestors</h3>
@@ -230,9 +284,12 @@ el.replaceWith(d);
         self._cmap_set = False
         self._cb_drawn = False
 
+        self.view.settings[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)
+        self.view.wg_sets[&#34;overlap&#34;].bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+
         self.view.settings[&#34;cmap&#34;].set(self.cmap)
         self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
-        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_cmap)
+        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
         self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
@@ -242,7 +299,6 @@ el.replaceWith(d);
         self.set_y()
 
     def update_f(self, f):
-        &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
         fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
@@ -271,7 +327,7 @@ el.replaceWith(d);
         self.update()
 
     def _plot_persistent(self, psds):
-        self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
+        self.view.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psds.shape[1]} FFTs&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
@@ -299,6 +355,8 @@ el.replaceWith(d);
     def handle_event(self, event):
         if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
             self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+        elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
+            self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
         else:
             super().handle_event(event)
 
@@ -315,7 +373,15 @@ el.replaceWith(d);
     def set_cmap(self, _cmap):
         &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
         self.cmap = _cmap
-        self._cmap_set = True</code></pre>
+        self._cmap_set = True
+
+    def set_overlap(self, overlap):
+        try:
+            overlap = float(overlap)
+            self.parent.model.overlap = overlap
+        except ValueError:
+            ref = self.ref_level
+        self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -340,9 +406,12 @@ el.replaceWith(d);
         self._cmap_set = False
         self._cb_drawn = False
 
+        self.view.settings[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)
+        self.view.wg_sets[&#34;overlap&#34;].bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+
         self.view.settings[&#34;cmap&#34;].set(self.cmap)
         self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
-        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_cmap)
+        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
         self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
@@ -352,7 +421,6 @@ el.replaceWith(d);
         self.set_y()
 
     def update_f(self, f):
-        &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
         fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
@@ -381,7 +449,7 @@ el.replaceWith(d);
         self.update()
 
     def _plot_persistent(self, psds):
-        self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
+        self.view.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psds.shape[1]} FFTs&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
@@ -409,6 +477,8 @@ el.replaceWith(d);
     def handle_event(self, event):
         if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
             self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+        elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
+            self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
         else:
             super().handle_event(event)
 
@@ -425,7 +495,15 @@ el.replaceWith(d);
     def set_cmap(self, _cmap):
         &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
         self.cmap = _cmap
-        self._cmap_set = True</code></pre>
+        self._cmap_set = True
+
+    def set_overlap(self, overlap):
+        try:
+            overlap = float(overlap)
+            self.parent.model.overlap = overlap
+        except ValueError:
+            ref = self.ref_level
+        self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -450,9 +528,12 @@ el.replaceWith(d);
         self._cmap_set = False
         self._cb_drawn = False
 
+        self.view.settings[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)
+        self.view.wg_sets[&#34;overlap&#34;].bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+
         self.view.settings[&#34;cmap&#34;].set(self.cmap)
         self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
-        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.set_cmap)
+        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
         self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
@@ -462,7 +543,6 @@ el.replaceWith(d);
         self.set_y()
 
     def update_f(self, f):
-        &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
         fmin, fmax, fnum = f
         x_mul = [0.0,0.25,0.5,0.75,1.0]
 
@@ -491,7 +571,7 @@ el.replaceWith(d);
         self.update()
 
     def _plot_persistent(self, psds):
-        self.view.ax(&#34;pst&#34;).ax.set_title(&#34;Persistent&#34;)
+        self.view.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psds.shape[1]} FFTs&#34;)
         mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
         mat = mat / np.max(mat)
 
@@ -519,6 +599,8 @@ el.replaceWith(d);
     def handle_event(self, event):
         if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
             self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+        elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
+            self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
         else:
             super().handle_event(event)
 
@@ -535,7 +617,15 @@ el.replaceWith(d);
     def set_cmap(self, _cmap):
         &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
         self.cmap = _cmap
-        self._cmap_set = True</code></pre>
+        self._cmap_set = True
+
+    def set_overlap(self, overlap):
+        try:
+            overlap = float(overlap)
+            self.parent.model.overlap = overlap
+        except ValueError:
+            ref = self.ref_level
+        self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -553,6 +643,8 @@ el.replaceWith(d);
 <pre><code class="python">def handle_event(self, event):
     if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
         self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
+    elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
+        self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
     else:
         super().handle_event(event)</code></pre>
 </details>
@@ -572,6 +664,24 @@ el.replaceWith(d);
     self._cmap_set = True</code></pre>
 </details>
 <div class="desc"><p>Set plot color mapping</p></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_overlap"><code class="name flex">
+<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_overlap(self, overlap):
+    try:
+        overlap = float(overlap)
+        self.parent.model.overlap = overlap
+    except ValueError:
+        ref = self.ref_level
+    self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+</details>
+<div class="desc"></div>
 </dd>
 <dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_y"><code class="name flex">
 <span>def <span class="ident">set_y</span></span>(<span>self)</span>
@@ -596,26 +706,6 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Set plot yticks and ylabels</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.update_f"><code class="name flex">
-<span>def <span class="ident">update_f</span></span>(<span>self, f)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def update_f(self, f):
-    &#34;&#34;&#34;Set plot xticks and xlabels&#34;&#34;&#34;
-    fmin, fmax, fnum = f
-    x_mul = [0.0,0.25,0.5,0.75,1.0]
-
-    x_tick = [self.x*m for m in x_mul]
-    x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-    self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
-    self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)</code></pre>
-</details>
-<div class="desc"><p>Set plot xticks and xlabels</p></div>
-</dd>
 </dl>
 <h3>Inherited members</h3>
 <ul class="hlist">
@@ -627,6 +717,7 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f">update_f</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
 </ul>
@@ -655,6 +746,9 @@ el.replaceWith(d);
 <ul>
 <li>
 <h4><code><a title="pyspecan.controller.tkGUI.mode_rt.ControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.ControllerRT">ControllerRT</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.ControllerRT.loop" href="#pyspecan.controller.tkGUI.mode_rt.ControllerRT.loop">loop</a></code></li>
+</ul>
 </li>
 <li>
 <h4><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT">PlotControllerRT</a></code></h4>
@@ -662,8 +756,8 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.cmap" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.cmap">cmap</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.handle_event" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.handle_event">handle_event</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_cmap" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_cmap">set_cmap</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_overlap" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_overlap">set_overlap</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_y" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_y">set_y</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.update_f" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.update_f">update_f</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.x" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.x">x</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.y" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.y">y</a></code></li>
 </ul>

@@ -235,7 +235,6 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
@@ -440,7 +439,6 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
@@ -639,7 +637,6 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
@@ -838,7 +835,6 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
@@ -1037,7 +1033,6 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
@@ -1236,7 +1231,6 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
@@ -1435,7 +1429,6 @@ el.replaceWith(d);
         self.update()
 
     def plot(self, freq, psd):
-        psd = _vbw.vbw(psd, self.vbw)
         if self.show_psd:
             self._plot_psd(freq, psd)
         if self.show_spg:
@@ -1601,28 +1594,6 @@ el.replaceWith(d);
 </details>
 <div class="desc"><p>Toggle spectrogram plot visibility</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.update_f"><code class="name flex">
-<span>def <span class="ident">update_f</span></span>(<span>self, f)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def update_f(self, f):
-    fmin, fmax, fnum = f
-    psd_tick = np.linspace(fmin, fmax, 5)
-    psd_text = [str(Frequency.get(f)) for f in psd_tick]
-    self.view.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
-    self.view.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
-
-    spg_tick = np.linspace(0, fnum+1, 5)
-    spg_text = psd_text
-    self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
-    self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 </dl>
 <h3>Inherited members</h3>
 <ul class="hlist">
@@ -1634,6 +1605,7 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f">update_f</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
 </ul>
@@ -1678,7 +1650,6 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_psd_min" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_psd_min">toggle_psd_min</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_psd" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_psd">toggle_show_psd</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_spg" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.toggle_show_spg">toggle_show_spg</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.update_f" href="#pyspecan.controller.tkGUI.mode_swept.PlotControllerSwept.update_f">update_f</a></code></li>
 </ul>
 </li>
 </ul>

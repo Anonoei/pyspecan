@@ -58,7 +58,8 @@ el.replaceWith(d);
 
     parser.add_argument(&#34;-fs&#34;, &#34;--Fs&#34;, default=1, type=Frequency.get, help=&#34;sample rate&#34;)
     parser.add_argument(&#34;-cf&#34;, &#34;--cf&#34;, default=0, type=Frequency.get, help=&#34;center frequency&#34;)
-    parser.add_argument(&#34;-n&#34;, &#34;--nfft&#34;, default=1024, help=&#34;FFT size&#34;)</code></pre>
+    parser.add_argument(&#34;-n&#34;, &#34;--nfft&#34;, default=1024, help=&#34;FFT size&#34;)
+    parser.add_argument(&#34;-st&#34;, &#34;--sweep_time&#34;, default=50.0, help=&#34;[ms] fft sweep time&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -80,7 +81,8 @@ el.replaceWith(d);
     __slots__ = (
         &#34;mode&#34;, &#34;reader&#34;,
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;_block_size&#34;, &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;
+        &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;,
+        &#34;_block_size&#34;, &#34;_sweep_time&#34;
     )
     def __init__(self, **kwargs):
         path = kwargs.get(&#34;path&#34;, None)
@@ -88,6 +90,7 @@ el.replaceWith(d);
         Fs = kwargs.get(&#34;Fs&#34;, 1)
         cf = kwargs.get(&#34;cf&#34;, 1)
         nfft = kwargs.get(&#34;nfft&#34;, 1024)
+        sweep_time = kwargs.get(&#34;sweep_time&#34;, 50.0)
 
         self.reader = Reader(fmt, path)
         self._Fs = Frequency.get(Fs)
@@ -98,10 +101,11 @@ el.replaceWith(d);
         self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
         self._samples = np.empty(self._nfft, dtype=np.complex64)
         self._psd = np.empty(self._nfft, dtype=np.float32)
-        self._block_size = 0
+        self._block_size = self._nfft
+        self._sweep_time = float(sweep_time)
 
     def show(self, ind=0):
-        print(&#34; &#34;*ind + &#34;Reader:&#34;)
+        print(&#34; &#34;*ind + f&#34;{type(self).__name__} Reader:&#34;)
         self.reader.show(ind+2)
 
     def reset(self):
@@ -138,6 +142,11 @@ el.replaceWith(d);
     def tot_time(self):
         return self.reader.max_samp/self.Fs
 
+    def skip_time(self, s):
+        samps = int(self.Fs * s)
+        # print(f&#34;Skipping {s:.3f}s, {samps} ({samps/self.reader.max_samp*100:.2f}%)&#34;)
+        self.reader.cur_samp += samps
+
     def get_fs(self):
         return self._Fs
     def set_fs(self, fs):
@@ -160,7 +169,13 @@ el.replaceWith(d);
         return self._block_size
     def set_block_size(self, size):
         self._block_size = size
-    block_size = property(get_block_size, set_block_size)</code></pre>
+    block_size = property(get_block_size, set_block_size)
+
+    def get_sweep_time(self):
+        return self._sweep_time
+    def set_sweep_time(self, ts):
+        self._sweep_time = ts
+    sweep_time = property(get_sweep_time, set_sweep_time)</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Subclasses</h3>
@@ -213,7 +228,8 @@ el.replaceWith(d);
     __slots__ = (
         &#34;mode&#34;, &#34;reader&#34;,
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;_block_size&#34;, &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;
+        &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;,
+        &#34;_block_size&#34;, &#34;_sweep_time&#34;
     )
     def __init__(self, **kwargs):
         path = kwargs.get(&#34;path&#34;, None)
@@ -221,6 +237,7 @@ el.replaceWith(d);
         Fs = kwargs.get(&#34;Fs&#34;, 1)
         cf = kwargs.get(&#34;cf&#34;, 1)
         nfft = kwargs.get(&#34;nfft&#34;, 1024)
+        sweep_time = kwargs.get(&#34;sweep_time&#34;, 50.0)
 
         self.reader = Reader(fmt, path)
         self._Fs = Frequency.get(Fs)
@@ -231,10 +248,11 @@ el.replaceWith(d);
         self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
         self._samples = np.empty(self._nfft, dtype=np.complex64)
         self._psd = np.empty(self._nfft, dtype=np.float32)
-        self._block_size = 0
+        self._block_size = self._nfft
+        self._sweep_time = float(sweep_time)
 
     def show(self, ind=0):
-        print(&#34; &#34;*ind + &#34;Reader:&#34;)
+        print(&#34; &#34;*ind + f&#34;{type(self).__name__} Reader:&#34;)
         self.reader.show(ind+2)
 
     def reset(self):
@@ -271,6 +289,11 @@ el.replaceWith(d);
     def tot_time(self):
         return self.reader.max_samp/self.Fs
 
+    def skip_time(self, s):
+        samps = int(self.Fs * s)
+        # print(f&#34;Skipping {s:.3f}s, {samps} ({samps/self.reader.max_samp*100:.2f}%)&#34;)
+        self.reader.cur_samp += samps
+
     def get_fs(self):
         return self._Fs
     def set_fs(self, fs):
@@ -293,7 +316,13 @@ el.replaceWith(d);
         return self._block_size
     def set_block_size(self, size):
         self._block_size = size
-    block_size = property(get_block_size, set_block_size)</code></pre>
+    block_size = property(get_block_size, set_block_size)
+
+    def get_sweep_time(self):
+        return self._sweep_time
+    def set_sweep_time(self, ts):
+        self._sweep_time = ts
+    sweep_time = property(get_sweep_time, set_sweep_time)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -307,7 +336,8 @@ el.replaceWith(d);
     __slots__ = (
         &#34;mode&#34;, &#34;reader&#34;,
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;_block_size&#34;, &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;
+        &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;,
+        &#34;_block_size&#34;, &#34;_sweep_time&#34;
     )
     def __init__(self, **kwargs):
         path = kwargs.get(&#34;path&#34;, None)
@@ -315,6 +345,7 @@ el.replaceWith(d);
         Fs = kwargs.get(&#34;Fs&#34;, 1)
         cf = kwargs.get(&#34;cf&#34;, 1)
         nfft = kwargs.get(&#34;nfft&#34;, 1024)
+        sweep_time = kwargs.get(&#34;sweep_time&#34;, 50.0)
 
         self.reader = Reader(fmt, path)
         self._Fs = Frequency.get(Fs)
@@ -325,10 +356,11 @@ el.replaceWith(d);
         self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
         self._samples = np.empty(self._nfft, dtype=np.complex64)
         self._psd = np.empty(self._nfft, dtype=np.float32)
-        self._block_size = 0
+        self._block_size = self._nfft
+        self._sweep_time = float(sweep_time)
 
     def show(self, ind=0):
-        print(&#34; &#34;*ind + &#34;Reader:&#34;)
+        print(&#34; &#34;*ind + f&#34;{type(self).__name__} Reader:&#34;)
         self.reader.show(ind+2)
 
     def reset(self):
@@ -365,6 +397,11 @@ el.replaceWith(d);
     def tot_time(self):
         return self.reader.max_samp/self.Fs
 
+    def skip_time(self, s):
+        samps = int(self.Fs * s)
+        # print(f&#34;Skipping {s:.3f}s, {samps} ({samps/self.reader.max_samp*100:.2f}%)&#34;)
+        self.reader.cur_samp += samps
+
     def get_fs(self):
         return self._Fs
     def set_fs(self, fs):
@@ -387,7 +424,13 @@ el.replaceWith(d);
         return self._block_size
     def set_block_size(self, size):
         self._block_size = size
-    block_size = property(get_block_size, set_block_size)</code></pre>
+    block_size = property(get_block_size, set_block_size)
+
+    def get_sweep_time(self):
+        return self._sweep_time
+    def set_sweep_time(self, ts):
+        self._sweep_time = ts
+    sweep_time = property(get_sweep_time, set_sweep_time)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -412,7 +455,8 @@ el.replaceWith(d);
     __slots__ = (
         &#34;mode&#34;, &#34;reader&#34;,
         &#34;f&#34;, &#34;_samples&#34;, &#34;_psd&#34;, &#34;_forward&#34;, &#34;_reverse&#34;,
-        &#34;_block_size&#34;, &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;
+        &#34;_Fs&#34;, &#34;_cf&#34;, &#34;_nfft&#34;,
+        &#34;_block_size&#34;, &#34;_sweep_time&#34;
     )
     def __init__(self, **kwargs):
         path = kwargs.get(&#34;path&#34;, None)
@@ -420,6 +464,7 @@ el.replaceWith(d);
         Fs = kwargs.get(&#34;Fs&#34;, 1)
         cf = kwargs.get(&#34;cf&#34;, 1)
         nfft = kwargs.get(&#34;nfft&#34;, 1024)
+        sweep_time = kwargs.get(&#34;sweep_time&#34;, 50.0)
 
         self.reader = Reader(fmt, path)
         self._Fs = Frequency.get(Fs)
@@ -430,10 +475,11 @@ el.replaceWith(d);
         self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
         self._samples = np.empty(self._nfft, dtype=np.complex64)
         self._psd = np.empty(self._nfft, dtype=np.float32)
-        self._block_size = 0
+        self._block_size = self._nfft
+        self._sweep_time = float(sweep_time)
 
     def show(self, ind=0):
-        print(&#34; &#34;*ind + &#34;Reader:&#34;)
+        print(&#34; &#34;*ind + f&#34;{type(self).__name__} Reader:&#34;)
         self.reader.show(ind+2)
 
     def reset(self):
@@ -470,6 +516,11 @@ el.replaceWith(d);
     def tot_time(self):
         return self.reader.max_samp/self.Fs
 
+    def skip_time(self, s):
+        samps = int(self.Fs * s)
+        # print(f&#34;Skipping {s:.3f}s, {samps} ({samps/self.reader.max_samp*100:.2f}%)&#34;)
+        self.reader.cur_samp += samps
+
     def get_fs(self):
         return self._Fs
     def set_fs(self, fs):
@@ -492,7 +543,13 @@ el.replaceWith(d);
         return self._block_size
     def set_block_size(self, size):
         self._block_size = size
-    block_size = property(get_block_size, set_block_size)</code></pre>
+    block_size = property(get_block_size, set_block_size)
+
+    def get_sweep_time(self):
+        return self._sweep_time
+    def set_sweep_time(self, ts):
+        self._sweep_time = ts
+    sweep_time = property(get_sweep_time, set_sweep_time)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -505,6 +562,17 @@ el.replaceWith(d);
 <pre><code class="python">@property
 def samples(self):
     return self._samples</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.sweep_time"><code class="name">prop <span class="ident">sweep_time</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_sweep_time(self):
+    return self._sweep_time</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -573,6 +641,19 @@ def samples(self):
 </summary>
 <pre><code class="python">def get_nfft(self):
     return self._nfft</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.get_sweep_time"><code class="name flex">
+<span>def <span class="ident">get_sweep_time</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_sweep_time(self):
+    return self._sweep_time</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -692,6 +773,19 @@ def samples(self):
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.model.base.Model.set_sweep_time"><code class="name flex">
+<span>def <span class="ident">set_sweep_time</span></span>(<span>self, ts)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_sweep_time(self, ts):
+    self._sweep_time = ts</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.model.base.Model.show"><code class="name flex">
 <span>def <span class="ident">show</span></span>(<span>self, ind=0)</span>
 </code></dt>
@@ -701,8 +795,23 @@ def samples(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def show(self, ind=0):
-    print(&#34; &#34;*ind + &#34;Reader:&#34;)
+    print(&#34; &#34;*ind + f&#34;{type(self).__name__} Reader:&#34;)
     self.reader.show(ind+2)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.skip_time"><code class="name flex">
+<span>def <span class="ident">skip_time</span></span>(<span>self, s)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def skip_time(self, s):
+    samps = int(self.Fs * s)
+    # print(f&#34;Skipping {s:.3f}s, {samps} ({samps/self.reader.max_samp*100:.2f}%)&#34;)
+    self.reader.cur_samp += samps</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -753,6 +862,7 @@ def samples(self):
 <li><code><a title="pyspecan.model.base.Model.get_cf" href="#pyspecan.model.base.Model.get_cf">get_cf</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.get_fs" href="#pyspecan.model.base.Model.get_fs">get_fs</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.get_nfft" href="#pyspecan.model.base.Model.get_nfft">get_nfft</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.get_sweep_time" href="#pyspecan.model.base.Model.get_sweep_time">get_sweep_time</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.mode" href="#pyspecan.model.base.Model.mode">mode</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.next" href="#pyspecan.model.base.Model.next">next</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.nfft" href="#pyspecan.model.base.Model.nfft">nfft</a></code></li>
@@ -765,7 +875,10 @@ def samples(self):
 <li><code><a title="pyspecan.model.base.Model.set_cf" href="#pyspecan.model.base.Model.set_cf">set_cf</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.set_fs" href="#pyspecan.model.base.Model.set_fs">set_fs</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.set_nfft" href="#pyspecan.model.base.Model.set_nfft">set_nfft</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.set_sweep_time" href="#pyspecan.model.base.Model.set_sweep_time">set_sweep_time</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.show" href="#pyspecan.model.base.Model.show">show</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.skip_time" href="#pyspecan.model.base.Model.skip_time">skip_time</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.sweep_time" href="#pyspecan.model.base.Model.sweep_time">sweep_time</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.tot_time" href="#pyspecan.model.base.Model.tot_time">tot_time</a></code></li>
 </ul>
 </li>

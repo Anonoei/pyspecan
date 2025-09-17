@@ -54,8 +54,8 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def args_rt(parser: argparse.ArgumentParser):
     define_args(parser)
-    parser.add_argument(&#34;--overlap&#34;, default=0.8, type=float)
-    parser.add_argument(&#34;--fftnum&#34;, default=4, type=int)</code></pre>
+    parser.add_argument(&#34;--overlap&#34;, default=0.6, type=float)
+    parser.add_argument(&#34;--block_max&#34;, default=102400, type=int)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -74,27 +74,30 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class ModelRT(Model):
-    __slots__ = (&#34;_overlap&#34;, &#34;_fftnum&#34;)
+    __slots__ = (&#34;_overlap&#34;, &#34;_block_max&#34;)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._overlap = kwargs.get(&#34;overlap&#34;, 0.8)
-        self._fftnum = kwargs.get(&#34;fftnum&#34;, 4)
+        self._overlap = kwargs.get(&#34;overlap&#34;, 0.6)
+        self._block_max = kwargs.get(&#34;block_max&#34;, 65536)
         self.update_blocksize()
 
     def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
         if self._samples is None:
             return None
         if self._psd is None:
+            if vbw is not None and vbw &lt;= 0.0:
+                vbw = None
             psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
             self._psd = psd
         return self._psd
 
     def update_blocksize(self):
-        self._block_size = self._nfft*self._fftnum
-
-    def set_nfft(self, nfft):
-        super().set_nfft(nfft)
-        self.update_blocksize()
+        print(f&#34;Updating block size - st: {self._sweep_time}&#34;)
+        self.block_size = int(self.Fs * (self._sweep_time/1000))
+        if self.block_size &gt; self._block_max:
+            self.block_size = self._block_max
+            super().set_sweep_time((self._block_size/self.Fs)*1000)
+        print(f&#34;Set block_size to {self._block_size}&#34;)
 
     def get_overlap(self):
         return self._overlap
@@ -104,12 +107,13 @@ el.replaceWith(d);
         self._overlap = float(overlap)
     overlap = property(get_overlap, set_overlap)
 
-    def get_fftnum(self):
-        return self._overlap
-    def set_fftnum(self, fftnum):
-        self._fftnum = int(fftnum)
+    def set_sweep_time(self, ts):
+        super().set_sweep_time(ts)
         self.update_blocksize()
-    fftnum = property(get_fftnum, set_fftnum)</code></pre>
+
+    def set_fs(self, fs):
+        super().set_fs(fs)
+        self.update_blocksize()</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
@@ -118,17 +122,6 @@ el.replaceWith(d);
 </ul>
 <h3>Instance variables</h3>
 <dl>
-<dt id="pyspecan.model.mode_rt.ModelRT.fftnum"><code class="name">prop <span class="ident">fftnum</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_fftnum(self):
-    return self._overlap</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 <dt id="pyspecan.model.mode_rt.ModelRT.overlap"><code class="name">prop <span class="ident">overlap</span></code></dt>
 <dd>
 <details class="source">
@@ -143,19 +136,6 @@ el.replaceWith(d);
 </dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.model.mode_rt.ModelRT.get_fftnum"><code class="name flex">
-<span>def <span class="ident">get_fftnum</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_fftnum(self):
-    return self._overlap</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 <dt id="pyspecan.model.mode_rt.ModelRT.get_overlap"><code class="name flex">
 <span>def <span class="ident">get_overlap</span></span>(<span>self)</span>
 </code></dt>
@@ -181,36 +161,24 @@ el.replaceWith(d);
     if self._samples is None:
         return None
     if self._psd is None:
+        if vbw is not None and vbw &lt;= 0.0:
+            vbw = None
         psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
         self._psd = psd
     return self._psd</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.set_fftnum"><code class="name flex">
-<span>def <span class="ident">set_fftnum</span></span>(<span>self, fftnum)</span>
+<dt id="pyspecan.model.mode_rt.ModelRT.set_fs"><code class="name flex">
+<span>def <span class="ident">set_fs</span></span>(<span>self, fs)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_fftnum(self, fftnum):
-    self._fftnum = int(fftnum)
-    self.update_blocksize()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.set_nfft"><code class="name flex">
-<span>def <span class="ident">set_nfft</span></span>(<span>self, nfft)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_nfft(self, nfft):
-    super().set_nfft(nfft)
+<pre><code class="python">def set_fs(self, fs):
+    super().set_fs(fs)
     self.update_blocksize()</code></pre>
 </details>
 <div class="desc"></div>
@@ -230,6 +198,20 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.model.mode_rt.ModelRT.set_sweep_time"><code class="name flex">
+<span>def <span class="ident">set_sweep_time</span></span>(<span>self, ts)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_sweep_time(self, ts):
+    super().set_sweep_time(ts)
+    self.update_blocksize()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.model.mode_rt.ModelRT.update_blocksize"><code class="name flex">
 <span>def <span class="ident">update_blocksize</span></span>(<span>self)</span>
 </code></dt>
@@ -239,7 +221,12 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def update_blocksize(self):
-    self._block_size = self._nfft*self._fftnum</code></pre>
+    print(f&#34;Updating block size - st: {self._sweep_time}&#34;)
+    self.block_size = int(self.Fs * (self._sweep_time/1000))
+    if self.block_size &gt; self._block_max:
+        self.block_size = self._block_max
+        super().set_sweep_time((self._block_size/self.Fs)*1000)
+    print(f&#34;Set block_size to {self._block_size}&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -268,14 +255,12 @@ el.replaceWith(d);
 <li>
 <h4><code><a title="pyspecan.model.mode_rt.ModelRT" href="#pyspecan.model.mode_rt.ModelRT">ModelRT</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.fftnum" href="#pyspecan.model.mode_rt.ModelRT.fftnum">fftnum</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.get_fftnum" href="#pyspecan.model.mode_rt.ModelRT.get_fftnum">get_fftnum</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.get_overlap" href="#pyspecan.model.mode_rt.ModelRT.get_overlap">get_overlap</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.overlap" href="#pyspecan.model.mode_rt.ModelRT.overlap">overlap</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.psd" href="#pyspecan.model.mode_rt.ModelRT.psd">psd</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_fftnum" href="#pyspecan.model.mode_rt.ModelRT.set_fftnum">set_fftnum</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_nfft" href="#pyspecan.model.mode_rt.ModelRT.set_nfft">set_nfft</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_fs" href="#pyspecan.model.mode_rt.ModelRT.set_fs">set_fs</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.set_overlap" href="#pyspecan.model.mode_rt.ModelRT.set_overlap">set_overlap</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_sweep_time" href="#pyspecan.model.mode_rt.ModelRT.set_sweep_time">set_sweep_time</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.update_blocksize" href="#pyspecan.model.mode_rt.ModelRT.update_blocksize">update_blocksize</a></code></li>
 </ul>
 </li>

@@ -67,13 +67,22 @@ el.replaceWith(d);
     def draw_settings(self, parent, row=0):
         row = super().draw_settings(parent, row)
 
+        var_overlap = tk.StringVar(self.fr_sets)
+        ent_overlap = ttk.Entry(self.fr_sets, textvariable=var_overlap, width=4)
+
         var_cmap = tk.StringVar(self.fr_sets)
         cb_cmap = ttk.Combobox(self.fr_sets, textvariable=var_cmap, width=9)
+
+        self.wg_sets[&#34;overlap&#34;] = ent_overlap
+        self.settings[&#34;overlap&#34;] = var_overlap
 
         self.wg_sets[&#34;cmap&#34;] = cb_cmap
         self.settings[&#34;cmap&#34;] = var_cmap
 
         ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
+        row += 1
+        ttk.Label(parent, text=&#34;Overlap&#34;).grid(row=row, column=0)
+        ent_overlap.grid(row=row, column=1)
         row += 1
         ttk.Label(parent, text=&#34;Colors&#34;).grid(row=row, column=0)
         cb_cmap.grid(row=row, column=1)
