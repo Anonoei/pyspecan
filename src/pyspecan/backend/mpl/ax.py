@@ -42,7 +42,7 @@ class Ax:
         else:
             line = self.art(name)
             if len(args) == 2:
-                line.set_data(*args)
+                line.set_data(*args) # type: ignore
             else:
                 print(f"plot args: {len(args)}")
                 print(f"plot kwargs: {kwargs}")
@@ -59,22 +59,22 @@ class Ax:
             self.add_artist(name, im)
         else:
             im = self.art(name)
-            im.set_data(*args)
+            im.set_data(*args) # type: ignore
             ks = [k for k in kwargs.keys()]
             for k in ks:
                 if k in ("cmap", "interpolation", "resample", "rasterized"):
-                    im.set(**{k: kwargs[k]})
+                    im.set(**{k: kwargs[k]}) # type: ignore
                     del kwargs[k]
         return im
 
     def set_data(self, name, *args):
-        self.art(name).set_data(*args)
+        self.art(name).set_data(*args) # type: ignore
 
     def set_xdata(self, name, x):
-        self.art(name).set_xdata(x)
+        self.art(name).set_xdata(x) # type: ignore
 
     def set_ydata(self, name, y):
-        self.art(name).set_ydata(y)
+        self.art(name).set_ydata(y) # type: ignore
 
     def set_xlim(self, xmin, xmax):
         self.ax.set_xlim(xmin, xmax)

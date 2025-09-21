@@ -35,8 +35,8 @@ class Scale(ttk.Frame):
             x, y = self.scale.coords()
             y = self.scale.winfo_y() - self.label.winfo_reqheight()
             self.label.place_configure(x=x, y=y)
-        from_ = ttk._to_number(self.scale["from"])
-        to = ttk._to_number(self.scale["to"])
+        from_ = ttk._to_number(self.scale["from"]) # type: ignore
+        to = ttk._to_number(self.scale["to"]) # type: ignore
         if to < from_:
             from_, to = to, from_
         newval = self._var.get()
