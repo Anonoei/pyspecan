@@ -1,5 +1,5 @@
 """Initialize tkGUI Controller"""
-import argparse
+import math
 import threading
 import time
 import datetime as dt
@@ -38,6 +38,7 @@ class Controller(_Controller):
         self.running = False
         self._stop = False
         self.time_show = kwargs.get("show", 50.0)
+        self.nfft_exp = int(math.log2(self.model.nfft))
         self.model.set_sweep_time(kwargs.get("sweep", 50.0))
         self._last_f = None
         self.plot: FreqPlotController = None # type: ignore
@@ -62,6 +63,7 @@ class Controller(_Controller):
         self.view.cb_file_fmt.bind("<<ComboboxSelected>>", self.handle_event)
         self.view.ent_fs.bind("<Return>", self.handle_event)
         self.view.ent_cf.bind("<Return>", self.handle_event)
+        self.view.ent_nfft_exp.bind("<Return>", self.handle_event)
 
         self.thread: threading.Thread = None # type: ignore
 
@@ -180,6 +182,11 @@ class Controller(_Controller):
 
         self.view.var_fs.set(str(self.model.Fs))
         self.view.var_cf.set(str(self.model.cf))
+        self.view.lbl_nfft.configure(text=str(self.model.nfft))
+        self.view.var_nfft_exp.set(str(self.nfft_exp))
+
+        self.view.lbl_block_size.configure(text=str(self.model.block_size))
+        self.view.lbl_sweep_samples.configure(text=str(self.model.sweep_samples()))
 
     def draw_view(self):
         pass
@@ -196,6 +203,8 @@ class Controller(_Controller):
             self.set_fs(self.view.var_fs.get())
         elif event.widget == self.view.ent_cf:
             self.set_cf(self.view.var_cf.get())
+        elif event.widget == self.view.ent_nfft_exp:
+            self.set_nfft(self.view.var_nfft_exp.get())
 
     def handle_btn_file(self):
         self.set_path(dialog.get_file(False))
@@ -214,6 +223,7 @@ class Controller(_Controller):
         except ValueError:
             pass
         self.view.var_sweep.set(f"{self.model.sweep_time:02.3f}")
+        self.draw_ctrl()
     def set_time_show(self, ts):
         try:
             ts = float(ts)
@@ -239,4 +249,13 @@ class Controller(_Controller):
     def set_cf(self, cf):
         self.model.cf = cf
         self.view.var_cf.set(str(self.model.cf))
+        self.draw_ctrl()
+
+    def set_nfft(self, exp):
+        exp = int(exp)
+        self.nfft_exp = exp
+        self.model.nfft = 2**exp
+        self.view.var_nfft_exp.set(str(self.nfft_exp))
+        self.view.lbl_nfft.config(text=str(self.model.nfft))
+        self.plot.update_nfft(self.model.nfft)
         self.draw_ctrl()

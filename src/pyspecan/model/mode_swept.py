@@ -33,3 +33,10 @@ class ModelSwept(Model):
             self.reader.cur_samp -= int(self.Fs * (self.sweep_time/1000))
             return True
         return False
+
+    def get_nfft(self):
+        return super().get_nfft()
+    def set_nfft(self, nfft):
+        super().set_nfft(nfft)
+        self.block_size = self._nfft
+    nfft = property(get_nfft, set_nfft)

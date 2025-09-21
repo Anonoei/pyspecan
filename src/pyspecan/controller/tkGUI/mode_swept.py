@@ -67,7 +67,7 @@ class PlotControllerSwept(FreqPlotController):
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -113,6 +113,9 @@ class PlotControllerSwept(FreqPlotController):
         spg_text = psd_text
         self.view.ax("spg").ax.set_xlim(0, fnum)
         self.view.ax("spg").ax.set_xticks(spg_tick, spg_text)
+
+    def update_nfft(self, nfft):
+        self.reset()
 
     def set_y(self):
         """Set plot ylimits"""

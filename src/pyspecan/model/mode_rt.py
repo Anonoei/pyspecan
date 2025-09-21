@@ -14,7 +14,7 @@ class ModelRT(Model):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._overlap = kwargs.get("overlap", 0.6)
-        self._block_max = kwargs.get("block_max", 65536)
+        self._block_max = kwargs.get("block_max", 102400)
         self.update_blocksize()
 
     def psd(self, vbw=None, win="blackman"): # type: ignore
@@ -28,12 +28,10 @@ class ModelRT(Model):
         return self._psd
 
     def update_blocksize(self):
-        print(f"Updating block size - st: {self._sweep_time}")
         self.block_size = int(self.Fs * (self._sweep_time/1000))
         if self.block_size > self._block_max:
             self.block_size = self._block_max
             super().set_sweep_time((self._block_size/self.Fs)*1000)
-        print(f"Set block_size to {self._block_size}")
 
     def get_overlap(self):
         return self._overlap
@@ -43,10 +41,16 @@ class ModelRT(Model):
         self._overlap = float(overlap)
     overlap = property(get_overlap, set_overlap)
 
+    def get_sweep_time(self):
+        return super().get_sweep_time()
     def set_sweep_time(self, ts):
         super().set_sweep_time(ts)
         self.update_blocksize()
+    sweep_time = property(get_sweep_time, set_sweep_time)
 
+    def get_fs(self):
+        return super().get_fs()
     def set_fs(self, fs):
         super().set_fs(fs)
         self.update_blocksize()
+    Fs = property(get_fs, set_fs)

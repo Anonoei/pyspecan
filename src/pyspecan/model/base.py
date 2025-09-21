@@ -103,12 +103,15 @@ class Model:
         return self._nfft
     def set_nfft(self, nfft):
         self._nfft = int(nfft)
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+        self._psd = np.empty(self._nfft, dtype=np.float32)
     nfft = property(get_nfft, set_nfft)
 
     def get_block_size(self):
         return self._block_size
     def set_block_size(self, size):
         self._block_size = size
+        self._samples = np.empty(self._block_size, dtype=np.complex64)
     block_size = property(get_block_size, set_block_size)
 
     def get_sweep_time(self):
@@ -116,3 +119,6 @@ class Model:
     def set_sweep_time(self, ts):
         self._sweep_time = ts
     sweep_time = property(get_sweep_time, set_sweep_time)
+
+    def sweep_samples(self):
+        return int(self.Fs * (self.sweep_time/1000))

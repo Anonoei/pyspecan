@@ -74,6 +74,9 @@ class FreqPlotController(_PlotController):
     def update_f(self, f):
         """Set plot xticks and xlabels"""
 
+    def update_nfft(self, nfft):
+        """Update plot nfft"""
+
     def plot(self, freq, psd):
         raise NotImplementedError()
 

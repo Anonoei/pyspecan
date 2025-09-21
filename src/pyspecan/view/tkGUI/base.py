@@ -132,6 +132,31 @@ class View(_View):
         self.ent_cf.grid(row=row,column=1, sticky=tk.W)
         root.pack(padx=2,pady=2, fill=tk.X)
 
+        root = ttk.Frame(parent) # Other params
+        root.columnconfigure(2, weight=1)
+        row = 0
+        self.var_nfft_exp = tk.StringVar(root)
+        ttk.Label(root, text="NFFT 2^").grid(row=row,column=0, sticky=tk.W)
+        self.ent_nfft_exp = ttk.Entry(root, textvariable=self.var_nfft_exp, width=2)
+        self.ent_nfft_exp.grid(row=row,column=1, sticky=tk.W)
+        self.lbl_nfft = ttk.Label(root)
+        self.lbl_nfft.grid(row=row,column=3, sticky=tk.NSEW)
+        root.pack(padx=2,pady=2, fill=tk.X)
+
+        ttk.Separator(parent, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=5)
+
+        root = ttk.Frame(parent) # Useful variables
+        row = 0
+        ttk.Label(root, text="Block size: ").grid(row=row, column=0, sticky=tk.W)
+        self.lbl_block_size = ttk.Label(root)
+        self.lbl_block_size.grid(row=row, column=1)
+        row += 1
+        ttk.Label(root, text="Sweep size: ").grid(row=row, column=0, sticky=tk.W)
+        self.lbl_sweep_samples = ttk.Label(root)
+        self.lbl_sweep_samples.grid(row=row, column=1)
+        root.pack(padx=2,pady=2, fill=tk.X)
+
+
     def mainloop(self):
         self.root.mainloop()
 
