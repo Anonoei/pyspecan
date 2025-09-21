@@ -163,19 +163,25 @@ el.replaceWith(d);
         return self._nfft
     def set_nfft(self, nfft):
         self._nfft = int(nfft)
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+        self._psd = np.empty(self._nfft, dtype=np.float32)
     nfft = property(get_nfft, set_nfft)
 
     def get_block_size(self):
         return self._block_size
     def set_block_size(self, size):
         self._block_size = size
+        self._samples = np.empty(self._block_size, dtype=np.complex64)
     block_size = property(get_block_size, set_block_size)
 
     def get_sweep_time(self):
         return self._sweep_time
     def set_sweep_time(self, ts):
         self._sweep_time = ts
-    sweep_time = property(get_sweep_time, set_sweep_time)</code></pre>
+    sweep_time = property(get_sweep_time, set_sweep_time)
+
+    def sweep_samples(self):
+        return int(self.Fs * (self.sweep_time/1000))</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Subclasses</h3>
@@ -310,19 +316,25 @@ el.replaceWith(d);
         return self._nfft
     def set_nfft(self, nfft):
         self._nfft = int(nfft)
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+        self._psd = np.empty(self._nfft, dtype=np.float32)
     nfft = property(get_nfft, set_nfft)
 
     def get_block_size(self):
         return self._block_size
     def set_block_size(self, size):
         self._block_size = size
+        self._samples = np.empty(self._block_size, dtype=np.complex64)
     block_size = property(get_block_size, set_block_size)
 
     def get_sweep_time(self):
         return self._sweep_time
     def set_sweep_time(self, ts):
         self._sweep_time = ts
-    sweep_time = property(get_sweep_time, set_sweep_time)</code></pre>
+    sweep_time = property(get_sweep_time, set_sweep_time)
+
+    def sweep_samples(self):
+        return int(self.Fs * (self.sweep_time/1000))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -418,19 +430,25 @@ el.replaceWith(d);
         return self._nfft
     def set_nfft(self, nfft):
         self._nfft = int(nfft)
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+        self._psd = np.empty(self._nfft, dtype=np.float32)
     nfft = property(get_nfft, set_nfft)
 
     def get_block_size(self):
         return self._block_size
     def set_block_size(self, size):
         self._block_size = size
+        self._samples = np.empty(self._block_size, dtype=np.complex64)
     block_size = property(get_block_size, set_block_size)
 
     def get_sweep_time(self):
         return self._sweep_time
     def set_sweep_time(self, ts):
         self._sweep_time = ts
-    sweep_time = property(get_sweep_time, set_sweep_time)</code></pre>
+    sweep_time = property(get_sweep_time, set_sweep_time)
+
+    def sweep_samples(self):
+        return int(self.Fs * (self.sweep_time/1000))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -537,19 +555,25 @@ el.replaceWith(d);
         return self._nfft
     def set_nfft(self, nfft):
         self._nfft = int(nfft)
+        self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+        self._psd = np.empty(self._nfft, dtype=np.float32)
     nfft = property(get_nfft, set_nfft)
 
     def get_block_size(self):
         return self._block_size
     def set_block_size(self, size):
         self._block_size = size
+        self._samples = np.empty(self._block_size, dtype=np.complex64)
     block_size = property(get_block_size, set_block_size)
 
     def get_sweep_time(self):
         return self._sweep_time
     def set_sweep_time(self, ts):
         self._sweep_time = ts
-    sweep_time = property(get_sweep_time, set_sweep_time)</code></pre>
+    sweep_time = property(get_sweep_time, set_sweep_time)
+
+    def sweep_samples(self):
+        return int(self.Fs * (self.sweep_time/1000))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -730,7 +754,8 @@ def samples(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_block_size(self, size):
-    self._block_size = size</code></pre>
+    self._block_size = size
+    self._samples = np.empty(self._block_size, dtype=np.complex64)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -769,7 +794,9 @@ def samples(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_nfft(self, nfft):
-    self._nfft = int(nfft)</code></pre>
+    self._nfft = int(nfft)
+    self.f = np.arange(-self._Fs.raw/2, self._Fs.raw/2, self._Fs.raw/self._nfft) + self._cf.raw
+    self._psd = np.empty(self._nfft, dtype=np.float32)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -812,6 +839,19 @@ def samples(self):
     samps = int(self.Fs * s)
     # print(f&#34;Skipping {s:.3f}s, {samps} ({samps/self.reader.max_samp*100:.2f}%)&#34;)
     self.reader.cur_samp += samps</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.base.Model.sweep_samples"><code class="name flex">
+<span>def <span class="ident">sweep_samples</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sweep_samples(self):
+    return int(self.Fs * (self.sweep_time/1000))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -878,6 +918,7 @@ def samples(self):
 <li><code><a title="pyspecan.model.base.Model.set_sweep_time" href="#pyspecan.model.base.Model.set_sweep_time">set_sweep_time</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.show" href="#pyspecan.model.base.Model.show">show</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.skip_time" href="#pyspecan.model.base.Model.skip_time">skip_time</a></code></li>
+<li><code><a title="pyspecan.model.base.Model.sweep_samples" href="#pyspecan.model.base.Model.sweep_samples">sweep_samples</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.sweep_time" href="#pyspecan.model.base.Model.sweep_time">sweep_time</a></code></li>
 <li><code><a title="pyspecan.model.base.Model.tot_time" href="#pyspecan.model.base.Model.tot_time">tot_time</a></code></li>
 </ul>

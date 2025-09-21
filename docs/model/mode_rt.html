@@ -78,7 +78,7 @@ el.replaceWith(d);
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._overlap = kwargs.get(&#34;overlap&#34;, 0.6)
-        self._block_max = kwargs.get(&#34;block_max&#34;, 65536)
+        self._block_max = kwargs.get(&#34;block_max&#34;, 102400)
         self.update_blocksize()
 
     def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
@@ -92,12 +92,10 @@ el.replaceWith(d);
         return self._psd
 
     def update_blocksize(self):
-        print(f&#34;Updating block size - st: {self._sweep_time}&#34;)
         self.block_size = int(self.Fs * (self._sweep_time/1000))
         if self.block_size &gt; self._block_max:
             self.block_size = self._block_max
             super().set_sweep_time((self._block_size/self.Fs)*1000)
-        print(f&#34;Set block_size to {self._block_size}&#34;)
 
     def get_overlap(self):
         return self._overlap
@@ -107,13 +105,19 @@ el.replaceWith(d);
         self._overlap = float(overlap)
     overlap = property(get_overlap, set_overlap)
 
+    def get_sweep_time(self):
+        return super().get_sweep_time()
     def set_sweep_time(self, ts):
         super().set_sweep_time(ts)
         self.update_blocksize()
+    sweep_time = property(get_sweep_time, set_sweep_time)
 
+    def get_fs(self):
+        return super().get_fs()
     def set_fs(self, fs):
         super().set_fs(fs)
-        self.update_blocksize()</code></pre>
+        self.update_blocksize()
+    Fs = property(get_fs, set_fs)</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
@@ -122,6 +126,17 @@ el.replaceWith(d);
 </ul>
 <h3>Instance variables</h3>
 <dl>
+<dt id="pyspecan.model.mode_rt.ModelRT.Fs"><code class="name">prop <span class="ident">Fs</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_fs(self):
+    return super().get_fs()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.model.mode_rt.ModelRT.overlap"><code class="name">prop <span class="ident">overlap</span></code></dt>
 <dd>
 <details class="source">
@@ -133,9 +148,33 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.model.mode_rt.ModelRT.sweep_time"><code class="name">prop <span class="ident">sweep_time</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_sweep_time(self):
+    return super().get_sweep_time()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 </dl>
 <h3>Methods</h3>
 <dl>
+<dt id="pyspecan.model.mode_rt.ModelRT.get_fs"><code class="name flex">
+<span>def <span class="ident">get_fs</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_fs(self):
+    return super().get_fs()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.model.mode_rt.ModelRT.get_overlap"><code class="name flex">
 <span>def <span class="ident">get_overlap</span></span>(<span>self)</span>
 </code></dt>
@@ -146,6 +185,19 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def get_overlap(self):
     return self._overlap</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode_rt.ModelRT.get_sweep_time"><code class="name flex">
+<span>def <span class="ident">get_sweep_time</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_sweep_time(self):
+    return super().get_sweep_time()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -221,12 +273,10 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def update_blocksize(self):
-    print(f&#34;Updating block size - st: {self._sweep_time}&#34;)
     self.block_size = int(self.Fs * (self._sweep_time/1000))
     if self.block_size &gt; self._block_max:
         self.block_size = self._block_max
-        super().set_sweep_time((self._block_size/self.Fs)*1000)
-    print(f&#34;Set block_size to {self._block_size}&#34;)</code></pre>
+        super().set_sweep_time((self._block_size/self.Fs)*1000)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -255,12 +305,16 @@ el.replaceWith(d);
 <li>
 <h4><code><a title="pyspecan.model.mode_rt.ModelRT" href="#pyspecan.model.mode_rt.ModelRT">ModelRT</a></code></h4>
 <ul class="two-column">
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.Fs" href="#pyspecan.model.mode_rt.ModelRT.Fs">Fs</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.get_fs" href="#pyspecan.model.mode_rt.ModelRT.get_fs">get_fs</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.get_overlap" href="#pyspecan.model.mode_rt.ModelRT.get_overlap">get_overlap</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.get_sweep_time" href="#pyspecan.model.mode_rt.ModelRT.get_sweep_time">get_sweep_time</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.overlap" href="#pyspecan.model.mode_rt.ModelRT.overlap">overlap</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.psd" href="#pyspecan.model.mode_rt.ModelRT.psd">psd</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.set_fs" href="#pyspecan.model.mode_rt.ModelRT.set_fs">set_fs</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.set_overlap" href="#pyspecan.model.mode_rt.ModelRT.set_overlap">set_overlap</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.set_sweep_time" href="#pyspecan.model.mode_rt.ModelRT.set_sweep_time">set_sweep_time</a></code></li>
+<li><code><a title="pyspecan.model.mode_rt.ModelRT.sweep_time" href="#pyspecan.model.mode_rt.ModelRT.sweep_time">sweep_time</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.update_blocksize" href="#pyspecan.model.mode_rt.ModelRT.update_blocksize">update_blocksize</a></code></li>
 </ul>
 </li>

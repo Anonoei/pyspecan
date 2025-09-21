@@ -84,6 +84,7 @@ el.replaceWith(d);
         self.running = False
         self._stop = False
         self.time_show = kwargs.get(&#34;show&#34;, 50.0)
+        self.nfft_exp = int(math.log2(self.model.nfft))
         self.model.set_sweep_time(kwargs.get(&#34;sweep&#34;, 50.0))
         self._last_f = None
         self.plot: FreqPlotController = None # type: ignore
@@ -108,6 +109,7 @@ el.replaceWith(d);
         self.view.cb_file_fmt.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
         self.view.ent_fs.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
         self.view.ent_cf.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+        self.view.ent_nfft_exp.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
 
         self.thread: threading.Thread = None # type: ignore
 
@@ -226,6 +228,11 @@ el.replaceWith(d);
 
         self.view.var_fs.set(str(self.model.Fs))
         self.view.var_cf.set(str(self.model.cf))
+        self.view.lbl_nfft.configure(text=str(self.model.nfft))
+        self.view.var_nfft_exp.set(str(self.nfft_exp))
+
+        self.view.lbl_block_size.configure(text=str(self.model.block_size))
+        self.view.lbl_sweep_samples.configure(text=str(self.model.sweep_samples()))
 
     def draw_view(self):
         pass
@@ -242,6 +249,8 @@ el.replaceWith(d);
             self.set_fs(self.view.var_fs.get())
         elif event.widget == self.view.ent_cf:
             self.set_cf(self.view.var_cf.get())
+        elif event.widget == self.view.ent_nfft_exp:
+            self.set_nfft(self.view.var_nfft_exp.get())
 
     def handle_btn_file(self):
         self.set_path(dialog.get_file(False))
@@ -260,6 +269,7 @@ el.replaceWith(d);
         except ValueError:
             pass
         self.view.var_sweep.set(f&#34;{self.model.sweep_time:02.3f}&#34;)
+        self.draw_ctrl()
     def set_time_show(self, ts):
         try:
             ts = float(ts)
@@ -285,6 +295,15 @@ el.replaceWith(d);
     def set_cf(self, cf):
         self.model.cf = cf
         self.view.var_cf.set(str(self.model.cf))
+        self.draw_ctrl()
+
+    def set_nfft(self, exp):
+        exp = int(exp)
+        self.nfft_exp = exp
+        self.model.nfft = 2**exp
+        self.view.var_nfft_exp.set(str(self.nfft_exp))
+        self.view.lbl_nfft.config(text=str(self.model.nfft))
+        self.plot.update_nfft(self.model.nfft)
         self.draw_ctrl()</code></pre>
 </details>
 <div class="desc"><p>tkGUI Controller</p></div>
@@ -327,7 +346,12 @@ el.replaceWith(d);
     self.view.var_file_fmt.set(str(self.model.reader.fmt.name))
 
     self.view.var_fs.set(str(self.model.Fs))
-    self.view.var_cf.set(str(self.model.cf))</code></pre>
+    self.view.var_cf.set(str(self.model.cf))
+    self.view.lbl_nfft.configure(text=str(self.model.nfft))
+    self.view.var_nfft_exp.set(str(self.nfft_exp))
+
+    self.view.lbl_block_size.configure(text=str(self.model.block_size))
+    self.view.lbl_sweep_samples.configure(text=str(self.model.sweep_samples()))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -394,7 +418,9 @@ el.replaceWith(d);
     elif event.widget == self.view.ent_fs:
         self.set_fs(self.view.var_fs.get())
     elif event.widget == self.view.ent_cf:
-        self.set_cf(self.view.var_cf.get())</code></pre>
+        self.set_cf(self.view.var_cf.get())
+    elif event.widget == self.view.ent_nfft_exp:
+        self.set_nfft(self.view.var_nfft_exp.get())</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -525,6 +551,25 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.controller.tkGUI.base.Controller.set_nfft"><code class="name flex">
+<span>def <span class="ident">set_nfft</span></span>(<span>self, exp)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_nfft(self, exp):
+    exp = int(exp)
+    self.nfft_exp = exp
+    self.model.nfft = 2**exp
+    self.view.var_nfft_exp.set(str(self.nfft_exp))
+    self.view.lbl_nfft.config(text=str(self.model.nfft))
+    self.plot.update_nfft(self.model.nfft)
+    self.draw_ctrl()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.controller.tkGUI.base.Controller.set_path"><code class="name flex">
 <span>def <span class="ident">set_path</span></span>(<span>self, path)</span>
 </code></dt>
@@ -589,7 +634,8 @@ el.replaceWith(d);
         self.model.set_sweep_time(float(ts))
     except ValueError:
         pass
-    self.view.var_sweep.set(f&#34;{self.model.sweep_time:02.3f}&#34;)</code></pre>
+    self.view.var_sweep.set(f&#34;{self.model.sweep_time:02.3f}&#34;)
+    self.draw_ctrl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -671,6 +717,7 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.set_cf" href="#pyspecan.controller.tkGUI.base.Controller.set_cf">set_cf</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.set_dtype" href="#pyspecan.controller.tkGUI.base.Controller.set_dtype">set_dtype</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.set_fs" href="#pyspecan.controller.tkGUI.base.Controller.set_fs">set_fs</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.Controller.set_nfft" href="#pyspecan.controller.tkGUI.base.Controller.set_nfft">set_nfft</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.set_path" href="#pyspecan.controller.tkGUI.base.Controller.set_path">set_path</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.set_samp" href="#pyspecan.controller.tkGUI.base.Controller.set_samp">set_samp</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.set_time_show" href="#pyspecan.controller.tkGUI.base.Controller.set_time_show">set_time_show</a></code></li>

@@ -96,15 +96,49 @@ el.replaceWith(d);
         if super().prev():
             self.reader.cur_samp -= int(self.Fs * (self.sweep_time/1000))
             return True
-        return False</code></pre>
+        return False
+
+    def get_nfft(self):
+        return super().get_nfft()
+    def set_nfft(self, nfft):
+        super().set_nfft(nfft)
+        self.block_size = self._nfft
+    nfft = property(get_nfft, set_nfft)</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li><a title="pyspecan.model.base.Model" href="base.html#pyspecan.model.base.Model">Model</a></li>
 </ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="pyspecan.model.mode_swept.ModelSwept.nfft"><code class="name">prop <span class="ident">nfft</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_nfft(self):
+    return super().get_nfft()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
 <h3>Methods</h3>
 <dl>
+<dt id="pyspecan.model.mode_swept.ModelSwept.get_nfft"><code class="name flex">
+<span>def <span class="ident">get_nfft</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_nfft(self):
+    return super().get_nfft()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.model.mode_swept.ModelSwept.next"><code class="name flex">
 <span>def <span class="ident">next</span></span>(<span>self)</span>
 </code></dt>
@@ -161,6 +195,20 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.model.mode_swept.ModelSwept.set_nfft"><code class="name flex">
+<span>def <span class="ident">set_nfft</span></span>(<span>self, nfft)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_nfft(self, nfft):
+    super().set_nfft(nfft)
+    self.block_size = self._nfft</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 </dl>
 </dd>
 </dl>
@@ -185,10 +233,13 @@ el.replaceWith(d);
 <ul>
 <li>
 <h4><code><a title="pyspecan.model.mode_swept.ModelSwept" href="#pyspecan.model.mode_swept.ModelSwept">ModelSwept</a></code></h4>
-<ul class="">
+<ul class="two-column">
+<li><code><a title="pyspecan.model.mode_swept.ModelSwept.get_nfft" href="#pyspecan.model.mode_swept.ModelSwept.get_nfft">get_nfft</a></code></li>
 <li><code><a title="pyspecan.model.mode_swept.ModelSwept.next" href="#pyspecan.model.mode_swept.ModelSwept.next">next</a></code></li>
+<li><code><a title="pyspecan.model.mode_swept.ModelSwept.nfft" href="#pyspecan.model.mode_swept.ModelSwept.nfft">nfft</a></code></li>
 <li><code><a title="pyspecan.model.mode_swept.ModelSwept.prev" href="#pyspecan.model.mode_swept.ModelSwept.prev">prev</a></code></li>
 <li><code><a title="pyspecan.model.mode_swept.ModelSwept.psd" href="#pyspecan.model.mode_swept.ModelSwept.psd">psd</a></code></li>
+<li><code><a title="pyspecan.model.mode_swept.ModelSwept.set_nfft" href="#pyspecan.model.mode_swept.ModelSwept.set_nfft">set_nfft</a></code></li>
 </ul>
 </li>
 </ul>

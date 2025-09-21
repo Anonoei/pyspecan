@@ -139,7 +139,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -185,6 +185,9 @@ el.replaceWith(d);
         spg_text = psd_text
         self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
         self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
+    def update_nfft(self, nfft):
+        self.reset()
 
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
@@ -343,7 +346,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -389,6 +392,9 @@ el.replaceWith(d);
         spg_text = psd_text
         self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
         self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
+    def update_nfft(self, nfft):
+        self.reset()
 
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
@@ -541,7 +547,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -587,6 +593,9 @@ el.replaceWith(d);
         spg_text = psd_text
         self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
         self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
+    def update_nfft(self, nfft):
+        self.reset()
 
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
@@ -739,7 +748,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -785,6 +794,9 @@ el.replaceWith(d);
         spg_text = psd_text
         self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
         self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
+    def update_nfft(self, nfft):
+        self.reset()
 
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
@@ -937,7 +949,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -983,6 +995,9 @@ el.replaceWith(d);
         spg_text = psd_text
         self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
         self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
+    def update_nfft(self, nfft):
+        self.reset()
 
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
@@ -1135,7 +1150,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -1181,6 +1196,9 @@ el.replaceWith(d);
         spg_text = psd_text
         self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
         self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
+    def update_nfft(self, nfft):
+        self.reset()
 
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
@@ -1333,7 +1351,7 @@ el.replaceWith(d);
     def reset(self):
         self.psd_min = None
         self.psd_max = None
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft))
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _toggle_show(self):
@@ -1379,6 +1397,9 @@ el.replaceWith(d);
         spg_text = psd_text
         self.view.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
         self.view.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
+
+    def update_nfft(self, nfft):
+        self.reset()
 
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
@@ -1498,7 +1519,7 @@ el.replaceWith(d);
 <pre><code class="python">def reset(self):
     self.psd_min = None
     self.psd_max = None
-    self.psds = np.zeros((self.max_count, self.parent.model.nfft))
+    self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
     self.psds[:,:] = -np.inf</code></pre>
 </details>
 <div class="desc"><p>Reset plot view</p></div>
@@ -1606,6 +1627,7 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f">update_f</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft">update_nfft</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
 </ul>
