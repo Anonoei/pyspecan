@@ -122,8 +122,8 @@ class Frequency(SI):
     _units = {
         0: ("Hz",""),
         3: ("kHz","k"),
-        6: ("MHz","m"),
-        9: ("GHz","g")
+        6: ("MHz","M"),
+        9: ("GHz","G")
     }
 
 if __name__ == "__main__":
