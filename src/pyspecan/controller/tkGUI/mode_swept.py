@@ -13,10 +13,14 @@ from .plot_base import define_args as freq_args
 
 from .plot_base import FreqPlotController
 
+class ModeConfig:
+    psd = True
+    spg = False
+
 def args_swept(parser: argparse.ArgumentParser):
     ctrl = base_args(parser)
     freq_args(parser)
-    mode = ctrl.add_argument_group("SWEPT mode")
+    mode = parser.add_argument_group("SWEPT mode")
     mode.add_argument("--psd", action="store_false", help="show psd")
     mode.add_argument("--spg", action="store_true", help="show spectrogram")
 
@@ -36,8 +40,8 @@ class PlotControllerSwept(FreqPlotController):
     def __init__(self, parent, view, **kwargs):
         super().__init__(parent, view, **kwargs)
         self.view: PlotSwept = self.view # type: ignore
-        self.show_psd = int(kwargs.get("psd", True))
-        self.show_spg = int(kwargs.get("spg", False))
+        self.show_psd = int(kwargs.get("psd", ModeConfig.psd))
+        self.show_spg = int(kwargs.get("spg", ModeConfig.spg))
         self.view.settings["show_psd"].set(self.show_psd)
         self.view.wg_sets["show_psd"].configure(command=self.toggle_show_psd)
         self.view.settings["show_spg"].set(self.show_spg)

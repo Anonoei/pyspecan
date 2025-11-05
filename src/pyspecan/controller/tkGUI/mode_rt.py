@@ -15,20 +15,24 @@ from .plot_base import define_args as freq_args
 
 from .plot_base import FreqPlotController
 
+class ModeConfig:
+    x = 1001
+    y = 600
+    cmap = "hot"
+
 def args_rt(parser: argparse.ArgumentParser):
     ctrl = base_args(parser)
     freq_args(parser)
-    mode = ctrl.add_argument_group("RT mode")
-    mode.add_argument("--x", default=1001, type=int, help="histogram x pixels")
-    mode.add_argument("--y", default=600, type=int, help="histogram y pixels")
-    mode.add_argument("--cmap", default="hot", choices=[k for k in cmap.keys()], help="histogram color map")
+    mode = parser.add_argument_group("RT mode")
+    mode.add_argument("--x", default=ModeConfig.x, type=int, help="histogram x pixels")
+    mode.add_argument("--y", default=ModeConfig.y, type=int, help="histogram y pixels")
+    mode.add_argument("--cmap", default=ModeConfig.cmap, choices=[k for k in cmap.keys()], help="histogram color map")
 
 class ControllerRT(Controller):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.plot = PlotControllerRT(self, self.view.plot, **kwargs)
         self.draw()
-
 
     def loop(self):
         while self.running:
@@ -51,9 +55,9 @@ class PlotControllerRT(FreqPlotController):
         "_cmap_set", "_cb_drawn"
     )
     def __init__(self, parent, view, **kwargs):
-        self.x = kwargs.get("x", 1001)
-        self.y = kwargs.get("y", 600)
-        self.cmap = kwargs.get("cmap", "hot")
+        self.x = kwargs.get("x", ModeConfig.x)
+        self.y = kwargs.get("y", ModeConfig.y)
+        self.cmap = kwargs.get("cmap", ModeConfig.cmap)
         super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
