@@ -43,32 +43,37 @@ el.replaceWith(d);
 <section>
 </section>
 <section>
-</section>
-<section>
-<h2 class="section-title" id="header-classes">Classes</h2>
+<h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.controller.cui.Controller"><code class="flex name class">
-<span>class <span class="ident">Controller</span></span>
-<span>(</span><span>model: <a title="pyspecan.model.base.Model" href="../model/base.html#pyspecan.model.base.Model">Model</a>,<br>view: <a title="pyspecan.view.cui.View" href="../view/cui.html#pyspecan.view.cui.View">View</a>)</span>
+<dt id="pyspecan.controller.cui.ControllerArgs"><code class="name flex">
+<span>def <span class="ident">ControllerArgs</span></span>(<span>mode)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class Controller(_Controller):
-    &#34;&#34;&#34;CUI Controller&#34;&#34;&#34;
-    def __init__(self, model: Model, view: CUI):
-        super().__init__(model, view)
-        self.view: CUI = self.view # type hints</code></pre>
+<pre><code class="python">def ControllerArgs(mode):
+    return define_args</code></pre>
 </details>
-<div class="desc"><p>CUI Controller</p></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.controller.base.Controller" href="base.html#pyspecan.controller.base.Controller">Controller</a></li>
-</ul>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.cui.GetController"><code class="name flex">
+<span>def <span class="ident">GetController</span></span>(<span>mode)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def GetController(mode):
+    return Controller</code></pre>
+</details>
+<div class="desc"></div>
 </dd>
 </dl>
+</section>
+<section>
 </section>
 </article>
 <nav id="sidebar">
@@ -81,11 +86,10 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller" href="index.html">pyspecan.controller</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-classes">Classes</a></h3>
-<ul>
-<li>
-<h4><code><a title="pyspecan.controller.cui.Controller" href="#pyspecan.controller.cui.Controller">Controller</a></code></h4>
-</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pyspecan.controller.cui.ControllerArgs" href="#pyspecan.controller.cui.ControllerArgs">ControllerArgs</a></code></li>
+<li><code><a title="pyspecan.controller.cui.GetController" href="#pyspecan.controller.cui.GetController">GetController</a></code></li>
 </ul>
 </li>
 </ul>

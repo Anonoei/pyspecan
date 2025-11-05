@@ -56,10 +56,10 @@ el.replaceWith(d);
 <pre><code class="python">def args_rt(parser: argparse.ArgumentParser):
     ctrl = base_args(parser)
     freq_args(parser)
-    mode = ctrl.add_argument_group(&#34;RT mode&#34;)
-    mode.add_argument(&#34;--x&#34;, default=1001, type=int, help=&#34;histogram x pixels&#34;)
-    mode.add_argument(&#34;--y&#34;, default=600, type=int, help=&#34;histogram y pixels&#34;)
-    mode.add_argument(&#34;--cmap&#34;, default=&#34;hot&#34;, choices=[k for k in cmap.keys()], help=&#34;histogram color map&#34;)</code></pre>
+    mode = parser.add_argument_group(&#34;RT mode&#34;)
+    mode.add_argument(&#34;--x&#34;, default=ModeConfig.x, type=int, help=&#34;histogram x pixels&#34;)
+    mode.add_argument(&#34;--y&#34;, default=ModeConfig.y, type=int, help=&#34;histogram y pixels&#34;)
+    mode.add_argument(&#34;--cmap&#34;, default=ModeConfig.cmap, choices=[k for k in cmap.keys()], help=&#34;histogram color map&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -82,7 +82,6 @@ el.replaceWith(d);
         super().__init__(*args, **kwargs)
         self.plot = PlotControllerRT(self, self.view.plot, **kwargs)
         self.draw()
-
 
     def loop(self):
         while self.running:
@@ -132,6 +131,36 @@ el.replaceWith(d);
 </dd>
 </dl>
 </dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig"><code class="flex name class">
+<span>class <span class="ident">ModeConfig</span></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ModeConfig:
+    x = 1001
+    y = 600
+    cmap = &#34;hot&#34;</code></pre>
+</details>
+<div class="desc"></div>
+<h3>Class variables</h3>
+<dl>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig.x"><code class="name">var <span class="ident">x</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig.y"><code class="name">var <span class="ident">y</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
 <dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT"><code class="flex name class">
 <span>class <span class="ident">PlotControllerRT</span></span>
 <span>(</span><span>parent, view, **kwargs)</span>
@@ -148,9 +177,9 @@ el.replaceWith(d);
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
     def __init__(self, parent, view, **kwargs):
-        self.x = kwargs.get(&#34;x&#34;, 1001)
-        self.y = kwargs.get(&#34;y&#34;, 600)
-        self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
+        self.x = kwargs.get(&#34;x&#34;, ModeConfig.x)
+        self.y = kwargs.get(&#34;y&#34;, ModeConfig.y)
+        self.cmap = kwargs.get(&#34;cmap&#34;, ModeConfig.cmap)
         super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
@@ -276,9 +305,9 @@ el.replaceWith(d);
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
     def __init__(self, parent, view, **kwargs):
-        self.x = kwargs.get(&#34;x&#34;, 1001)
-        self.y = kwargs.get(&#34;y&#34;, 600)
-        self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
+        self.x = kwargs.get(&#34;x&#34;, ModeConfig.x)
+        self.y = kwargs.get(&#34;y&#34;, ModeConfig.y)
+        self.cmap = kwargs.get(&#34;cmap&#34;, ModeConfig.cmap)
         super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
@@ -398,9 +427,9 @@ el.replaceWith(d);
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
     def __init__(self, parent, view, **kwargs):
-        self.x = kwargs.get(&#34;x&#34;, 1001)
-        self.y = kwargs.get(&#34;y&#34;, 600)
-        self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
+        self.x = kwargs.get(&#34;x&#34;, ModeConfig.x)
+        self.y = kwargs.get(&#34;y&#34;, ModeConfig.y)
+        self.cmap = kwargs.get(&#34;cmap&#34;, ModeConfig.cmap)
         super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
@@ -520,9 +549,9 @@ el.replaceWith(d);
         &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
     )
     def __init__(self, parent, view, **kwargs):
-        self.x = kwargs.get(&#34;x&#34;, 1001)
-        self.y = kwargs.get(&#34;y&#34;, 600)
-        self.cmap = kwargs.get(&#34;cmap&#34;, &#34;hot&#34;)
+        self.x = kwargs.get(&#34;x&#34;, ModeConfig.x)
+        self.y = kwargs.get(&#34;y&#34;, ModeConfig.y)
+        self.cmap = kwargs.get(&#34;cmap&#34;, ModeConfig.cmap)
         super().__init__(parent, view, **kwargs)
         # self.view: viewPSD = self.view # type hint
         self._cmap_set = False
@@ -749,6 +778,14 @@ el.replaceWith(d);
 <h4><code><a title="pyspecan.controller.tkGUI.mode_rt.ControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.ControllerRT">ControllerRT</a></code></h4>
 <ul class="">
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.ControllerRT.loop" href="#pyspecan.controller.tkGUI.mode_rt.ControllerRT.loop">loop</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig">ModeConfig</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.cmap" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.cmap">cmap</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.x" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.x">x</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.y" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.y">y</a></code></li>
 </ul>
 </li>
 <li>

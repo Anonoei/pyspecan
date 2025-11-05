@@ -97,7 +97,7 @@ el.replaceWith(d);
         else:
             line = self.art(name)
             if len(args) == 2:
-                line.set_data(*args)
+                line.set_data(*args) # type: ignore
             else:
                 print(f&#34;plot args: {len(args)}&#34;)
                 print(f&#34;plot kwargs: {kwargs}&#34;)
@@ -114,22 +114,22 @@ el.replaceWith(d);
             self.add_artist(name, im)
         else:
             im = self.art(name)
-            im.set_data(*args)
+            im.set_data(*args) # type: ignore
             ks = [k for k in kwargs.keys()]
             for k in ks:
                 if k in (&#34;cmap&#34;, &#34;interpolation&#34;, &#34;resample&#34;, &#34;rasterized&#34;):
-                    im.set(**{k: kwargs[k]})
+                    im.set(**{k: kwargs[k]}) # type: ignore
                     del kwargs[k]
         return im
 
     def set_data(self, name, *args):
-        self.art(name).set_data(*args)
+        self.art(name).set_data(*args) # type: ignore
 
     def set_xdata(self, name, x):
-        self.art(name).set_xdata(x)
+        self.art(name).set_xdata(x) # type: ignore
 
     def set_ydata(self, name, y):
-        self.art(name).set_ydata(y)
+        self.art(name).set_ydata(y) # type: ignore
 
     def set_xlim(self, xmin, xmax):
         self.ax.set_xlim(xmin, xmax)
@@ -250,11 +250,11 @@ def fig(self):
         self.add_artist(name, im)
     else:
         im = self.art(name)
-        im.set_data(*args)
+        im.set_data(*args) # type: ignore
         ks = [k for k in kwargs.keys()]
         for k in ks:
             if k in (&#34;cmap&#34;, &#34;interpolation&#34;, &#34;resample&#34;, &#34;rasterized&#34;):
-                im.set(**{k: kwargs[k]})
+                im.set(**{k: kwargs[k]}) # type: ignore
                 del kwargs[k]
     return im</code></pre>
 </details>
@@ -280,7 +280,7 @@ def fig(self):
     else:
         line = self.art(name)
         if len(args) == 2:
-            line.set_data(*args)
+            line.set_data(*args) # type: ignore
         else:
             print(f&#34;plot args: {len(args)}&#34;)
             print(f&#34;plot kwargs: {kwargs}&#34;)
@@ -310,7 +310,7 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_data(self, name, *args):
-    self.art(name).set_data(*args)</code></pre>
+    self.art(name).set_data(*args) # type: ignore</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -323,7 +323,7 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_xdata(self, name, x):
-    self.art(name).set_xdata(x)</code></pre>
+    self.art(name).set_xdata(x) # type: ignore</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -349,7 +349,7 @@ def fig(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_ydata(self, name, y):
-    self.art(name).set_ydata(y)</code></pre>
+    self.art(name).set_ydata(y) # type: ignore</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
