@@ -21,5 +21,7 @@ from . import obj
 from . import utils
 
 # from .model.base import Model
+from .model.base import Model
+from .model.model import GetModel
 
 from .specan import SpecAn

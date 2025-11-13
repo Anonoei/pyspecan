@@ -13,12 +13,12 @@ def main():
     cf = 0
     nfft = 1024
 
-    pyspecan.config.MODE = pyspecan.Mode["SWEPT"]
+    mode = pyspecan.Mode.SWEPT
 
     vbw = 1000
     window = "blackman"
 
-    model = pyspecan.Model(path, fmt, nfft, Fs, cf)
+    model = pyspecan.GetModel(mode)(path=path, fmt=fmt, nfft=nfft, Fs=Fs, cf=cf)
 
     pmf = pyspecan.utils.ComplexPMF(256)
     # pmf = PMF(256)
