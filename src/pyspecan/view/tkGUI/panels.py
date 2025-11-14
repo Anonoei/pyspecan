@@ -8,7 +8,7 @@ class PanelView:
         self.main.pack(fill=tk.BOTH, expand=True)
 
         self.btn_row = ttk.Button(master, text="Add Row", style="AddRow.TButton")
-        self.btn_row.pack(side=tk.LEFT, padx=5)
+        self.btn_row.pack(side=tk.LEFT, padx=1)
 
     def update_layout(self):
         self.main.update_idletasks()
@@ -24,7 +24,7 @@ class PanelChild:
         self.main.pack(fill=tk.BOTH, expand=True)
 
         self.btn_col = ttk.Button(self.root, text="Add Col", style="AddCol.TButton")
-        self.btn_col.pack(side=tk.LEFT, padx=5)
+        self.btn_col.pack(side=tk.LEFT, padx=1)
         self.btn_close = ttk.Button(master, text="X", style="Close.TButton")
         self.btn_close.place(relx=1, rely=0, anchor=tk.NE, bordermode=tk.OUTSIDE)
 
