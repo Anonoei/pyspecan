@@ -36,8 +36,10 @@ class PanelControllerSwept(PanelController):
                     ch.destroy()
                 for ch in pane.settings.winfo_children():
                     ch.destroy()
+                self.del_active(child, pane, self.view[child][pane])
             plot = plots[view](self.parent, pane)
             self.view[child][pane] = plot
+            self.add_active(child, pane, plot)
 
 class ControllerSwept(Controller):
     def __init__(self, *args, **kwargs):

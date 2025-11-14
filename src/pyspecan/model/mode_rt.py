@@ -23,8 +23,8 @@ class ModelRT(Model):
         if vbw is not None and vbw <= 0.0:
             vbw = None
         psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
-        self._psd = psd
-        return self._psd
+        # self._psd = psd
+        return psd
 
     def update_blocksize(self):
         self.block_size = int(self.Fs * (self._sweep_time/1000))

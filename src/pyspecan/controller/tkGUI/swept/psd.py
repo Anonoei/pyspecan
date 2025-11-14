@@ -62,7 +62,7 @@ class PSD(FreqPlotController):
         self.psd_min = None
         self.psd_max = None
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         self.plotter.ax("psd").ax.set_title("PSD")
 
         if self.pane.sets["show_max"].get() == 1:

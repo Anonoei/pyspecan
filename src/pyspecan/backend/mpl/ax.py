@@ -91,12 +91,8 @@ class Ax:
             del kwargs["name"]
         else:
             name = len(self._art)
-        if self.art(name) is None:
-            surf = self.ax.plot_wireframe(*args, **kwargs)
-            self.add_artist(name, surf)
-        else:
-            surf = self.art(name)
-            surf.set_data_3d(*args)
+        surf = self.ax.plot_wireframe(*args, **kwargs) # type: ignore
+        # self.add_artist(name, surf)
         return surf
 
     def plot_surface(self, *args, **kwargs):
@@ -105,7 +101,7 @@ class Ax:
             del kwargs["name"]
         else:
             name = len(self._art)
-        surf = self.ax.plot_surface(*args, **kwargs)
+        surf = self.ax.plot_surface(*args, **kwargs) # type: ignore
         # self.add_artist(name, surf)
         return surf
 

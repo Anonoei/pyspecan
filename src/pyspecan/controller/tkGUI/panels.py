@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from ...view.tkGUI.panels import PanelView, PanelChild, Panel
+from .plot_base import TimePlotController, FreqPlotController, BlitPlot
 
 class PanelController:
     def __init__(self, parent, panel: PanelView):
@@ -10,11 +11,14 @@ class PanelController:
         self.rows = []
         self.cols = {}
         self.view = {}
+        self.active = []
 
         self.panel.btn_row.configure(command=self.add_row)
         self.add_row()
 
     def add_row(self):
+        if len(self.rows) > 5:
+            return
         frame = ttk.LabelFrame(self.panel.main, text=f"Row {len(self.rows)}")
         child = PanelChild(self, frame)
         self.rows.append(child)
@@ -36,6 +40,8 @@ class PanelController:
         self.rows.pop(idx).root.destroy()
 
     def add_col(self, child: PanelChild):
+        if len(self.cols[child]) > 5:
+            return
         frame = ttk.LabelFrame(child.main, text=f"Col {len(self.cols[child])}")
         pane = Panel(self, frame)
         self.cols[child].append(pane)
@@ -54,6 +60,10 @@ class PanelController:
     def del_col(self, child: PanelChild, pane: Panel):
         idx = self.cols[child].index(pane)
         child.main.remove(pane.master)
+        plot = self.view[child][pane]
+        if plot is not None:
+            self.active.pop(self.active.index(plot))
+        del self.view[child][pane]
         self.cols[child].pop(idx).root.destroy()
         if len(self.cols[child]) == 0:
             self.del_row(child)
@@ -73,11 +83,40 @@ class PanelController:
     def set_view(self, e, child: PanelChild, pane: Panel):
         raise NotImplementedError
 
-    def reset(self):
-        pass
-
     def get_pane(self, child: PanelChild, pane: Panel):
         return self.cols[child][self.cols[child].index(pane)]
 
     def get_view(self, child: PanelChild, pane: Panel):
         return self.view[child][pane]
+
+    def add_active(self, child, pane, plot):
+        self.active.append(plot)
+
+    def del_active(self, child, pane, plot):
+        plot.enabled = False
+        self.active.pop(self.active.index(plot))
+
+    def on_plot(self, model):
+        for view in self.active:
+            if not isinstance(view.plotter, BlitPlot):
+                view.plotter.cla()
+                print("Cleared plot!")
+            if isinstance(view, FreqPlotController):
+                vbw = float(view.pane.sets["vbw"].get())
+                window = view.pane.sets["window"].get()
+                view.plot(model.f, model.psd(vbw, window))
+            elif isinstance(view, TimePlotController):
+                view.plot(model.samples)
+    def on_update_f(self, f):
+        for view in self.active:
+            if isinstance(view, FreqPlotController):
+                view.update_f(f)
+
+    def on_update_nfft(self, nfft):
+        for view in self.active:
+            if isinstance(view, FreqPlotController):
+                view.update_nfft(nfft)
+
+    def on_reset(self):
+        for view in self.active:
+            view.reset()

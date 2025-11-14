@@ -14,8 +14,8 @@ class ModelSwept(Model):
         if vbw is not None and vbw <= 0.0:
             vbw = None
         psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
-        self._psd = psd
-        return self._psd
+        # self._psd = psd
+        return psd
 
     def next(self):
         if self.sweep_time <= 0.0:

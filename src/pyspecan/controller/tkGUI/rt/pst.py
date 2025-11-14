@@ -71,7 +71,7 @@ class PST(FreqPlotController):
         self.psd_min = None
         self.psd_max = None
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         self.plotter.ax("pst").ax.set_title(f"Persistent - {psd.shape[1]} FFTs")
 
         mat = matrix.cvec(self.x, self.y, psd, self.y_top, self.y_btm)

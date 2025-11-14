@@ -7,8 +7,8 @@ class PanelView:
         self.main = ttk.PanedWindow(master, orient=tk.VERTICAL)
         self.main.pack(fill=tk.BOTH, expand=True)
 
-        self.btn_row = ttk.Button(master, text="Add Row", style="AddRow.TButton")
-        self.btn_row.pack(side=tk.LEFT, padx=1)
+        self.btn_row = ttk.Button(master, text="+ ROW", style="AddRow.TButton")
+        self.btn_row.place(relx=1,rely=0, x=-100, anchor=tk.NE, bordermode=tk.OUTSIDE, height=30, width=60)
 
     def update_layout(self):
         self.main.update_idletasks()
@@ -23,10 +23,10 @@ class PanelChild:
         self.main = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         self.main.pack(fill=tk.BOTH, expand=True)
 
-        self.btn_col = ttk.Button(self.root, text="Add Col", style="AddCol.TButton")
-        self.btn_col.pack(side=tk.LEFT, padx=1)
+        self.btn_col = ttk.Button(master, text="+ COL", style="AddCol.TButton")
+        self.btn_col.place(relx=1,rely=0, x=-40, y=0, anchor=tk.NE, bordermode=tk.OUTSIDE, height=30, width=60)
         self.btn_close = ttk.Button(master, text="X", style="Close.TButton")
-        self.btn_close.place(relx=1, rely=0, anchor=tk.NE, bordermode=tk.OUTSIDE)
+        self.btn_close.place(relx=1, rely=0, anchor=tk.NE, bordermode=tk.OUTSIDE, height=30, width=30)
 
     def update_layout(self):
         self.main.update_idletasks()
@@ -61,6 +61,6 @@ class Panel:
         self.fr_main.pack(fill=tk.BOTH, expand=True)
 
         self.btn_toggle = ttk.Button(master, text="Settings", style="Settings.TButton")
-        self.btn_toggle.place(relx=0,rely=1, anchor=tk.SW)
+        self.btn_toggle.place(relx=0,rely=1, x=-5, y=5, anchor=tk.SW)
         self.btn_close = ttk.Button(master, text="X", style="Close.TButton")
-        self.btn_close.place(relx=1, rely=0, anchor=tk.NE, bordermode=tk.OUTSIDE)
+        self.btn_close.place(relx=1, rely=0, y=5, anchor=tk.NE, bordermode=tk.OUTSIDE, height=30, width=30)

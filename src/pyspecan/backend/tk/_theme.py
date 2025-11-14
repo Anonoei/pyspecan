@@ -87,7 +87,9 @@ class _Theme:
         style = {
             "TButton": {
                 "relief": "raised",
-                "padding": (5,2)
+                "padding": (5,2),
+                "anchor": "center",
+                "justify": "center"
             },
             "Settings.TButton": {
                 "font": ("TkDefaultFont", 6),
@@ -98,13 +100,22 @@ class _Theme:
                 "padding": (5,0)
             },
             "AddRow.TButton": {
-                "font": ("TkDefaultFont", 8),
+                "font": ("TkDefaultFont", 7),
                 "padding": (5,0)
             },
             "AddCol.TButton": {
-                "font": ("TkDefaultFont", 8),
+                "font": ("TkDefaultFont", 7),
                 "padding": (5,0)
             },
+            "Toggle.TButton": {
+                "font": ("TkDefaultFont", 7),
+                "padding": (5,0),
+                "highlightthickness": 0,
+                "focusthickness": 0,
+            },
+            "Time.TLabel": {
+                "font": ("TkDefaultFont", 8),
+            }
         }
         cls.configure(style)
         maps = {

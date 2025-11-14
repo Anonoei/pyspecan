@@ -1,9 +1,9 @@
 """Base Controllers for tkGUI Controller"""
 import argparse
+import time
 
 import tkinter as tk
 from tkinter import ttk
-
 import numpy as np
 
 from .panels import Panel
@@ -21,17 +21,30 @@ def define_args(parser: argparse.ArgumentParser, cfg):
 class _PlotController:
     """Controller for view.tkGUI.GUIPlot"""
     __slots__ = (
-        "parent", "pane", "plotter", "ready",
-        "fr_canv"
+        "parent", "pane", "plotter",
+        "ready", "enabled",
+        "btn_enable", "lbl_time", "fr_canv"
     )
     def __init__(self, parent, pane: Panel, **kwargs):
         self.parent = parent
         self.pane = pane
         self.ready = False
+        self.enabled = True
+        self.btn_enable = ttk.Button(pane.master, text="DISABLE", style="Toggle.TButton", command=self.toggle)
+        self.btn_enable.place(relx=1, rely=0, x=-100, y=5, anchor=tk.N, bordermode=tk.OUTSIDE, height=30, width=80)
+        self.lbl_time = ttk.Label(pane.master, text="00.000s", style="Time.TLabel")
+        self.lbl_time.place(relx=1, rely=0, x=-180, y=5, anchor=tk.N, bordermode=tk.OUTSIDE, height=20, width=60)
         self.plotter: Plot = None # type: ignore
 
         self.fr_canv = ttk.Frame(pane.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
+
+    def toggle(self, *args, **kwargs):
+        self.enabled = not self.enabled
+        if self.enabled:
+            self.btn_enable.config(text="DISABLE")
+        else:
+            self.btn_enable.config(text="ENABLE")
 
     def update(self):
         """Update view plot"""
@@ -43,6 +56,18 @@ class _PlotController:
 
     def plot(self, *args, **kwargs):
         """Update plot data"""
+        if not self.enabled:
+            return None
+        ptime = time.perf_counter()
+        self._plot(*args, **kwargs)
+        ptime = time.perf_counter() - ptime
+        try: # catch threading state mismatch
+            self.lbl_time.config(text=f"{ptime:06.3f}s")
+        except tk.TclError:
+            pass
+        return ptime
+
+    def _plot(self, *args, **kwargs):
         raise NotImplementedError()
 
     def draw_settings(self, row=0):
@@ -58,7 +83,7 @@ class TimePlotController(_PlotController):
     def update(self):
         self.plotter.canvas.draw()
 
-    def plot(self, samps):
+    def _plot(self, samps):
         raise NotImplementedError()
 
     def draw_settings(self, row=0):
@@ -93,7 +118,7 @@ class FreqPlotController(_PlotController):
     def update_nfft(self, nfft):
         """Update plot nfft"""
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         raise NotImplementedError()
 
     @property

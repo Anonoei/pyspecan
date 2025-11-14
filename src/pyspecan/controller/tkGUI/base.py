@@ -95,7 +95,6 @@ class Controller(_Controller):
         self.stop()
         self.on_reset()
         self.model.reset()
-        self.panel.reset()
         self.draw_tb()
 
     def prev(self):
@@ -148,46 +147,16 @@ class Controller(_Controller):
         return ptime
 
     def on_plot(self):
-        for child in self.panel.rows:
-            for pane in self.panel.cols[child]:
-                view = self.panel.view[child][pane]
-                if view is None:
-                    continue
-                if not isinstance(view.plotter, BlitPlot):
-                    view.plotter.cla()
-                    print("Cleared plot!")
-                if isinstance(view, FreqPlotController):
-                    vbw = float(pane.sets["vbw"].get())
-                    window = pane.sets["window"].get()
-                    view.plot(self.model.f, self.model.psd(vbw, window))
-                elif isinstance(view, TimePlotController):
-                    view.plot(self.model.samples)
+        self.panel.on_plot(self.model)
 
     def on_update_f(self, f):
-        for child in self.panel.rows:
-            for pane in self.panel.cols[child]:
-                view = self.panel.view[child][pane]
-                if view is None:
-                    continue
-                if isinstance(view, FreqPlotController):
-                    view.update_f(f)
+        self.panel.on_update_f(f)
 
     def on_update_nfft(self, nfft):
-        for child in self.panel.rows:
-            for pane in self.panel.cols[child]:
-                view = self.panel.view[child][pane]
-                if view is None:
-                    continue
-                if isinstance(view, FreqPlotController):
-                    view.update_nfft(nfft)
+        self.panel.on_update_nfft(nfft)
 
     def on_reset(self):
-        for child in self.panel.rows:
-            for pane in self.panel.cols[child]:
-                view = self.panel.view[child][pane]
-                if view is None:
-                    continue
-                view.reset()
+        self.panel.on_reset()
 
     def _check_f(self):
         def _update_f():
