@@ -76,7 +76,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(_PlotController):
-    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
+    &#34;&#34;&#34;Controller for view.tkGUI frequency-domain plots&#34;&#34;&#34;
     __slots__ = (
         &#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;,
         &#34;lbl_lo&#34;, &#34;lbl_hi&#34;
@@ -104,7 +104,7 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         raise NotImplementedError()
 
     @property
@@ -143,6 +143,7 @@ el.replaceWith(d);
 
         var_window = tk.StringVar(self.pane.settings, str(self.window))
         cb_window = ttk.Combobox(self.pane.settings, textvariable=var_window, width=9)
+        cb_window.configure(values=[k for k in WindowLUT.keys()])
         cb_window.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.pane.wgts[&#34;scale&#34;] = ent_scale
@@ -211,7 +212,7 @@ el.replaceWith(d);
         &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
         self.window = window</code></pre>
 </details>
-<div class="desc"><p>Controller for view.tkGUI.GUIFreqPlot</p></div>
+<div class="desc"><p>Controller for view.tkGUI frequency-domain plots</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li>pyspecan.controller.tkGUI.plot_base._PlotController</li>
@@ -219,8 +220,10 @@ el.replaceWith(d);
 <h3>Subclasses</h3>
 <ul class="hlist">
 <li><a title="pyspecan.controller.tkGUI.rt.pst.PST" href="rt/pst.html#pyspecan.controller.tkGUI.rt.pst.PST">PST</a></li>
+<li><a title="pyspecan.controller.tkGUI.rt.spg.SPG" href="rt/spg.html#pyspecan.controller.tkGUI.rt.spg.SPG">SPG</a></li>
 <li><a title="pyspecan.controller.tkGUI.swept.psd.PSD" href="swept/psd.html#pyspecan.controller.tkGUI.swept.psd.PSD">PSD</a></li>
 <li><a title="pyspecan.controller.tkGUI.swept.spg.SPG" href="swept/spg.html#pyspecan.controller.tkGUI.swept.spg.SPG">SPG</a></li>
+<li><a title="pyspecan.controller.tkGUI.swept.spg3d.SPG3D" href="swept/spg3d.html#pyspecan.controller.tkGUI.swept.spg3d.SPG3D">SPG3D</a></li>
 </ul>
 <h3>Instance variables</h3>
 <dl>
@@ -231,7 +234,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(_PlotController):
-    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
+    &#34;&#34;&#34;Controller for view.tkGUI frequency-domain plots&#34;&#34;&#34;
     __slots__ = (
         &#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;,
         &#34;lbl_lo&#34;, &#34;lbl_hi&#34;
@@ -259,7 +262,7 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         raise NotImplementedError()
 
     @property
@@ -298,6 +301,7 @@ el.replaceWith(d);
 
         var_window = tk.StringVar(self.pane.settings, str(self.window))
         cb_window = ttk.Combobox(self.pane.settings, textvariable=var_window, width=9)
+        cb_window.configure(values=[k for k in WindowLUT.keys()])
         cb_window.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.pane.wgts[&#34;scale&#34;] = ent_scale
@@ -375,7 +379,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(_PlotController):
-    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
+    &#34;&#34;&#34;Controller for view.tkGUI frequency-domain plots&#34;&#34;&#34;
     __slots__ = (
         &#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;,
         &#34;lbl_lo&#34;, &#34;lbl_hi&#34;
@@ -403,7 +407,7 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         raise NotImplementedError()
 
     @property
@@ -442,6 +446,7 @@ el.replaceWith(d);
 
         var_window = tk.StringVar(self.pane.settings, str(self.window))
         cb_window = ttk.Combobox(self.pane.settings, textvariable=var_window, width=9)
+        cb_window.configure(values=[k for k in WindowLUT.keys()])
         cb_window.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.pane.wgts[&#34;scale&#34;] = ent_scale
@@ -519,7 +524,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(_PlotController):
-    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
+    &#34;&#34;&#34;Controller for view.tkGUI frequency-domain plots&#34;&#34;&#34;
     __slots__ = (
         &#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;,
         &#34;lbl_lo&#34;, &#34;lbl_hi&#34;
@@ -547,7 +552,7 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         raise NotImplementedError()
 
     @property
@@ -586,6 +591,7 @@ el.replaceWith(d);
 
         var_window = tk.StringVar(self.pane.settings, str(self.window))
         cb_window = ttk.Combobox(self.pane.settings, textvariable=var_window, width=9)
+        cb_window.configure(values=[k for k in WindowLUT.keys()])
         cb_window.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.pane.wgts[&#34;scale&#34;] = ent_scale
@@ -663,7 +669,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(_PlotController):
-    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
+    &#34;&#34;&#34;Controller for view.tkGUI frequency-domain plots&#34;&#34;&#34;
     __slots__ = (
         &#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;,
         &#34;lbl_lo&#34;, &#34;lbl_hi&#34;
@@ -691,7 +697,7 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         raise NotImplementedError()
 
     @property
@@ -730,6 +736,7 @@ el.replaceWith(d);
 
         var_window = tk.StringVar(self.pane.settings, str(self.window))
         cb_window = ttk.Combobox(self.pane.settings, textvariable=var_window, width=9)
+        cb_window.configure(values=[k for k in WindowLUT.keys()])
         cb_window.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.pane.wgts[&#34;scale&#34;] = ent_scale
@@ -807,7 +814,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(_PlotController):
-    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
+    &#34;&#34;&#34;Controller for view.tkGUI frequency-domain plots&#34;&#34;&#34;
     __slots__ = (
         &#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;,
         &#34;lbl_lo&#34;, &#34;lbl_hi&#34;
@@ -835,7 +842,7 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         raise NotImplementedError()
 
     @property
@@ -874,6 +881,7 @@ el.replaceWith(d);
 
         var_window = tk.StringVar(self.pane.settings, str(self.window))
         cb_window = ttk.Combobox(self.pane.settings, textvariable=var_window, width=9)
+        cb_window.configure(values=[k for k in WindowLUT.keys()])
         cb_window.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.pane.wgts[&#34;scale&#34;] = ent_scale
@@ -951,7 +959,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class FreqPlotController(_PlotController):
-    &#34;&#34;&#34;Controller for view.tkGUI.GUIFreqPlot&#34;&#34;&#34;
+    &#34;&#34;&#34;Controller for view.tkGUI frequency-domain plots&#34;&#34;&#34;
     __slots__ = (
         &#34;window&#34;, &#34;vbw&#34;, &#34;scale&#34;, &#34;ref_level&#34;,
         &#34;lbl_lo&#34;, &#34;lbl_hi&#34;
@@ -979,7 +987,7 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         raise NotImplementedError()
 
     @property
@@ -1018,6 +1026,7 @@ el.replaceWith(d);
 
         var_window = tk.StringVar(self.pane.settings, str(self.window))
         cb_window = ttk.Combobox(self.pane.settings, textvariable=var_window, width=9)
+        cb_window.configure(values=[k for k in WindowLUT.keys()])
         cb_window.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
         self.pane.wgts[&#34;scale&#34;] = ent_scale
@@ -1140,6 +1149,7 @@ def y_top(self):
 
     var_window = tk.StringVar(self.pane.settings, str(self.window))
     cb_window = ttk.Combobox(self.pane.settings, textvariable=var_window, width=9)
+    cb_window.configure(values=[k for k in WindowLUT.keys()])
     cb_window.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
     self.pane.wgts[&#34;scale&#34;] = ent_scale
@@ -1186,19 +1196,6 @@ def y_top(self):
         self.set_window(self.pane.sets[&#34;window&#34;].get())</code></pre>
 </details>
 <div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot"><code class="name flex">
-<span>def <span class="ident">plot</span></span>(<span>self, freq, psd)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def plot(self, freq, psd):
-    raise NotImplementedError()</code></pre>
-</details>
-<div class="desc"><p>Update plot data</p></div>
 </dd>
 <dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level"><code class="name flex">
 <span>def <span class="ident">set_ref_level</span></span>(<span>self, ref)</span>
@@ -1314,6 +1311,74 @@ def y_top(self):
 </dd>
 </dl>
 </dd>
+<dt id="pyspecan.controller.tkGUI.plot_base.TimePlotController"><code class="flex name class">
+<span>class <span class="ident">TimePlotController</span></span>
+<span>(</span><span>parent,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class TimePlotController(_PlotController):
+    &#34;&#34;&#34;Controller for view.tkGUI time-domain plots&#34;&#34;&#34;
+    def __init__(self, parent, pane: Panel, **kwargs):
+        super().__init__(parent, pane)
+        self.draw_settings()
+
+    def update(self):
+        self.plotter.canvas.draw()
+
+    def _plot(self, samps):
+        raise NotImplementedError()
+
+    def draw_settings(self, row=0):
+        pass</code></pre>
+</details>
+<div class="desc"><p>Controller for view.tkGUI time-domain plots</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pyspecan.controller.tkGUI.plot_base._PlotController</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.tkGUI.rt.iq.IQ" href="rt/iq.html#pyspecan.controller.tkGUI.rt.iq.IQ">IQ</a></li>
+<li><a title="pyspecan.controller.tkGUI.rt.iq3d.IQ3D" href="rt/iq3d.html#pyspecan.controller.tkGUI.rt.iq3d.IQ3D">IQ3D</a></li>
+<li><a title="pyspecan.controller.tkGUI.rt.pmf.PMF" href="rt/pmf.html#pyspecan.controller.tkGUI.rt.pmf.PMF">PMF</a></li>
+<li><a title="pyspecan.controller.tkGUI.swept.iq.IQ" href="swept/iq.html#pyspecan.controller.tkGUI.swept.iq.IQ">IQ</a></li>
+<li><a title="pyspecan.controller.tkGUI.swept.iq3d.IQ3D" href="swept/iq3d.html#pyspecan.controller.tkGUI.swept.iq3d.IQ3D">IQ3D</a></li>
+<li><a title="pyspecan.controller.tkGUI.swept.pmf.PMF" href="swept/pmf.html#pyspecan.controller.tkGUI.swept.pmf.PMF">PMF</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.controller.tkGUI.plot_base.TimePlotController.draw_settings"><code class="name flex">
+<span>def <span class="ident">draw_settings</span></span>(<span>self, row=0)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def draw_settings(self, row=0):
+    pass</code></pre>
+</details>
+<div class="desc"><p>Initialize settings panel</p></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.plot_base.TimePlotController.update"><code class="name flex">
+<span>def <span class="ident">update</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update(self):
+    self.plotter.canvas.draw()</code></pre>
+</details>
+<div class="desc"><p>Update view plot</p></div>
+</dd>
+</dl>
+</dd>
 </dl>
 </section>
 </article>
@@ -1341,7 +1406,6 @@ def y_top(self):
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.handle_event" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.handle_event">handle_event</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.lbl_hi" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.lbl_hi">lbl_hi</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.lbl_lo" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.lbl_lo">lbl_lo</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot">plot</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.ref_level" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.ref_level">ref_level</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.scale" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.scale">scale</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
@@ -1355,6 +1419,13 @@ def y_top(self):
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.window" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.window">window</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.plot_base.TimePlotController" href="#pyspecan.controller.tkGUI.plot_base.TimePlotController">TimePlotController</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.TimePlotController.draw_settings" href="#pyspecan.controller.tkGUI.plot_base.TimePlotController.draw_settings">draw_settings</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.TimePlotController.update" href="#pyspecan.controller.tkGUI.plot_base.TimePlotController.update">update</a></code></li>
 </ul>
 </li>
 </ul>

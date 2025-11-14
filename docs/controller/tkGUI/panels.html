@@ -62,11 +62,14 @@ el.replaceWith(d);
         self.rows = []
         self.cols = {}
         self.view = {}
+        self.active = []
 
         self.panel.btn_row.configure(command=self.add_row)
         self.add_row()
 
     def add_row(self):
+        if len(self.rows) &gt; 5:
+            return
         frame = ttk.LabelFrame(self.panel.main, text=f&#34;Row {len(self.rows)}&#34;)
         child = PanelChild(self, frame)
         self.rows.append(child)
@@ -88,6 +91,8 @@ el.replaceWith(d);
         self.rows.pop(idx).root.destroy()
 
     def add_col(self, child: PanelChild):
+        if len(self.cols[child]) &gt; 5:
+            return
         frame = ttk.LabelFrame(child.main, text=f&#34;Col {len(self.cols[child])}&#34;)
         pane = Panel(self, frame)
         self.cols[child].append(pane)
@@ -106,6 +111,10 @@ el.replaceWith(d);
     def del_col(self, child: PanelChild, pane: Panel):
         idx = self.cols[child].index(pane)
         child.main.remove(pane.master)
+        plot = self.view[child][pane]
+        if plot is not None:
+            self.active.pop(self.active.index(plot))
+        del self.view[child][pane]
         self.cols[child].pop(idx).root.destroy()
         if len(self.cols[child]) == 0:
             self.del_row(child)
@@ -125,14 +134,43 @@ el.replaceWith(d);
     def set_view(self, e, child: PanelChild, pane: Panel):
         raise NotImplementedError
 
-    def reset(self):
-        pass
-
     def get_pane(self, child: PanelChild, pane: Panel):
         return self.cols[child][self.cols[child].index(pane)]
 
     def get_view(self, child: PanelChild, pane: Panel):
-        return self.view[child][pane]</code></pre>
+        return self.view[child][pane]
+
+    def add_active(self, child, pane, plot):
+        self.active.append(plot)
+
+    def del_active(self, child, pane, plot):
+        plot.enabled = False
+        self.active.pop(self.active.index(plot))
+
+    def on_plot(self, model):
+        for view in self.active:
+            if not isinstance(view.plotter, BlitPlot):
+                view.plotter.cla()
+                print(&#34;Cleared plot!&#34;)
+            if isinstance(view, FreqPlotController):
+                vbw = view.vbw
+                window = view.window
+                view.plot(model.f, model.psd(vbw, window))
+            elif isinstance(view, TimePlotController):
+                view.plot(model.samples)
+    def on_update_f(self, f):
+        for view in self.active:
+            if isinstance(view, FreqPlotController):
+                view.update_f(f)
+
+    def on_update_nfft(self, nfft):
+        for view in self.active:
+            if isinstance(view, FreqPlotController):
+                view.update_nfft(nfft)
+
+    def on_reset(self):
+        for view in self.active:
+            view.reset()</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Subclasses</h3>
@@ -142,6 +180,19 @@ el.replaceWith(d);
 </ul>
 <h3>Methods</h3>
 <dl>
+<dt id="pyspecan.controller.tkGUI.panels.PanelController.add_active"><code class="name flex">
+<span>def <span class="ident">add_active</span></span>(<span>self, child, pane, plot)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add_active(self, child, pane, plot):
+    self.active.append(plot)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.controller.tkGUI.panels.PanelController.add_col"><code class="name flex">
 <span>def <span class="ident">add_col</span></span>(<span>self,<br>child: <a title="pyspecan.view.tkGUI.panels.PanelChild" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelChild">PanelChild</a>)</span>
 </code></dt>
@@ -151,6 +202,8 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def add_col(self, child: PanelChild):
+    if len(self.cols[child]) &gt; 5:
+        return
     frame = ttk.LabelFrame(child.main, text=f&#34;Col {len(self.cols[child])}&#34;)
     pane = Panel(self, frame)
     self.cols[child].append(pane)
@@ -177,6 +230,8 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def add_row(self):
+    if len(self.rows) &gt; 5:
+        return
     frame = ttk.LabelFrame(self.panel.main, text=f&#34;Row {len(self.rows)}&#34;)
     child = PanelChild(self, frame)
     self.rows.append(child)
@@ -193,6 +248,20 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.controller.tkGUI.panels.PanelController.del_active"><code class="name flex">
+<span>def <span class="ident">del_active</span></span>(<span>self, child, pane, plot)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def del_active(self, child, pane, plot):
+    plot.enabled = False
+    self.active.pop(self.active.index(plot))</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.controller.tkGUI.panels.PanelController.del_col"><code class="name flex">
 <span>def <span class="ident">del_col</span></span>(<span>self,<br>child: <a title="pyspecan.view.tkGUI.panels.PanelChild" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelChild">PanelChild</a>,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>)</span>
 </code></dt>
@@ -204,6 +273,10 @@ el.replaceWith(d);
 <pre><code class="python">def del_col(self, child: PanelChild, pane: Panel):
     idx = self.cols[child].index(pane)
     child.main.remove(pane.master)
+    plot = self.view[child][pane]
+    if plot is not None:
+        self.active.pop(self.active.index(plot))
+    del self.view[child][pane]
     self.cols[child].pop(idx).root.destroy()
     if len(self.cols[child]) == 0:
         self.del_row(child)</code></pre>
@@ -252,16 +325,69 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.panels.PanelController.reset"><code class="name flex">
-<span>def <span class="ident">reset</span></span>(<span>self)</span>
+<dt id="pyspecan.controller.tkGUI.panels.PanelController.on_plot"><code class="name flex">
+<span>def <span class="ident">on_plot</span></span>(<span>self, model)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def reset(self):
-    pass</code></pre>
+<pre><code class="python">def on_plot(self, model):
+    for view in self.active:
+        if not isinstance(view.plotter, BlitPlot):
+            view.plotter.cla()
+            print(&#34;Cleared plot!&#34;)
+        if isinstance(view, FreqPlotController):
+            vbw = view.vbw
+            window = view.window
+            view.plot(model.f, model.psd(vbw, window))
+        elif isinstance(view, TimePlotController):
+            view.plot(model.samples)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.panels.PanelController.on_reset"><code class="name flex">
+<span>def <span class="ident">on_reset</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def on_reset(self):
+    for view in self.active:
+        view.reset()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.panels.PanelController.on_update_f"><code class="name flex">
+<span>def <span class="ident">on_update_f</span></span>(<span>self, f)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def on_update_f(self, f):
+    for view in self.active:
+        if isinstance(view, FreqPlotController):
+            view.update_f(f)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.panels.PanelController.on_update_nfft"><code class="name flex">
+<span>def <span class="ident">on_update_nfft</span></span>(<span>self, nfft)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def on_update_nfft(self, nfft):
+    for view in self.active:
+        if isinstance(view, FreqPlotController):
+            view.update_nfft(nfft)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -330,13 +456,18 @@ el.replaceWith(d);
 <li>
 <h4><code><a title="pyspecan.controller.tkGUI.panels.PanelController" href="#pyspecan.controller.tkGUI.panels.PanelController">PanelController</a></code></h4>
 <ul class="two-column">
+<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.add_active" href="#pyspecan.controller.tkGUI.panels.PanelController.add_active">add_active</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.add_col" href="#pyspecan.controller.tkGUI.panels.PanelController.add_col">add_col</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.add_row" href="#pyspecan.controller.tkGUI.panels.PanelController.add_row">add_row</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.del_active" href="#pyspecan.controller.tkGUI.panels.PanelController.del_active">del_active</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.del_col" href="#pyspecan.controller.tkGUI.panels.PanelController.del_col">del_col</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.del_row" href="#pyspecan.controller.tkGUI.panels.PanelController.del_row">del_row</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.get_pane" href="#pyspecan.controller.tkGUI.panels.PanelController.get_pane">get_pane</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.get_view" href="#pyspecan.controller.tkGUI.panels.PanelController.get_view">get_view</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.reset" href="#pyspecan.controller.tkGUI.panels.PanelController.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.on_plot" href="#pyspecan.controller.tkGUI.panels.PanelController.on_plot">on_plot</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.on_reset" href="#pyspecan.controller.tkGUI.panels.PanelController.on_reset">on_reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.on_update_f" href="#pyspecan.controller.tkGUI.panels.PanelController.on_update_f">on_update_f</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.on_update_nfft" href="#pyspecan.controller.tkGUI.panels.PanelController.on_update_nfft">on_update_nfft</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.set_settings" href="#pyspecan.controller.tkGUI.panels.PanelController.set_settings">set_settings</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.set_view" href="#pyspecan.controller.tkGUI.panels.PanelController.set_view">set_view</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.toggle_settings" href="#pyspecan.controller.tkGUI.panels.PanelController.toggle_settings">toggle_settings</a></code></li>

@@ -142,8 +142,10 @@ el.replaceWith(d);
                     ch.destroy()
                 for ch in pane.settings.winfo_children():
                     ch.destroy()
+                self.del_active(child, pane, self.view[child][pane])
             plot = plots[view](self.parent, pane)
-            self.view[child][pane] = plot</code></pre>
+            self.view[child][pane] = plot
+            self.add_active(child, pane, plot)</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
@@ -184,8 +186,10 @@ el.replaceWith(d);
                 ch.destroy()
             for ch in pane.settings.winfo_children():
                 ch.destroy()
+            self.del_active(child, pane, self.view[child][pane])
         plot = plots[view](self.parent, pane)
-        self.view[child][pane] = plot</code></pre>
+        self.view[child][pane] = plot
+        self.add_active(child, pane, plot)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>

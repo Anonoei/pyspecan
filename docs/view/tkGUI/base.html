@@ -60,6 +60,8 @@ el.replaceWith(d);
     &#34;&#34;&#34;Parent tkGUI view class&#34;&#34;&#34;
     def __init__(self, root=tk.Tk(), **kwargs):
         self.root = root
+        self.root.title(&#34;pyspecan&#34;)
+
         if config.MODE == Mode.SWEPT:
             self.root.title(&#34;pyspecan | Swept&#34;)
         elif config.MODE == Mode.RT:
@@ -68,8 +70,6 @@ el.replaceWith(d);
         theme_mpl.get(kwargs.get(&#34;theme&#34;, &#34;Dark&#34;))() # Set matplotlib theme
 
         # self.style = ttk.Style(root)
-        self.root.title(f&#34;pyspecan&#34;)
-        self.root.protocol(&#34;WM_DELETE_WINDOW&#34;, self.quit)
 
         self._main = ttk.Frame(self.root)
         self._main.pack(expand=True, fill=tk.BOTH)
@@ -207,11 +207,7 @@ el.replaceWith(d);
 
 
     def mainloop(self):
-        self.root.mainloop()
-
-    def quit(self):
-        self.root.quit()
-        self.root.destroy()</code></pre>
+        self.root.mainloop()</code></pre>
 </details>
 <div class="desc"><p>Parent tkGUI view class</p></div>
 <h3>Ancestors</h3>

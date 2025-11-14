@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.tkGUI.rt.pst API documentation</title>
+<title>pyspecan.controller.tkGUI.rt.spg API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.tkGUI.rt.pst</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.tkGUI.rt.spg</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -44,7 +44,7 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.pst.define_args"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.rt.spg.define_args"><code class="name flex">
 <span>def <span class="ident">define_args</span></span>(<span>parser: argparse.ArgumentParser)</span>
 </code></dt>
 <dd>
@@ -65,8 +65,43 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PST"><code class="flex name class">
-<span>class <span class="ident">PST</span></span>
+<dt id="pyspecan.controller.tkGUI.rt.spg.PlotConfig"><code class="flex name class">
+<span>class <span class="ident">PlotConfig</span></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PlotConfig:
+    ref_level = 0
+    scale_div = 10.0
+    vbw = 10.0
+    window = &#34;blackman&#34;</code></pre>
+</details>
+<div class="desc"></div>
+<h3>Class variables</h3>
+<dl>
+<dt id="pyspecan.controller.tkGUI.rt.spg.PlotConfig.ref_level"><code class="name">var <span class="ident">ref_level</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.rt.spg.PlotConfig.scale_div"><code class="name">var <span class="ident">scale_div</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.rt.spg.PlotConfig.vbw"><code class="name">var <span class="ident">vbw</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.rt.spg.PlotConfig.window"><code class="name">var <span class="ident">window</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="pyspecan.controller.tkGUI.rt.spg.SPG"><code class="flex name class">
+<span>class <span class="ident">SPG</span></span>
 <span>(</span><span>parent,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>,<br>**kwargs)</span>
 </code></dt>
 <dd>
@@ -74,11 +109,10 @@ el.replaceWith(d);
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class PST(FreqPlotController):
+<pre><code class="python">class SPG(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
-        self.x = kwargs.get(&#34;x&#34;, PlotConfig.x)
-        self.y = kwargs.get(&#34;y&#34;, PlotConfig.y)
-        self.cmap = kwargs.get(&#34;cmap&#34;, PlotConfig.cmap)
+        self.max_count = 256
+        self.psds: np.ndarray = None # type: ignore
         self.fmin = None
         self.fmax = None
         if not &#34;ref_level&#34; in kwargs:
@@ -90,56 +124,37 @@ el.replaceWith(d);
         if not &#34;window&#34; in kwargs:
             kwargs[&#34;vbw&#34;] = PlotConfig.vbw
         super().__init__(parent, pane, **kwargs)
-        self._cmap_set = False
-        self._cb_drawn = False
-
+        self.reset()
         fig = plt.figure(figsize=(5,5), layout=&#34;constrained&#34;)
 
         fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
         self.plotter = BlitPlot(fig) # type: ignore
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-        self.plotter.add_ax(&#34;pst&#34;, fig.add_subplot())
+        self.plotter.add_ax(&#34;spg&#34;, fig.add_subplot())
 
-        self.plotter.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
-        self.plotter.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
-        self.plotter.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
-        self.plotter.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
+        self.plotter.ax(&#34;spg&#34;).ax.set_autoscale_on(False)
+        self.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
         self.set_y()
         self.update()
 
     def reset(self):
-        self.psd_min = None
-        self.psd_max = None
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
+        self.psds[:,:] = -np.inf
 
     def _plot(self, freq, psd):
-        self.plotter.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psd.shape[1]} FFTs&#34;)
-
-        mat = matrix.cvec(self.x, self.y, psd, self.y_top, self.y_btm)
-        mat = mat / np.max(mat)
-
-        im = self.plotter.ax(&#34;pst&#34;).imshow(
-                mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
-                vmin=0, vmax=1,
-                aspect=&#34;auto&#34;,
-                interpolation=&#34;nearest&#34;, resample=False, rasterized=True
+        self.plotter.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
+        psd = np.clip(psd, self.y_btm, self.y_top)
+        self.psds = np.roll(self.psds, 1, axis=0)
+        self.psds[0,:] = psd
+        # print(self.psds.shape)
+        im = self.plotter.ax(&#34;spg&#34;).imshow(
+            self.psds, name=&#34;spg&#34;,
+            aspect=&#34;auto&#34;, origin=&#34;upper&#34;, cmap=&#34;magma&#34;,
+            interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
-
-        if not self._cb_drawn:
-            # print(&#34;Adding colorbar&#34;)
-            cb = self.plotter.fig.colorbar(
-                im, ax=self.plotter.ax(&#34;pst&#34;).ax, # type: ignore
-                pad=0.005, fraction=0.05
-            )
-            self.plotter.canvas.draw()
-            self._cb_drawn = True
-
-        if self._cmap_set:
-            self.plotter.ax(&#34;pst&#34;).set_ylim(0, self.y)
-            self._cmap_set = False
-
-        self._show_y_location(psd)
         self.update()
 
     def update_f(self, f):
@@ -149,74 +164,67 @@ el.replaceWith(d);
         else:
             self.fmin = fmin
             self.fmax = fmax
-        x_mul = [0.0,0.25,0.5,0.75,1.0]
+        psd_tick = np.linspace(fmin, fmax, 5)
+        psd_text = [str(Frequency.get(f)) for f in psd_tick]
 
-        x_tick = [self.x*m for m in x_mul]
-        x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.plotter.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
-        self.plotter.ax(&#34;pst&#34;).set_xlim(0, self.x)
-        self.update()
+        spg_tick = np.linspace(0, fnum+1, 5)
+        spg_text = psd_text
+        self.plotter.ax(&#34;spg&#34;).ax.set_xlim(0, fnum)
+        self.plotter.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
 
     def update_nfft(self, nfft):
+        self.psds = np.zeros((self.max_count, nfft), dtype=np.float32)
+        self.psds[:,:] = -np.inf
         self.reset()
 
     def set_y(self):
         &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-        y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-        y_max = self.y_top
-        y_min = self.y_btm
-        y_rng = abs(y_max - y_min)
-        #y_off = y_min if y_min &lt; 0 else -y_min
-        y_off = y_min
-
-        y_tick = [self.y*m for m in y_mul]
-        y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.plotter.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
-        self.plotter.ax(&#34;pst&#34;).set_ylim(0, self.y)
+        self.plotter.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)
 
     def draw_settings(self, row=0):
         row = super().draw_settings(row)
-        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.overlap))
-        ent_overlap = ttk.Entry(self.pane.settings, textvariable=var_overlap, width=4)
-        ent_overlap.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+        var_max_count = tk.StringVar(self.pane.settings, str(self.max_count))
+        ent_max_count = ttk.Entry(self.pane.settings, textvariable=var_max_count, width=10)
+        ent_max_count.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
 
-        var_cmap = tk.StringVar(self.pane.settings, str(self.cmap))
-        cb_cmap = ttk.Combobox(self.pane.settings, textvariable=var_cmap, width=9)
-        cb_cmap.configure(values=[k for k in cmap.keys()])
-        cb_cmap.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
-
-        self.pane.wgts[&#34;overlap&#34;] = ent_overlap
-        self.pane.sets[&#34;overlap&#34;] = var_overlap
-
-        self.pane.wgts[&#34;cmap&#34;] = cb_cmap
-        self.pane.sets[&#34;cmap&#34;] = var_cmap
+        self.pane.wgts[&#34;max_count&#34;] = ent_max_count
+        self.pane.sets[&#34;max_count&#34;] = var_max_count
 
         ttk.Separator(self.pane.settings, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
         row += 1
-        ttk.Label(self.pane.settings, text=&#34;Overlap&#34;).grid(row=row, column=0)
-        ent_overlap.grid(row=row, column=1)
+        ttk.Label(self.pane.settings, text=&#34;Spectrogram&#34;).grid(row=row, column=0,columnspan=2)
         row += 1
-        ttk.Label(self.pane.settings, text=&#34;Colors&#34;).grid(row=row, column=0)
-        cb_cmap.grid(row=row, column=1)
+        ttk.Label(self.pane.settings, text=&#34;Max Count&#34;).grid(row=row, column=0)
+        ent_max_count.grid(row=row, column=1)
         row += 1
         return row
 
     # --- GUI bind events and setters --- #
     def handle_event(self, event):
-        if event.widget == self.pane.wgts[&#34;cmap&#34;]:
-            self.set_cmap(self.pane.sets[&#34;cmap&#34;].get())
-        elif event.widget == self.pane.wgts[&#34;overlap&#34;]:
-            self.set_overlap(self.pane.sets[&#34;overlap&#34;].get())
+        if event.widget == self.pane.wgts[&#34;max_count&#34;]:
+            self.set_count(self.pane.sets[&#34;max_count&#34;].get())
         else:
             super().handle_event(event)
+
+    def set_count(self, count):
+        prev = int(self.max_count)
+        try:
+            count = int(count)
+            self.max_count = count
+        except ValueError:
+            count = self.max_count
+        self.pane.sets[&#34;count&#34;].set(str(self.max_count))
+        if not prev == self.max_count:
+            self.reset()
+
     def set_scale(self, scale):
-        prev = self.scale
+        prev = float(self.scale)
         super().set_scale(scale)
         if not prev == self.scale:
             self.set_y()
 
     def set_ref_level(self, ref):
-        prev = self.ref_level
+        prev = float(self.ref_level)
         super().set_ref_level(ref)
         if not prev == self.ref_level:
             self.set_y()
@@ -225,20 +233,8 @@ el.replaceWith(d);
         prev = float(self.vbw)
         super().set_vbw(smooth)
         if not prev == self.vbw:
-            pass
-
-    def set_cmap(self, _cmap):
-        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-        self.cmap = _cmap
-        self._cmap_set = True
-
-    def set_overlap(self, overlap):
-        try:
-            overlap = float(overlap)
-            self.parent.model.overlap = overlap
-        except ValueError:
-            overlap = self.parent.model.overlap
-        self.pane.sets[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+            self.psd_min = None
+            self.psd_max = None</code></pre>
 </details>
 <div class="desc"><p>Controller for view.tkGUI frequency-domain plots</p></div>
 <h3>Ancestors</h3>
@@ -248,7 +244,7 @@ el.replaceWith(d);
 </ul>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PST.handle_event"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.rt.spg.SPG.handle_event"><code class="name flex">
 <span>def <span class="ident">handle_event</span></span>(<span>self, event)</span>
 </code></dt>
 <dd>
@@ -257,16 +253,14 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def handle_event(self, event):
-    if event.widget == self.pane.wgts[&#34;cmap&#34;]:
-        self.set_cmap(self.pane.sets[&#34;cmap&#34;].get())
-    elif event.widget == self.pane.wgts[&#34;overlap&#34;]:
-        self.set_overlap(self.pane.sets[&#34;overlap&#34;].get())
+    if event.widget == self.pane.wgts[&#34;max_count&#34;]:
+        self.set_count(self.pane.sets[&#34;max_count&#34;].get())
     else:
         super().handle_event(event)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PST.reset"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.rt.spg.SPG.reset"><code class="name flex">
 <span>def <span class="ident">reset</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -275,45 +269,33 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def reset(self):
-    self.psd_min = None
-    self.psd_max = None</code></pre>
+    self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
+    self.psds[:,:] = -np.inf</code></pre>
 </details>
 <div class="desc"><p>Reset plot view</p></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PST.set_cmap"><code class="name flex">
-<span>def <span class="ident">set_cmap</span></span>(<span>self, _cmap)</span>
+<dt id="pyspecan.controller.tkGUI.rt.spg.SPG.set_count"><code class="name flex">
+<span>def <span class="ident">set_count</span></span>(<span>self, count)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_cmap(self, _cmap):
-    &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-    self.cmap = _cmap
-    self._cmap_set = True</code></pre>
-</details>
-<div class="desc"><p>Set plot color mapping</p></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PST.set_overlap"><code class="name flex">
-<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_overlap(self, overlap):
+<pre><code class="python">def set_count(self, count):
+    prev = int(self.max_count)
     try:
-        overlap = float(overlap)
-        self.parent.model.overlap = overlap
+        count = int(count)
+        self.max_count = count
     except ValueError:
-        overlap = self.parent.model.overlap
-    self.pane.sets[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+        count = self.max_count
+    self.pane.sets[&#34;count&#34;].set(str(self.max_count))
+    if not prev == self.max_count:
+        self.reset()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PST.set_y"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.rt.spg.SPG.set_y"><code class="name flex">
 <span>def <span class="ident">set_y</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -323,17 +305,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def set_y(self):
     &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
-    y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-    y_max = self.y_top
-    y_min = self.y_btm
-    y_rng = abs(y_max - y_min)
-    #y_off = y_min if y_min &lt; 0 else -y_min
-    y_off = y_min
-
-    y_tick = [self.y*m for m in y_mul]
-    y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-    self.plotter.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
-    self.plotter.ax(&#34;pst&#34;).set_ylim(0, self.y)</code></pre>
+    self.plotter.ax(&#34;spg&#34;).set_ylim(self.max_count, 0)</code></pre>
 </details>
 <div class="desc"><p>Set plot ylimits</p></div>
 </dd>
@@ -356,56 +328,6 @@ el.replaceWith(d);
 </li>
 </ul>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig"><code class="flex name class">
-<span>class <span class="ident">PlotConfig</span></span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class PlotConfig:
-    ref_level = 0
-    scale_div = 10.0
-    vbw = 0.0
-    window = &#34;blackman&#34;
-    x = 1001
-    y = 600
-    cmap = &#34;hot&#34;</code></pre>
-</details>
-<div class="desc"></div>
-<h3>Class variables</h3>
-<dl>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.ref_level"><code class="name">var <span class="ident">ref_level</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.scale_div"><code class="name">var <span class="ident">scale_div</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.vbw"><code class="name">var <span class="ident">vbw</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.window"><code class="name">var <span class="ident">window</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.x"><code class="name">var <span class="ident">x</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.y"><code class="name">var <span class="ident">y</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-</dl>
-</dd>
 </dl>
 </section>
 </article>
@@ -421,31 +343,27 @@ el.replaceWith(d);
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.define_args" href="#pyspecan.controller.tkGUI.rt.pst.define_args">define_args</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.spg.define_args" href="#pyspecan.controller.tkGUI.rt.spg.define_args">define_args</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.rt.pst.PST" href="#pyspecan.controller.tkGUI.rt.pst.PST">PST</a></code></h4>
+<h4><code><a title="pyspecan.controller.tkGUI.rt.spg.PlotConfig" href="#pyspecan.controller.tkGUI.rt.spg.PlotConfig">PlotConfig</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.handle_event" href="#pyspecan.controller.tkGUI.rt.pst.PST.handle_event">handle_event</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.reset" href="#pyspecan.controller.tkGUI.rt.pst.PST.reset">reset</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.set_cmap" href="#pyspecan.controller.tkGUI.rt.pst.PST.set_cmap">set_cmap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.set_overlap" href="#pyspecan.controller.tkGUI.rt.pst.PST.set_overlap">set_overlap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.set_y" href="#pyspecan.controller.tkGUI.rt.pst.PST.set_y">set_y</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.spg.PlotConfig.ref_level" href="#pyspecan.controller.tkGUI.rt.spg.PlotConfig.ref_level">ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.spg.PlotConfig.scale_div" href="#pyspecan.controller.tkGUI.rt.spg.PlotConfig.scale_div">scale_div</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.spg.PlotConfig.vbw" href="#pyspecan.controller.tkGUI.rt.spg.PlotConfig.vbw">vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.spg.PlotConfig.window" href="#pyspecan.controller.tkGUI.rt.spg.PlotConfig.window">window</a></code></li>
 </ul>
 </li>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig">PlotConfig</a></code></h4>
-<ul class="two-column">
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.cmap" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.cmap">cmap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.ref_level" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.ref_level">ref_level</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.scale_div" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.scale_div">scale_div</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.vbw" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.vbw">vbw</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.window" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.window">window</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.x" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.x">x</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.y" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.y">y</a></code></li>
+<h4><code><a title="pyspecan.controller.tkGUI.rt.spg.SPG" href="#pyspecan.controller.tkGUI.rt.spg.SPG">SPG</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.rt.spg.SPG.handle_event" href="#pyspecan.controller.tkGUI.rt.spg.SPG.handle_event">handle_event</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.spg.SPG.reset" href="#pyspecan.controller.tkGUI.rt.spg.SPG.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.spg.SPG.set_count" href="#pyspecan.controller.tkGUI.rt.spg.SPG.set_count">set_count</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.spg.SPG.set_y" href="#pyspecan.controller.tkGUI.rt.spg.SPG.set_y">set_y</a></code></li>
 </ul>
 </li>
 </ul>

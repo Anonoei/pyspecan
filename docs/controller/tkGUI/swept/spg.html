@@ -111,7 +111,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class SPG(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
-        self.max_count = 100
+        self.max_count = 256
         self.psds: np.ndarray = None # type: ignore
         self.fmin = None
         self.fmax = None
@@ -141,18 +141,18 @@ el.replaceWith(d);
         self.update()
 
     def reset(self):
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float16)
         self.psds[:,:] = -np.inf
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         self.plotter.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
+        psd = np.clip(psd, self.y_btm, self.y_top)
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
         im = self.plotter.ax(&#34;spg&#34;).imshow(
             self.psds, name=&#34;spg&#34;,
-            vmin=self.y_btm, vmax=self.y_top,
-            aspect=&#34;auto&#34;, origin=&#34;upper&#34;,
+            aspect=&#34;auto&#34;, origin=&#34;upper&#34;, cmap=&#34;magma&#34;,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
         self.update()
@@ -173,8 +173,9 @@ el.replaceWith(d);
         self.plotter.ax(&#34;spg&#34;).ax.set_xticks(spg_tick, spg_text)
 
     def update_nfft(self, nfft):
-        self.psds = np.zeros((self.max_count, nfft), dtype=np.float32)
-        self.psds[:,:] = -np.inf
+        self.reset()
+        # self.psds = np.zeros((self.max_count, nfft), dtype=np.float32)
+        # self.psds[:,:] = -np.inf
         self.reset()
 
     def set_y(self):
@@ -213,7 +214,7 @@ el.replaceWith(d);
             self.max_count = count
         except ValueError:
             count = self.max_count
-        self.pane.sets[&#34;count&#34;].set(str(self.max_count))
+        self.pane.sets[&#34;max_count&#34;].set(str(self.max_count))
         if not prev == self.max_count:
             self.reset()
 
@@ -236,7 +237,7 @@ el.replaceWith(d);
             self.psd_min = None
             self.psd_max = None</code></pre>
 </details>
-<div class="desc"><p>Controller for view.tkGUI.GUIFreqPlot</p></div>
+<div class="desc"><p>Controller for view.tkGUI frequency-domain plots</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></li>
@@ -269,7 +270,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def reset(self):
-    self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
+    self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float16)
     self.psds[:,:] = -np.inf</code></pre>
 </details>
 <div class="desc"><p>Reset plot view</p></div>
@@ -289,7 +290,7 @@ el.replaceWith(d);
         self.max_count = count
     except ValueError:
         count = self.max_count
-    self.pane.sets[&#34;count&#34;].set(str(self.max_count))
+    self.pane.sets[&#34;max_count&#34;].set(str(self.max_count))
     if not prev == self.max_count:
         self.reset()</code></pre>
 </details>
@@ -315,7 +316,6 @@ el.replaceWith(d);
 <li><code><b><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></b></code>:
 <ul class="hlist">
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings">draw_settings</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot">plot</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale">set_scale</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>

@@ -84,9 +84,9 @@ el.replaceWith(d);
         self.fr_main.pack(fill=tk.BOTH, expand=True)
 
         self.btn_toggle = ttk.Button(master, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
-        self.btn_toggle.place(relx=0,rely=1, anchor=tk.SW)
+        self.btn_toggle.place(relx=0,rely=1, x=-5, y=5, anchor=tk.SW)
         self.btn_close = ttk.Button(master, text=&#34;X&#34;, style=&#34;Close.TButton&#34;)
-        self.btn_close.place(relx=1, rely=0, anchor=tk.NE, bordermode=tk.OUTSIDE)</code></pre>
+        self.btn_close.place(relx=1, rely=0, y=5, anchor=tk.NE, bordermode=tk.OUTSIDE, height=30, width=30)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -108,10 +108,10 @@ el.replaceWith(d);
         self.main = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         self.main.pack(fill=tk.BOTH, expand=True)
 
-        self.btn_col = ttk.Button(self.root, text=&#34;Add Col&#34;, style=&#34;AddCol.TButton&#34;)
-        self.btn_col.pack(side=tk.LEFT, padx=5)
+        self.btn_col = ttk.Button(master, text=&#34;+ COL&#34;, style=&#34;AddCol.TButton&#34;)
+        self.btn_col.place(relx=1,rely=0, x=-40, y=0, anchor=tk.NE, bordermode=tk.OUTSIDE, height=30, width=60)
         self.btn_close = ttk.Button(master, text=&#34;X&#34;, style=&#34;Close.TButton&#34;)
-        self.btn_close.place(relx=1, rely=0, anchor=tk.NE, bordermode=tk.OUTSIDE)
+        self.btn_close.place(relx=1, rely=0, anchor=tk.NE, bordermode=tk.OUTSIDE, height=30, width=30)
 
     def update_layout(self):
         self.main.update_idletasks()
@@ -151,8 +151,8 @@ el.replaceWith(d);
         self.main = ttk.PanedWindow(master, orient=tk.VERTICAL)
         self.main.pack(fill=tk.BOTH, expand=True)
 
-        self.btn_row = ttk.Button(master, text=&#34;Add Row&#34;, style=&#34;AddRow.TButton&#34;)
-        self.btn_row.pack(side=tk.LEFT, padx=5)
+        self.btn_row = ttk.Button(master, text=&#34;+ ROW&#34;, style=&#34;AddRow.TButton&#34;)
+        self.btn_row.place(relx=1,rely=0, x=-100, anchor=tk.NE, bordermode=tk.OUTSIDE, height=30, width=60)
 
     def update_layout(self):
         self.main.update_idletasks()

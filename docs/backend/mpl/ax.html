@@ -103,6 +103,24 @@ el.replaceWith(d);
                 print(f&#34;plot kwargs: {kwargs}&#34;)
         return line
 
+    def plot3d(self, *args, **kwargs):
+        name = kwargs.get(&#34;name&#34;, None)
+        if name is not None:
+            del kwargs[&#34;name&#34;]
+        else:
+            name = len(self._art)
+        if self.art(name) is None:
+            line, = self.ax.plot(*args, **kwargs)
+            self.add_artist(name, line)
+        else:
+            line = self.art(name)
+            if len(args) == 3:
+                line.set_data_3d(*args) # type: ignore
+            else:
+                print(f&#34;plot args: {len(args)}&#34;)
+                print(f&#34;plot kwargs: {kwargs}&#34;)
+        return line
+
     def imshow(self, *args, **kwargs):
         name = kwargs.get(&#34;name&#34;, None)
         if name is not None:
@@ -121,6 +139,26 @@ el.replaceWith(d);
                     im.set(**{k: kwargs[k]}) # type: ignore
                     del kwargs[k]
         return im
+
+    def plot_wireframe(self, *args, **kwargs):
+        name = kwargs.get(&#34;name&#34;, None)
+        if name is not None:
+            del kwargs[&#34;name&#34;]
+        else:
+            name = len(self._art)
+        surf = self.ax.plot_wireframe(*args, **kwargs) # type: ignore
+        # self.add_artist(name, surf)
+        return surf
+
+    def plot_surface(self, *args, **kwargs):
+        name = kwargs.get(&#34;name&#34;, None)
+        if name is not None:
+            del kwargs[&#34;name&#34;]
+        else:
+            name = len(self._art)
+        surf = self.ax.plot_surface(*args, **kwargs) # type: ignore
+        # self.add_artist(name, surf)
+        return surf
 
     def set_data(self, name, *args):
         self.art(name).set_data(*args) # type: ignore
@@ -285,6 +323,74 @@ def fig(self):
             print(f&#34;plot args: {len(args)}&#34;)
             print(f&#34;plot kwargs: {kwargs}&#34;)
     return line</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.backend.mpl.ax.Ax.plot3d"><code class="name flex">
+<span>def <span class="ident">plot3d</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot3d(self, *args, **kwargs):
+    name = kwargs.get(&#34;name&#34;, None)
+    if name is not None:
+        del kwargs[&#34;name&#34;]
+    else:
+        name = len(self._art)
+    if self.art(name) is None:
+        line, = self.ax.plot(*args, **kwargs)
+        self.add_artist(name, line)
+    else:
+        line = self.art(name)
+        if len(args) == 3:
+            line.set_data_3d(*args) # type: ignore
+        else:
+            print(f&#34;plot args: {len(args)}&#34;)
+            print(f&#34;plot kwargs: {kwargs}&#34;)
+    return line</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.backend.mpl.ax.Ax.plot_surface"><code class="name flex">
+<span>def <span class="ident">plot_surface</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_surface(self, *args, **kwargs):
+    name = kwargs.get(&#34;name&#34;, None)
+    if name is not None:
+        del kwargs[&#34;name&#34;]
+    else:
+        name = len(self._art)
+    surf = self.ax.plot_surface(*args, **kwargs) # type: ignore
+    # self.add_artist(name, surf)
+    return surf</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.backend.mpl.ax.Ax.plot_wireframe"><code class="name flex">
+<span>def <span class="ident">plot_wireframe</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_wireframe(self, *args, **kwargs):
+    name = kwargs.get(&#34;name&#34;, None)
+    if name is not None:
+        del kwargs[&#34;name&#34;]
+    else:
+        name = len(self._art)
+    surf = self.ax.plot_wireframe(*args, **kwargs) # type: ignore
+    # self.add_artist(name, surf)
+    return surf</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -467,6 +573,9 @@ def fig(self):
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.fig" href="#pyspecan.backend.mpl.ax.Ax.fig">fig</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.imshow" href="#pyspecan.backend.mpl.ax.Ax.imshow">imshow</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.plot" href="#pyspecan.backend.mpl.ax.Ax.plot">plot</a></code></li>
+<li><code><a title="pyspecan.backend.mpl.ax.Ax.plot3d" href="#pyspecan.backend.mpl.ax.Ax.plot3d">plot3d</a></code></li>
+<li><code><a title="pyspecan.backend.mpl.ax.Ax.plot_surface" href="#pyspecan.backend.mpl.ax.Ax.plot_surface">plot_surface</a></code></li>
+<li><code><a title="pyspecan.backend.mpl.ax.Ax.plot_wireframe" href="#pyspecan.backend.mpl.ax.Ax.plot_wireframe">plot_wireframe</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.relim" href="#pyspecan.backend.mpl.ax.Ax.relim">relim</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.set_data" href="#pyspecan.backend.mpl.ax.Ax.set_data">set_data</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.set_xdata" href="#pyspecan.backend.mpl.ax.Ax.set_xdata">set_xdata</a></code></li>

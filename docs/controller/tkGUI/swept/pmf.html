@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.tkGUI.rt API documentation</title>
+<title>pyspecan.controller.tkGUI.swept.pmf API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,40 +33,124 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.tkGUI.rt</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.tkGUI.swept.pmf</code></h1>
 </header>
 <section id="section-intro">
 </section>
 <section>
-<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt><code class="name"><a title="pyspecan.controller.tkGUI.rt.iq" href="iq.html">pyspecan.controller.tkGUI.rt.iq</a></code></dt>
+<dt id="pyspecan.controller.tkGUI.swept.pmf.define_args"><code class="name flex">
+<span>def <span class="ident">define_args</span></span>(<span>parser: argparse.ArgumentParser)</span>
+</code></dt>
 <dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.controller.tkGUI.rt.iq3d" href="iq3d.html">pyspecan.controller.tkGUI.rt.iq3d</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.controller.tkGUI.rt.pmf" href="pmf.html">pyspecan.controller.tkGUI.rt.pmf</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.controller.tkGUI.rt.pst" href="pst.html">pyspecan.controller.tkGUI.rt.pst</a></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt><code class="name"><a title="pyspecan.controller.tkGUI.rt.spg" href="spg.html">pyspecan.controller.tkGUI.rt.spg</a></code></dt>
-<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def define_args(parser: argparse.ArgumentParser):
+    pass</code></pre>
+</details>
 <div class="desc"></div>
 </dd>
 </dl>
 </section>
 <section>
-</section>
-<section>
-</section>
-<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="pyspecan.controller.tkGUI.swept.pmf.PMF"><code class="flex name class">
+<span>class <span class="ident">PMF</span></span>
+<span>(</span><span>parent,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PMF(TimePlotController):
+    def __init__(self, parent, pane: Panel, **kwargs):
+        self.pmf = ComplexPMF(256)
+        super().__init__(parent, pane, **kwargs)
+        fig = plt.figure(figsize=(5,5), layout=&#34;constrained&#34;)
+
+        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
+        self.plotter = BlitPlot(fig) # type: ignore
+        self.plotter.canvas.draw()
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
+        self.plotter.add_ax(&#34;pmf&#34;, fig.add_subplot())
+
+        self.plotter.ax(&#34;pmf&#34;).ax.grid(True, alpha=0.2)
+
+        self.update()
+
+    def reset(self):
+        self.pmf = ComplexPMF(256)
+
+    def _plot(self, samps):
+        self.plotter.ax(&#34;pmf&#34;).ax.set_title(&#34;PMF&#34;)
+        self.pmf.update(samps)
+
+        x = self.pmf.x
+        y = self.pmf.y
+
+        line_real = self.plotter.ax(&#34;pmf&#34;).plot(y.real, x.real, name=&#34;real&#34;)
+        line_imag = self.plotter.ax(&#34;pmf&#34;).plot(y.imag, x.imag, name=&#34;imag&#34;)
+
+        self.update()
+
+    def draw_settings(self, row=0):
+        pass</code></pre>
+</details>
+<div class="desc"><p>Controller for view.tkGUI time-domain plots</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.tkGUI.plot_base.TimePlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.TimePlotController">TimePlotController</a></li>
+<li>pyspecan.controller.tkGUI.plot_base._PlotController</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.controller.tkGUI.swept.pmf.PMF.reset"><code class="name flex">
+<span>def <span class="ident">reset</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def reset(self):
+    self.pmf = ComplexPMF(256)</code></pre>
+</details>
+<div class="desc"><p>Reset plot view</p></div>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="pyspecan.controller.tkGUI.plot_base.TimePlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.TimePlotController">TimePlotController</a></b></code>:
+<ul class="hlist">
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.TimePlotController.draw_settings" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.TimePlotController.draw_settings">draw_settings</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.TimePlotController.update" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.TimePlotController.update">update</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="pyspecan.controller.tkGUI.swept.pmf.PlotConfig"><code class="flex name class">
+<span>class <span class="ident">PlotConfig</span></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PlotConfig:
+    pass</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
 </section>
 </article>
 <nav id="sidebar">
@@ -76,16 +160,25 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.controller.tkGUI" href="../index.html">pyspecan.controller.tkGUI</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.swept" href="index.html">pyspecan.controller.tkGUI.swept</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.swept.pmf.define_args" href="#pyspecan.controller.tkGUI.swept.pmf.define_args">define_args</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
-<li><code><a title="pyspecan.controller.tkGUI.rt.iq" href="iq.html">pyspecan.controller.tkGUI.rt.iq</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.iq3d" href="iq3d.html">pyspecan.controller.tkGUI.rt.iq3d</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pmf" href="pmf.html">pyspecan.controller.tkGUI.rt.pmf</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst" href="pst.html">pyspecan.controller.tkGUI.rt.pst</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.spg" href="spg.html">pyspecan.controller.tkGUI.rt.spg</a></code></li>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.swept.pmf.PMF" href="#pyspecan.controller.tkGUI.swept.pmf.PMF">PMF</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.swept.pmf.PMF.reset" href="#pyspecan.controller.tkGUI.swept.pmf.PMF.reset">reset</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.swept.pmf.PlotConfig" href="#pyspecan.controller.tkGUI.swept.pmf.PlotConfig">PlotConfig</a></code></h4>
+</li>
 </ul>
 </li>
 </ul>

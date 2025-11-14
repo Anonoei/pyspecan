@@ -75,12 +75,11 @@ el.replaceWith(d);
     def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
         if self._samples is None:
             return None
-        if self._psd is None:
-            if vbw is not None and vbw &lt;= 0.0:
-                vbw = None
-            psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
-            self._psd = psd
-        return self._psd
+        if vbw is not None and vbw &lt;= 0.0:
+            vbw = None
+        psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
+        # self._psd = psd
+        return psd
 
     def next(self):
         if self.sweep_time &lt;= 0.0:
@@ -186,12 +185,11 @@ el.replaceWith(d);
 <pre><code class="python">def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
     if self._samples is None:
         return None
-    if self._psd is None:
-        if vbw is not None and vbw &lt;= 0.0:
-            vbw = None
-        psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
-        self._psd = psd
-    return self._psd</code></pre>
+    if vbw is not None and vbw &lt;= 0.0:
+        vbw = None
+    psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
+    # self._psd = psd
+    return psd</code></pre>
 </details>
 <div class="desc"></div>
 </dd>

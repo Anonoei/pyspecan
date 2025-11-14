@@ -109,7 +109,7 @@ el.replaceWith(d);
         self.psd_min = None
         self.psd_max = None
 
-    def plot(self, freq, psd):
+    def _plot(self, freq, psd):
         self.plotter.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
 
         if self.pane.sets[&#34;show_max&#34;].get() == 1:
@@ -221,7 +221,7 @@ el.replaceWith(d);
             art.set_visible(True)
         self.update()</code></pre>
 </details>
-<div class="desc"><p>Controller for view.tkGUI.GUIFreqPlot</p></div>
+<div class="desc"><p>Controller for view.tkGUI frequency-domain plots</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
 <li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></li>
@@ -307,7 +307,6 @@ el.replaceWith(d);
 <li><code><b><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></b></code>:
 <ul class="hlist">
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings">draw_settings</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot">plot</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale">set_scale</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>

@@ -81,8 +81,7 @@ el.replaceWith(d);
     def __init__(self, model: Model, view: GUI, **kwargs):
         super().__init__(model, view)
         self.view: GUI = self.view # type hints
-        self.running = False
-        self._stop = False
+        self.dispatch: Dispatch = Dispatch(self)
         self.time_show = kwargs.get(&#34;show&#34;, 50.0)
         self.nfft_exp = int(math.log2(self.model.nfft))
         self.model.set_sweep_time(kwargs.get(&#34;sweep&#34;, 50.0))
@@ -111,128 +110,40 @@ el.replaceWith(d);
         self.view.ent_cf.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
         self.view.ent_nfft_exp.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
 
-        self.thread: threading.Thread = None # type: ignore
+        self.dispatch.start()
 
         style = kwargs.get(&#34;theme&#34;, &#34;Dark&#34;)
 
         theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]
 
+        self.view.root.protocol(&#34;WM_DELETE_WINDOW&#34;, self.quit)
+
     def start(self):
-        if self.running:
-            return
         if self.model.reader.path is None:
             return
-        self.running = True
         self.view.btn_start.config(state=tk.DISABLED)
         self.view.btn_stop.config(state=tk.ACTIVE)
-        self.thread = threading.Thread(target=self.loop)
-        self.thread.start()
+        self.dispatch.queue.put(CMD.START)
 
     def stop(self):
-        if not self._stop and not self.running:
-            return
-        self.running = False
         self.view.btn_stop.config(state=tk.DISABLED)
         self.view.btn_start.config(state=tk.ACTIVE)
-        self.thread.join(timeout=0.2)
+        self.dispatch.queue.put(CMD.STOP)
 
     def reset(self):
+        self.dispatch.queue.put(CMD.RESET)
         self.stop()
-        self.model.reset()
-        self.panel.reset()
-        self.draw_tb()
 
     def prev(self):
-        self.stop()
-        return self._prev()
+        self.dispatch.queue.put(CMD.PREV)
 
     def next(self):
-        self.stop()
-        return self._next()
+        self.dispatch.queue.put(CMD.NEXT)
 
-    def _prev(self):
-        valid = self.model.prev()
-        tplot = None
-        if valid:
-            tplot = self._plot()
-        return (valid, tplot)
-
-    def _next(self):
-        valid = self.model.next()
-        tplot = None
-        if valid:
-            tplot = self._plot()
-        return (valid, tplot)
-
-    def loop(self):
-        while self.running:
-            time_show = self.time_show/1000 # convert ms to s
-            valid, ptime = self._next()
-            if not valid or ptime is None:
-                break
-            wait = time_show-ptime
-            if wait &gt; 0:
-                self.view.lbl_msg.configure(text=&#34;&#34;)
-                time.sleep(wait)
-            else:
-                self.model.skip_time(-wait)
-                self.view.lbl_msg.configure(text=&#34;OVERFLOW&#34;)
-
-    def _plot(self):
-        if config.MON_MEM:
-            Memory().peak()
-        ptime = time.perf_counter()
-        self._check_f()
-        self.on_plot()
-        ptime = (time.perf_counter() - ptime)
-        self.view.var_draw_time.set(f&#34;{ptime:06.3f}s&#34;)
-        self.draw_tb()
-        # print(f&#34;Plotted in {ptime*1000:.1f}ms / {self.time_show}&#34;)
-        return ptime
-
-    def on_plot(self):
-        for child in self.panel.rows:
-            for pane in self.panel.cols[child]:
-                view = self.panel.view[child][pane]
-                if view is None:
-                    continue
-                if not isinstance(view.plotter, BlitPlot):
-                    view.plotter.cla()
-                    print(&#34;Cleared plot!&#34;)
-                if isinstance(view, FreqPlotController):
-                    vbw = float(pane.sets[&#34;vbw&#34;].get())
-                    window = pane.sets[&#34;window&#34;].get()
-                    view.plot(self.model.f, self.model.psd(vbw, window))
-
-    def on_update_f(self, f):
-        for child in self.panel.rows:
-            for pane in self.panel.cols[child]:
-                view = self.panel.view[child][pane]
-                if view is None:
-                    continue
-                if isinstance(view, FreqPlotController):
-                    view.update_f(f)
-
-    def on_update_nfft(self, nfft):
-        for child in self.panel.rows:
-            for pane in self.panel.cols[child]:
-                view = self.panel.view[child][pane]
-                if view is None:
-                    continue
-                if isinstance(view, FreqPlotController):
-                    view.update_nfft(nfft)
-
-    def _check_f(self):
-        def _update_f():
-            return (self.model.f[0], self.model.f[-1]+(self.model.f[-1]-self.model.f[-2]), len(self.model.f))
-        if self._last_f is None:
-            self._last_f = _update_f()
-            self.on_update_f(self._last_f)
-        elif not self.model.f[0] == self._last_f[0] and not len(self.model.f) == self._last_f[2]:
-            self._last_f = _update_f()
-            self.on_update_f(self._last_f)
-        else:
-            self.on_update_f(self._last_f)
+    def quit(self):
+        self.dispatch.stop()
+        self.view.root.quit()
+        self.view.root.destroy()
 
     def draw(self):
         self.draw_tb()
@@ -463,30 +374,6 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.base.Controller.loop"><code class="name flex">
-<span>def <span class="ident">loop</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def loop(self):
-    while self.running:
-        time_show = self.time_show/1000 # convert ms to s
-        valid, ptime = self._next()
-        if not valid or ptime is None:
-            break
-        wait = time_show-ptime
-        if wait &gt; 0:
-            self.view.lbl_msg.configure(text=&#34;&#34;)
-            time.sleep(wait)
-        else:
-            self.model.skip_time(-wait)
-            self.view.lbl_msg.configure(text=&#34;OVERFLOW&#34;)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 <dt id="pyspecan.controller.tkGUI.base.Controller.next"><code class="name flex">
 <span>def <span class="ident">next</span></span>(<span>self)</span>
 </code></dt>
@@ -496,70 +383,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def next(self):
-    self.stop()
-    return self._next()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.base.Controller.on_plot"><code class="name flex">
-<span>def <span class="ident">on_plot</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def on_plot(self):
-    for child in self.panel.rows:
-        for pane in self.panel.cols[child]:
-            view = self.panel.view[child][pane]
-            if view is None:
-                continue
-            if not isinstance(view.plotter, BlitPlot):
-                view.plotter.cla()
-                print(&#34;Cleared plot!&#34;)
-            if isinstance(view, FreqPlotController):
-                vbw = float(pane.sets[&#34;vbw&#34;].get())
-                window = pane.sets[&#34;window&#34;].get()
-                view.plot(self.model.f, self.model.psd(vbw, window))</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.base.Controller.on_update_f"><code class="name flex">
-<span>def <span class="ident">on_update_f</span></span>(<span>self, f)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def on_update_f(self, f):
-    for child in self.panel.rows:
-        for pane in self.panel.cols[child]:
-            view = self.panel.view[child][pane]
-            if view is None:
-                continue
-            if isinstance(view, FreqPlotController):
-                view.update_f(f)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.base.Controller.on_update_nfft"><code class="name flex">
-<span>def <span class="ident">on_update_nfft</span></span>(<span>self, nfft)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def on_update_nfft(self, nfft):
-    for child in self.panel.rows:
-        for pane in self.panel.cols[child]:
-            view = self.panel.view[child][pane]
-            if view is None:
-                continue
-            if isinstance(view, FreqPlotController):
-                view.update_nfft(nfft)</code></pre>
+    self.dispatch.queue.put(CMD.NEXT)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -572,8 +396,22 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def prev(self):
-    self.stop()
-    return self._prev()</code></pre>
+    self.dispatch.queue.put(CMD.PREV)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.base.Controller.quit"><code class="name flex">
+<span>def <span class="ident">quit</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def quit(self):
+    self.dispatch.stop()
+    self.view.root.quit()
+    self.view.root.destroy()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -586,10 +424,8 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def reset(self):
-    self.stop()
-    self.model.reset()
-    self.panel.reset()
-    self.draw_tb()</code></pre>
+    self.dispatch.queue.put(CMD.RESET)
+    self.stop()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -736,15 +572,11 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def start(self):
-    if self.running:
-        return
     if self.model.reader.path is None:
         return
-    self.running = True
     self.view.btn_start.config(state=tk.DISABLED)
     self.view.btn_stop.config(state=tk.ACTIVE)
-    self.thread = threading.Thread(target=self.loop)
-    self.thread.start()</code></pre>
+    self.dispatch.queue.put(CMD.START)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -757,12 +589,9 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def stop(self):
-    if not self._stop and not self.running:
-        return
-    self.running = False
     self.view.btn_stop.config(state=tk.DISABLED)
     self.view.btn_start.config(state=tk.ACTIVE)
-    self.thread.join(timeout=0.2)</code></pre>
+    self.dispatch.queue.put(CMD.STOP)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -798,12 +627,9 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.handle_btn_file" href="#pyspecan.controller.tkGUI.base.Controller.handle_btn_file">handle_btn_file</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.handle_event" href="#pyspecan.controller.tkGUI.base.Controller.handle_event">handle_event</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.handle_sld_samp" href="#pyspecan.controller.tkGUI.base.Controller.handle_sld_samp">handle_sld_samp</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.Controller.loop" href="#pyspecan.controller.tkGUI.base.Controller.loop">loop</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.next" href="#pyspecan.controller.tkGUI.base.Controller.next">next</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.Controller.on_plot" href="#pyspecan.controller.tkGUI.base.Controller.on_plot">on_plot</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.Controller.on_update_f" href="#pyspecan.controller.tkGUI.base.Controller.on_update_f">on_update_f</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.base.Controller.on_update_nfft" href="#pyspecan.controller.tkGUI.base.Controller.on_update_nfft">on_update_nfft</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.prev" href="#pyspecan.controller.tkGUI.base.Controller.prev">prev</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.base.Controller.quit" href="#pyspecan.controller.tkGUI.base.Controller.quit">quit</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.reset" href="#pyspecan.controller.tkGUI.base.Controller.reset">reset</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.set_cf" href="#pyspecan.controller.tkGUI.base.Controller.set_cf">set_cf</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.base.Controller.set_dtype" href="#pyspecan.controller.tkGUI.base.Controller.set_dtype">set_dtype</a></code></li>
