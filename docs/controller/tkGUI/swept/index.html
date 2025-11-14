@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.view.tkGUI.mode_rt API documentation</title>
+<title>pyspecan.controller.tkGUI.swept API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,112 +33,28 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.view.tkGUI.mode_rt</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.tkGUI.swept</code></h1>
 </header>
 <section id="section-intro">
 </section>
 <section>
-</section>
-<section>
-</section>
-<section>
-</section>
-<section>
-<h2 class="section-title" id="header-classes">Classes</h2>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt id="pyspecan.view.tkGUI.mode_rt.PlotRT"><code class="flex name class">
-<span>class <span class="ident">PlotRT</span></span>
-<span>(</span><span>view, root)</span>
-</code></dt>
+<dt><code class="name"><a title="pyspecan.controller.tkGUI.swept.psd" href="psd.html">pyspecan.controller.tkGUI.swept.psd</a></code></dt>
 <dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class PlotRT(GUIFreqPlot):
-    &#34;&#34;&#34;Manager for RT mode plots&#34;&#34;&#34;
-    def __init__(self, view, root):
-        fig = plt.figure(figsize=(5,5), layout=&#34;constrained&#34;)
-        super().__init__(view, root, fig)
-        self.gs = self.plotter.fig.add_gridspec(1,1)
-        self.plotter.add_ax(&#34;pst&#34;, fig.add_subplot(self.gs[0]))
-        self.gs.update()
-
-    def draw_settings(self, parent, row=0):
-        row = super().draw_settings(parent, row)
-
-        var_overlap = tk.StringVar(self.fr_sets)
-        ent_overlap = ttk.Entry(self.fr_sets, textvariable=var_overlap, width=4)
-
-        var_cmap = tk.StringVar(self.fr_sets)
-        cb_cmap = ttk.Combobox(self.fr_sets, textvariable=var_cmap, width=9)
-
-        self.wg_sets[&#34;overlap&#34;] = ent_overlap
-        self.settings[&#34;overlap&#34;] = var_overlap
-
-        self.wg_sets[&#34;cmap&#34;] = cb_cmap
-        self.settings[&#34;cmap&#34;] = var_cmap
-
-        ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-        row += 1
-        ttk.Label(parent, text=&#34;Overlap&#34;).grid(row=row, column=0)
-        ent_overlap.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;Colors&#34;).grid(row=row, column=0)
-        cb_cmap.grid(row=row, column=1)
-        row += 1
-        return row</code></pre>
-</details>
-<div class="desc"><p>Manager for RT mode plots</p></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.plot_base.GUIFreqPlot" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIFreqPlot">GUIFreqPlot</a></li>
-<li><a title="pyspecan.view.tkGUI.plot_base.GUIBlitPlot" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIBlitPlot">GUIBlitPlot</a></li>
-<li><a title="pyspecan.view.tkGUI.plot_base.GUIPlot" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIPlot">GUIPlot</a></li>
-</ul>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pyspecan.view.tkGUI.plot_base.GUIFreqPlot" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIFreqPlot">GUIFreqPlot</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pyspecan.view.tkGUI.plot_base.GUIFreqPlot.draw_settings" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIPlot.draw_settings">draw_settings</a></code></li>
-</ul>
-</li>
-</ul>
+<div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.tkGUI.mode_rt.ViewRT"><code class="flex name class">
-<span>class <span class="ident">ViewRT</span></span>
-<span>(</span><span>*args, **kwargs)</span>
-</code></dt>
+<dt><code class="name"><a title="pyspecan.controller.tkGUI.swept.spg" href="spg.html">pyspecan.controller.tkGUI.swept.spg</a></code></dt>
 <dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class ViewRT(View):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.root.title(f&#34;pyspecan | Real-Time&#34;)
-        self.plot = PlotRT(self, self.fr_view)</code></pre>
-</details>
-<div class="desc"><p>Parent tkGUI view class</p></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.base.View" href="base.html#pyspecan.view.tkGUI.base.View">View</a></li>
-<li><a title="pyspecan.view.base.View" href="../base.html#pyspecan.view.base.View">View</a></li>
-</ul>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pyspecan.view.tkGUI.base.View" href="base.html#pyspecan.view.tkGUI.base.View">View</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pyspecan.view.tkGUI.base.View.draw_ctrl" href="base.html#pyspecan.view.tkGUI.base.View.draw_ctrl">draw_ctrl</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.View.draw_tb" href="base.html#pyspecan.view.tkGUI.base.View.draw_tb">draw_tb</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.View.mainloop" href="../base.html#pyspecan.view.base.View.mainloop">mainloop</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.View.quit" href="../base.html#pyspecan.view.base.View.quit">quit</a></code></li>
-</ul>
-</li>
-</ul>
+<div class="desc"></div>
 </dd>
 </dl>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
 </section>
 </article>
 <nav id="sidebar">
@@ -148,17 +64,13 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.view.tkGUI" href="index.html">pyspecan.view.tkGUI</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI" href="../index.html">pyspecan.controller.tkGUI</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-classes">Classes</a></h3>
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li>
-<h4><code><a title="pyspecan.view.tkGUI.mode_rt.PlotRT" href="#pyspecan.view.tkGUI.mode_rt.PlotRT">PlotRT</a></code></h4>
-</li>
-<li>
-<h4><code><a title="pyspecan.view.tkGUI.mode_rt.ViewRT" href="#pyspecan.view.tkGUI.mode_rt.ViewRT">ViewRT</a></code></h4>
-</li>
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd" href="psd.html">pyspecan.controller.tkGUI.swept.psd</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.swept.spg" href="spg.html">pyspecan.controller.tkGUI.swept.spg</a></code></li>
 </ul>
 </li>
 </ul>

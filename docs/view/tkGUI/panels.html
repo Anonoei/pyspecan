@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.view.tkGUI.mode_swept API documentation</title>
+<title>pyspecan.view.tkGUI.panels API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.view.tkGUI.mode_swept</code></h1>
+<h1 class="title">Module <code>pyspecan.view.tkGUI.panels</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -46,142 +46,136 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.view.tkGUI.mode_swept.PlotSwept"><code class="flex name class">
-<span>class <span class="ident">PlotSwept</span></span>
-<span>(</span><span>view, root)</span>
+<dt id="pyspecan.view.tkGUI.panels.Panel"><code class="flex name class">
+<span>class <span class="ident">Panel</span></span>
+<span>(</span><span>parent, master)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class PlotSwept(GUIFreqPlot):
-    &#34;&#34;&#34;Manager for SWEPT mode plots&#34;&#34;&#34;
-    def __init__(self, view, root):
-        fig = plt.figure(figsize=(5,5), layout=&#34;constrained&#34;)
-        super().__init__(view, root, fig)
-        self.gs = self.plotter.fig.add_gridspec(2,1)
-        self.plotter.add_ax(&#34;psd&#34;, fig.add_subplot(self.gs[0]))
-        self.plotter.add_ax(&#34;spg&#34;, fig.add_subplot(self.gs[1]))
-        self.gs.update()
+<pre><code class="python">class Panel:
+    def __init__(self, parent, master):
+        self.parent = parent
+        self.master = master
+        self.root = ttk.Frame(master)
+        self.root.pack(fill=tk.BOTH, expand=True)
 
-    def draw_settings(self, parent, row=0):
-        var_show_psd = tk.IntVar(self.fr_sets)
-        chk_show_psd = ttk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_show_psd)
-        var_show_spg = tk.IntVar(self.fr_sets)
-        chk_show_spg = ttk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_show_spg)
+        self.wgts = {}
+        self.sets = {}
 
-        self.wg_sets[&#34;show_psd&#34;] = chk_show_psd
-        self.settings[&#34;show_psd&#34;] = var_show_psd
-        self.wg_sets[&#34;show_spg&#34;] = chk_show_spg
-        self.settings[&#34;show_spg&#34;] = var_show_spg
+        self.fr_sets = ttk.Frame(self.root, borderwidth=1, relief=tk.RAISED)
+        self.fr_sets.pack(side=tk.LEFT, fill=tk.Y)
 
-        ttk.Label(parent, text=&#34;Plots&#34;).grid(row=row, column=0,columnspan=2)
-        row += 1
-        ttk.Label(parent, text=&#34;PSD&#34;).grid(row=row, column=0)
-        chk_show_psd.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;SPG&#34;).grid(row=row, column=0)
-        chk_show_spg.grid(row=row, column=1)
-        row += 1
-        ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-        row += 1
+        self.lbl_sets = ttk.Label(self.fr_sets, text=&#34;Settings&#34;)
+        self.lbl_sets.pack(side=tk.TOP, fill=tk.X)
 
-        row = super().draw_settings(parent, row)
-        # row = self._draw_settings_freq(parent, row)
+        self.var_view = tk.StringVar(self.fr_sets)
+        self.cb_view = ttk.Combobox(self.fr_sets, textvariable=self.var_view, width=20)
+        self.cb_view.pack()
+        ttk.Separator(self.fr_sets, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=5)
 
-        row = self._draw_settings_psd(parent, row)
+        self.settings = ttk.Frame(self.fr_sets)
+        self.settings.pack(side=tk.TOP, fill=tk.BOTH)
+        self.fr_sets.pack_forget()
 
-        row = self._draw_settings_spectrogram(parent, row)
-        return row
+        self.fr_main = ttk.Frame(self.root)
+        self.fr_main.pack(fill=tk.BOTH, expand=True)
 
-    def _draw_settings_psd(self, parent, row):
-        var_psd_min = tk.IntVar(self.fr_sets)
-        chk_show_min = ttk.Checkbutton(parent, onvalue=1, offvalue=0,variable=var_psd_min)
-        var_psd_max = tk.IntVar(self.fr_sets)
-        chk_show_max = ttk.Checkbutton(parent, onvalue=1, offvalue=0, variable=var_psd_max)
-
-        self.wg_sets[&#34;show_min&#34;] = chk_show_min
-        self.settings[&#34;show_min&#34;] = var_psd_min
-        self.wg_sets[&#34;show_max&#34;] = chk_show_max
-        self.settings[&#34;show_max&#34;] = var_psd_max
-
-        ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-        row += 1
-        ttk.Label(parent, text=&#34;PSD&#34;).grid(row=row, column=0,columnspan=2)
-        row += 1
-        ttk.Label(parent, text=&#34;Max Hold&#34;).grid(row=row, column=0)
-        chk_show_max.grid(row=row, column=1)
-        row += 1
-        ttk.Label(parent, text=&#34;Min Hold&#34;).grid(row=row, column=0)
-        chk_show_min.grid(row=row, column=1)
-        row += 1
-        return row
-
-    def _draw_settings_spectrogram(self, parent, row):
-        var_max_count = tk.StringVar(self.fr_sets)
-        ent_max_count = ttk.Entry(self.fr_sets, textvariable=var_max_count, width=10)
-
-        self.wg_sets[&#34;max_count&#34;] = ent_max_count
-        self.settings[&#34;max_count&#34;] = var_max_count
-
-        ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-        row += 1
-        ttk.Label(parent, text=&#34;Spectrogram&#34;).grid(row=row, column=0,columnspan=2)
-        row += 1
-        ttk.Label(parent, text=&#34;Max Count&#34;).grid(row=row, column=0)
-        ent_max_count.grid(row=row, column=1)
-        row += 1
-        return row</code></pre>
+        self.btn_toggle = ttk.Button(master, text=&#34;Settings&#34;, style=&#34;Settings.TButton&#34;)
+        self.btn_toggle.place(relx=0,rely=1, anchor=tk.SW)
+        self.btn_close = ttk.Button(master, text=&#34;X&#34;, style=&#34;Close.TButton&#34;)
+        self.btn_close.place(relx=1, rely=0, anchor=tk.NE, bordermode=tk.OUTSIDE)</code></pre>
 </details>
-<div class="desc"><p>Manager for SWEPT mode plots</p></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.plot_base.GUIFreqPlot" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIFreqPlot">GUIFreqPlot</a></li>
-<li><a title="pyspecan.view.tkGUI.plot_base.GUIBlitPlot" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIBlitPlot">GUIBlitPlot</a></li>
-<li><a title="pyspecan.view.tkGUI.plot_base.GUIPlot" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIPlot">GUIPlot</a></li>
-</ul>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pyspecan.view.tkGUI.plot_base.GUIFreqPlot" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIFreqPlot">GUIFreqPlot</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pyspecan.view.tkGUI.plot_base.GUIFreqPlot.draw_settings" href="plot_base.html#pyspecan.view.tkGUI.plot_base.GUIPlot.draw_settings">draw_settings</a></code></li>
-</ul>
-</li>
-</ul>
+<div class="desc"></div>
 </dd>
-<dt id="pyspecan.view.tkGUI.mode_swept.ViewSwept"><code class="flex name class">
-<span>class <span class="ident">ViewSwept</span></span>
-<span>(</span><span>*args, **kwargs)</span>
+<dt id="pyspecan.view.tkGUI.panels.PanelChild"><code class="flex name class">
+<span>class <span class="ident">PanelChild</span></span>
+<span>(</span><span>parent, master)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ViewSwept(View):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.root.title(f&#34;pyspecan | Swept&#34;)
-        self.plot = PlotSwept(self, self.fr_view)</code></pre>
+<pre><code class="python">class PanelChild:
+    def __init__(self, parent, master):
+        self.parent = parent
+        self.master = master
+        self.root = ttk.Frame(master)
+        self.root.pack(fill=tk.BOTH, expand=True)
+        self.main = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
+        self.main.pack(fill=tk.BOTH, expand=True)
+
+        self.btn_col = ttk.Button(self.root, text=&#34;Add Col&#34;, style=&#34;AddCol.TButton&#34;)
+        self.btn_col.pack(side=tk.LEFT, padx=5)
+        self.btn_close = ttk.Button(master, text=&#34;X&#34;, style=&#34;Close.TButton&#34;)
+        self.btn_close.place(relx=1, rely=0, anchor=tk.NE, bordermode=tk.OUTSIDE)
+
+    def update_layout(self):
+        self.main.update_idletasks()
+        self.master.update_idletasks()</code></pre>
 </details>
-<div class="desc"><p>Parent tkGUI view class</p></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.base.View" href="base.html#pyspecan.view.tkGUI.base.View">View</a></li>
-<li><a title="pyspecan.view.base.View" href="../base.html#pyspecan.view.base.View">View</a></li>
-</ul>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pyspecan.view.tkGUI.base.View" href="base.html#pyspecan.view.tkGUI.base.View">View</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pyspecan.view.tkGUI.base.View.draw_ctrl" href="base.html#pyspecan.view.tkGUI.base.View.draw_ctrl">draw_ctrl</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.View.draw_tb" href="base.html#pyspecan.view.tkGUI.base.View.draw_tb">draw_tb</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.View.mainloop" href="../base.html#pyspecan.view.base.View.mainloop">mainloop</a></code></li>
-<li><code><a title="pyspecan.view.tkGUI.base.View.quit" href="../base.html#pyspecan.view.base.View.quit">quit</a></code></li>
-</ul>
-</li>
-</ul>
+<div class="desc"></div>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.view.tkGUI.panels.PanelChild.update_layout"><code class="name flex">
+<span>def <span class="ident">update_layout</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_layout(self):
+    self.main.update_idletasks()
+    self.master.update_idletasks()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="pyspecan.view.tkGUI.panels.PanelView"><code class="flex name class">
+<span>class <span class="ident">PanelView</span></span>
+<span>(</span><span>master)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PanelView:
+    def __init__(self, master):
+        self.master = master
+        self.main = ttk.PanedWindow(master, orient=tk.VERTICAL)
+        self.main.pack(fill=tk.BOTH, expand=True)
+
+        self.btn_row = ttk.Button(master, text=&#34;Add Row&#34;, style=&#34;AddRow.TButton&#34;)
+        self.btn_row.pack(side=tk.LEFT, padx=5)
+
+    def update_layout(self):
+        self.main.update_idletasks()
+        self.master.update_idletasks()</code></pre>
+</details>
+<div class="desc"></div>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.view.tkGUI.panels.PanelView.update_layout"><code class="name flex">
+<span>def <span class="ident">update_layout</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_layout(self):
+    self.main.update_idletasks()
+    self.master.update_idletasks()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
 </dd>
 </dl>
 </section>
@@ -199,10 +193,19 @@ el.replaceWith(d);
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.view.tkGUI.mode_swept.PlotSwept" href="#pyspecan.view.tkGUI.mode_swept.PlotSwept">PlotSwept</a></code></h4>
+<h4><code><a title="pyspecan.view.tkGUI.panels.Panel" href="#pyspecan.view.tkGUI.panels.Panel">Panel</a></code></h4>
 </li>
 <li>
-<h4><code><a title="pyspecan.view.tkGUI.mode_swept.ViewSwept" href="#pyspecan.view.tkGUI.mode_swept.ViewSwept">ViewSwept</a></code></h4>
+<h4><code><a title="pyspecan.view.tkGUI.panels.PanelChild" href="#pyspecan.view.tkGUI.panels.PanelChild">PanelChild</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.view.tkGUI.panels.PanelChild.update_layout" href="#pyspecan.view.tkGUI.panels.PanelChild.update_layout">update_layout</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pyspecan.view.tkGUI.panels.PanelView" href="#pyspecan.view.tkGUI.panels.PanelView">PanelView</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.view.tkGUI.panels.PanelView.update_layout" href="#pyspecan.view.tkGUI.panels.PanelView.update_layout">update_layout</a></code></li>
+</ul>
 </li>
 </ul>
 </li>

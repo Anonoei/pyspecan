@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>pyspecan.controller.tkGUI.swept.psd API documentation</title>
+<meta name="description" content="">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>pyspecan.controller.tkGUI.swept.psd</code></h1>
+</header>
+<section id="section-intro">
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="pyspecan.controller.tkGUI.swept.psd.define_args"><code class="name flex">
+<span>def <span class="ident">define_args</span></span>(<span>parser: argparse.ArgumentParser)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def define_args(parser: argparse.ArgumentParser):
+    parser.add_argument(&#34;-rl&#34;, &#34;--ref_level&#34;, default=PlotConfig.ref_level, type=float, help=&#34;ref Level&#34;)
+    parser.add_argument(&#34;-sd&#34;, &#34;--scale_div&#34;, default=PlotConfig.scale_div, type=float, help=&#34;scale per division&#34;)
+    parser.add_argument(&#34;-vb&#34;, &#34;--vbw&#34;, default=PlotConfig.vbw, type=float, help=&#34;video bandwidth&#34;)
+    parser.add_argument(&#34;-w&#34;, &#34;--window&#34;, default=PlotConfig.window, choices=[k for k in WindowLUT.keys()], help=&#34;FFT window function&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PSD"><code class="flex name class">
+<span>class <span class="ident">PSD</span></span>
+<span>(</span><span>parent,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PSD(FreqPlotController):
+    def __init__(self, parent, pane: Panel, **kwargs):
+        self.psd_min = None
+        self.psd_max = None
+        self.fmin = None
+        self.fmax = None
+        if not &#34;ref_level&#34; in kwargs:
+            kwargs[&#34;ref_level&#34;] = PlotConfig.ref_level
+        if not &#34;scale_div&#34; in kwargs:
+            kwargs[&#34;scale_div&#34;] = PlotConfig.scale_div
+        if not &#34;vbw&#34; in kwargs:
+            kwargs[&#34;vbw&#34;] = PlotConfig.vbw
+        if not &#34;window&#34; in kwargs:
+            kwargs[&#34;vbw&#34;] = PlotConfig.vbw
+        super().__init__(parent, pane, **kwargs)
+        fig = plt.figure(figsize=(5,5), layout=&#34;constrained&#34;)
+
+        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
+        self.plotter = BlitPlot(fig) # type: ignore
+        self.plotter.canvas.draw()
+        self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
+        self.plotter.add_ax(&#34;psd&#34;, fig.add_subplot())
+
+        self.plotter.ax(&#34;psd&#34;).ax.set_autoscale_on(False)
+        self.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
+        self.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
+        self.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
+
+        self.set_y()
+        self.update()
+
+    def reset(self):
+        self.psd_min = None
+        self.psd_max = None
+
+    def plot(self, freq, psd):
+        self.plotter.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
+
+        if self.pane.sets[&#34;show_max&#34;].get() == 1:
+            if self.psd_max is None:
+                self.psd_max = np.repeat(-np.inf, len(psd))
+            self.psd_max[psd &gt; self.psd_max] = psd[psd &gt; self.psd_max]
+            line_max = self.plotter.ax(&#34;psd&#34;).plot(freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
+        else:
+            line_max = None
+        if self.pane.sets[&#34;show_min&#34;].get() == 1:
+            if self.psd_min is None:
+                self.psd_min = np.repeat(np.inf, len(psd))
+            self.psd_min[psd &lt; self.psd_min] = psd[psd &lt; self.psd_min]
+            line_min = self.plotter.ax(&#34;psd&#34;).plot(freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
+        else:
+            line_min = None
+        line_psd = self.plotter.ax(&#34;psd&#34;).plot(freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
+
+        self._show_y_location(psd)
+        self.update()
+
+    def update_f(self, f):
+        fmin, fmax, fnum = f
+        if self.fmin == fmin and self.fmax == fmax:
+            return
+        else:
+            self.fmin = fmin
+            self.fmax = fmax
+        psd_tick = np.linspace(fmin, fmax, 5)
+        psd_text = [str(Frequency.get(f)) for f in psd_tick]
+        self.plotter.ax(&#34;psd&#34;).set_xlim(fmin, fmax)
+        self.plotter.ax(&#34;psd&#34;).ax.set_xticks(psd_tick, psd_text)
+        self.update()
+
+    def update_nfft(self, nfft):
+        self.reset()
+
+    def set_y(self):
+        &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
+        self.plotter.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)
+
+    def draw_settings(self, row=0):
+        row = super().draw_settings(row)
+        var_psd_min = tk.IntVar(self.pane.settings, 1)
+        chk_show_min = ttk.Checkbutton(self.pane.settings, onvalue=1, offvalue=0,variable=var_psd_min)
+        chk_show_min.configure(command=self.toggle_psd_min)
+        var_psd_max = tk.IntVar(self.pane.settings, 1)
+        chk_show_max = ttk.Checkbutton(self.pane.settings, onvalue=1, offvalue=0, variable=var_psd_max)
+        chk_show_max.configure(command=self.toggle_psd_max)
+
+        self.pane.wgts[&#34;show_min&#34;] = chk_show_min
+        self.pane.sets[&#34;show_min&#34;] = var_psd_min
+        self.pane.wgts[&#34;show_max&#34;] = chk_show_max
+        self.pane.sets[&#34;show_max&#34;] = var_psd_max
+
+        ttk.Separator(self.pane.settings, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
+        row += 1
+        ttk.Label(self.pane.settings, text=&#34;PSD&#34;).grid(row=row, column=0,columnspan=2)
+        row += 1
+        ttk.Label(self.pane.settings, text=&#34;Max Hold&#34;).grid(row=row, column=0)
+        chk_show_max.grid(row=row, column=1)
+        row += 1
+        ttk.Label(self.pane.settings, text=&#34;Min Hold&#34;).grid(row=row, column=0)
+        chk_show_min.grid(row=row, column=1)
+        row += 1
+        return row
+
+    # --- GUI bind events and setters --- #
+    def set_scale(self, scale):
+        prev = float(self.scale)
+        super().set_scale(scale)
+        if not prev == self.scale:
+            self.set_y()
+
+    def set_ref_level(self, ref):
+        prev = float(self.ref_level)
+        super().set_ref_level(ref)
+        if not prev == self.ref_level:
+            self.set_y()
+
+    def set_vbw(self, smooth):
+        prev = float(self.vbw)
+        super().set_vbw(smooth)
+        if not prev == self.vbw:
+            self.psd_min = None
+            self.psd_max = None
+
+    def toggle_psd_min(self):
+        &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+        art = self.plotter.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
+        if art is None:
+            return
+        if self.pane.sets[&#34;show_min&#34;].get() == 0:
+            self.psd_max = None
+            art.set_visible(False)
+        else:
+            art.set_visible(True)
+        self.update()
+
+    def toggle_psd_max(self):
+        &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+        art = self.plotter.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
+        if art is None:
+            return
+        if self.pane.sets[&#34;show_max&#34;].get() == 0:
+            self.psd_min = None
+            art.set_visible(False)
+        else:
+            art.set_visible(True)
+        self.update()</code></pre>
+</details>
+<div class="desc"><p>Controller for view.tkGUI.GUIFreqPlot</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></li>
+<li>pyspecan.controller.tkGUI.plot_base._PlotController</li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PSD.reset"><code class="name flex">
+<span>def <span class="ident">reset</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def reset(self):
+    self.psd_min = None
+    self.psd_max = None</code></pre>
+</details>
+<div class="desc"><p>Reset plot view</p></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PSD.set_y"><code class="name flex">
+<span>def <span class="ident">set_y</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_y(self):
+    &#34;&#34;&#34;Set plot ylimits&#34;&#34;&#34;
+    self.plotter.ax(&#34;psd&#34;).set_ylim(self.y_btm, self.y_top)</code></pre>
+</details>
+<div class="desc"><p>Set plot ylimits</p></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PSD.toggle_psd_max"><code class="name flex">
+<span>def <span class="ident">toggle_psd_max</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def toggle_psd_max(self):
+    &#34;&#34;&#34;Toggle PSD max-hold visibility&#34;&#34;&#34;
+    art = self.plotter.ax(&#34;psd&#34;).art(&#34;psd_max&#34;)
+    if art is None:
+        return
+    if self.pane.sets[&#34;show_max&#34;].get() == 0:
+        self.psd_min = None
+        art.set_visible(False)
+    else:
+        art.set_visible(True)
+    self.update()</code></pre>
+</details>
+<div class="desc"><p>Toggle PSD max-hold visibility</p></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PSD.toggle_psd_min"><code class="name flex">
+<span>def <span class="ident">toggle_psd_min</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def toggle_psd_min(self):
+    &#34;&#34;&#34;Toggle PSD min-hold visibility&#34;&#34;&#34;
+    art = self.plotter.ax(&#34;psd&#34;).art(&#34;psd_min&#34;)
+    if art is None:
+        return
+    if self.pane.sets[&#34;show_min&#34;].get() == 0:
+        self.psd_max = None
+        art.set_visible(False)
+    else:
+        art.set_visible(True)
+    self.update()</code></pre>
+</details>
+<div class="desc"><p>Toggle PSD min-hold visibility</p></div>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></b></code>:
+<ul class="hlist">
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings">draw_settings</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot">plot</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale">set_scale</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f">update_f</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft">update_nfft</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PlotConfig"><code class="flex name class">
+<span>class <span class="ident">PlotConfig</span></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class PlotConfig:
+    ref_level = 0
+    scale_div = 10.0
+    vbw = 10.0
+    window = &#34;blackman&#34;</code></pre>
+</details>
+<div class="desc"></div>
+<h3>Class variables</h3>
+<dl>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PlotConfig.ref_level"><code class="name">var <span class="ident">ref_level</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PlotConfig.scale_div"><code class="name">var <span class="ident">scale_div</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PlotConfig.vbw"><code class="name">var <span class="ident">vbw</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.swept.psd.PlotConfig.window"><code class="name">var <span class="ident">window</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="pyspecan.controller.tkGUI.swept" href="index.html">pyspecan.controller.tkGUI.swept</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd.define_args" href="#pyspecan.controller.tkGUI.swept.psd.define_args">define_args</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.swept.psd.PSD" href="#pyspecan.controller.tkGUI.swept.psd.PSD">PSD</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd.PSD.reset" href="#pyspecan.controller.tkGUI.swept.psd.PSD.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd.PSD.set_y" href="#pyspecan.controller.tkGUI.swept.psd.PSD.set_y">set_y</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd.PSD.toggle_psd_max" href="#pyspecan.controller.tkGUI.swept.psd.PSD.toggle_psd_max">toggle_psd_max</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd.PSD.toggle_psd_min" href="#pyspecan.controller.tkGUI.swept.psd.PSD.toggle_psd_min">toggle_psd_min</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.swept.psd.PlotConfig" href="#pyspecan.controller.tkGUI.swept.psd.PlotConfig">PlotConfig</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd.PlotConfig.ref_level" href="#pyspecan.controller.tkGUI.swept.psd.PlotConfig.ref_level">ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd.PlotConfig.scale_div" href="#pyspecan.controller.tkGUI.swept.psd.PlotConfig.scale_div">scale_div</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd.PlotConfig.vbw" href="#pyspecan.controller.tkGUI.swept.psd.PlotConfig.vbw">vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.swept.psd.PlotConfig.window" href="#pyspecan.controller.tkGUI.swept.psd.PlotConfig.window">window</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>

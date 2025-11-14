@@ -60,7 +60,10 @@ el.replaceWith(d);
     &#34;&#34;&#34;Parent tkGUI view class&#34;&#34;&#34;
     def __init__(self, root=tk.Tk(), **kwargs):
         self.root = root
-        self.plot: GUIFreqPlot = None # type: ignore
+        if config.MODE == Mode.SWEPT:
+            self.root.title(&#34;pyspecan | Swept&#34;)
+        elif config.MODE == Mode.RT:
+            self.root.title(&#34;pyspecan | Real-Time&#34;)
 
         theme_mpl.get(kwargs.get(&#34;theme&#34;, &#34;Dark&#34;))() # Set matplotlib theme
 
@@ -79,6 +82,7 @@ el.replaceWith(d);
         self.main.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         self.fr_view = ttk.Frame(self.main)
+        self.panel = PanelView(self.fr_view)
 
         self.fr_ctrl = ttk.Frame(self.main, width=100)
         self.draw_ctrl(self.fr_ctrl)
@@ -93,7 +97,6 @@ el.replaceWith(d);
         self.sld_samp = widgets.Scale(
             parent, variable=self.var_samp, length=150
         )
-        ttk.LabeledScale
         self.sld_samp.grid(row=0,rowspan=2,column=col, sticky=tk.NSEW)
         col += 1
         self.var_time_cur = tk.StringVar(parent)
@@ -215,11 +218,6 @@ el.replaceWith(d);
 <ul class="hlist">
 <li><a title="pyspecan.view.base.View" href="../base.html#pyspecan.view.base.View">View</a></li>
 </ul>
-<h3>Subclasses</h3>
-<ul class="hlist">
-<li><a title="pyspecan.view.tkGUI.mode_rt.ViewRT" href="mode_rt.html#pyspecan.view.tkGUI.mode_rt.ViewRT">ViewRT</a></li>
-<li><a title="pyspecan.view.tkGUI.mode_swept.ViewSwept" href="mode_swept.html#pyspecan.view.tkGUI.mode_swept.ViewSwept">ViewSwept</a></li>
-</ul>
 <h3>Methods</h3>
 <dl>
 <dt id="pyspecan.view.tkGUI.base.View.draw_ctrl"><code class="name flex">
@@ -302,7 +300,6 @@ el.replaceWith(d);
     self.sld_samp = widgets.Scale(
         parent, variable=self.var_samp, length=150
     )
-    ttk.LabeledScale
     self.sld_samp.grid(row=0,rowspan=2,column=col, sticky=tk.NSEW)
     col += 1
     self.var_time_cur = tk.StringVar(parent)

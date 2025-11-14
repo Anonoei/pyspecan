@@ -55,7 +55,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def args_rt(parser: argparse.ArgumentParser):
     ctrl = base_args(parser)
-    freq_args(parser)
+    # freq_args(parser)
     mode = parser.add_argument_group(&#34;RT mode&#34;)
     mode.add_argument(&#34;--x&#34;, default=ModeConfig.x, type=int, help=&#34;histogram x pixels&#34;)
     mode.add_argument(&#34;--y&#34;, default=ModeConfig.y, type=int, help=&#34;histogram y pixels&#34;)
@@ -80,7 +80,11 @@ el.replaceWith(d);
 <pre><code class="python">class ControllerRT(Controller):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.plot = PlotControllerRT(self, self.view.plot, **kwargs)
+        self.panel = PanelControllerRT(self, self.view.panel)
+        child = self.panel.rows[0]
+        pane = self.panel.cols[child][0]
+        pane.var_view.set(&#34;PST&#34;)
+        self.panel.set_view(None, child, pane)
         self.draw()
 
     def loop(self):
@@ -161,595 +165,83 @@ el.replaceWith(d);
 </dd>
 </dl>
 </dd>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT"><code class="flex name class">
-<span>class <span class="ident">PlotControllerRT</span></span>
-<span>(</span><span>parent, view, **kwargs)</span>
+<dt id="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT"><code class="flex name class">
+<span>class <span class="ident">PanelControllerRT</span></span>
+<span>(</span><span>parent,<br>panel: <a title="pyspecan.view.tkGUI.panels.PanelView" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelView">PanelView</a>)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class PlotControllerRT(FreqPlotController):
-    &#34;&#34;&#34;Controller for ViewRT&#34;&#34;&#34;
-    __slots__ = (
-        &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
-        &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
-    )
-    def __init__(self, parent, view, **kwargs):
-        self.x = kwargs.get(&#34;x&#34;, ModeConfig.x)
-        self.y = kwargs.get(&#34;y&#34;, ModeConfig.y)
-        self.cmap = kwargs.get(&#34;cmap&#34;, ModeConfig.cmap)
-        super().__init__(parent, view, **kwargs)
-        # self.view: viewPSD = self.view # type hint
-        self._cmap_set = False
-        self._cb_drawn = False
+<pre><code class="python">class PanelControllerRT(PanelController):
+    def set_settings(self, child, pane):
+        pane.cb_view.config(values=list(k for k in plots.keys()))
+        pane.cb_view.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, lambda e,c=child, p=pane: self.set_view(e,c,p))
 
-        self.view.settings[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)
-        self.view.wg_sets[&#34;overlap&#34;].bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
-
-        self.view.settings[&#34;cmap&#34;].set(self.cmap)
-        self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
-        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
-
-        self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
-        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
-
-        self.set_y()
-
-    def update_f(self, f):
-        fmin, fmax, fnum = f
-        x_mul = [0.0,0.25,0.5,0.75,1.0]
-
-        x_tick = [self.x*m for m in x_mul]
-        x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
-        self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)
-
-    def set_y(self):
-        &#34;&#34;&#34;Set plot yticks and ylabels&#34;&#34;&#34;
-        y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-        y_max = self.y_top
-        y_min = self.y_btm
-        y_rng = abs(abs(y_max) - abs(y_min))
-        y_off = y_min if y_min &lt; 0 else -y_min
-
-        y_tick = [self.y*m for m in y_mul]
-        y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
-        self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-
-    def plot(self, freq, psd):
-        self._plot_persistent(psd)
-
-        self._show_y_location(psd)
-        self.update()
-
-    def _plot_persistent(self, psds):
-        self.view.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psds.shape[1]} FFTs&#34;)
-        mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
-        mat = mat / np.max(mat)
-
-        im = self.view.ax(&#34;pst&#34;).imshow(
-                mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
-                vmin=0, vmax=1,
-                aspect=&#34;auto&#34;,
-                interpolation=&#34;nearest&#34;, resample=False, rasterized=True
-        )
-
-        if not self._cb_drawn:
-            # print(&#34;Adding colorbar&#34;)
-            cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.ax(&#34;pst&#34;).ax, # type: ignore
-                pad=0.005, fraction=0.05
-            )
-            self.view.plotter.canvas.draw()
-            self._cb_drawn = True
-
-        if self._cmap_set:
-            self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-            self._cmap_set = False
-
-    # --- GUI bind events and setters --- #
-    def handle_event(self, event):
-        if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
-            self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
-        elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
-            self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
-        else:
-            super().handle_event(event)
-
-    def set_scale(self, scale):
-        prev = self.scale
-        super().set_scale(scale)
-        if not prev == self.scale:
-            self.set_y()
-    def set_ref_level(self, ref):
-        prev = self.ref_level
-        super().set_ref_level(ref)
-        if not prev == self.ref_level:
-            self.set_y()
-    def set_cmap(self, _cmap):
-        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-        self.cmap = _cmap
-        self._cmap_set = True
-
-    def set_overlap(self, overlap):
-        try:
-            overlap = float(overlap)
-            self.parent.model.overlap = overlap
-        except ValueError:
-            ref = self.ref_level
-        self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+    def set_view(self, e, child: PanelChild, pane: Panel):
+        view = pane.var_view.get()
+        if view in plots:
+            if self.view[child][pane] is not None:
+                pane.wgts = {}
+                pane.sets = {}
+                for ch in pane.fr_main.winfo_children():
+                    ch.destroy()
+                for ch in pane.settings.winfo_children():
+                    ch.destroy()
+            plot = plots[view](self.parent, pane)
+            self.view[child][pane] = plot</code></pre>
 </details>
-<div class="desc"><p>Controller for ViewRT</p></div>
+<div class="desc"></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></li>
-<li>pyspecan.controller.tkGUI.plot_base._PlotController</li>
+<li><a title="pyspecan.controller.tkGUI.panels.PanelController" href="panels.html#pyspecan.controller.tkGUI.panels.PanelController">PanelController</a></li>
 </ul>
-<h3>Instance variables</h3>
-<dl>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class PlotControllerRT(FreqPlotController):
-    &#34;&#34;&#34;Controller for ViewRT&#34;&#34;&#34;
-    __slots__ = (
-        &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
-        &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
-    )
-    def __init__(self, parent, view, **kwargs):
-        self.x = kwargs.get(&#34;x&#34;, ModeConfig.x)
-        self.y = kwargs.get(&#34;y&#34;, ModeConfig.y)
-        self.cmap = kwargs.get(&#34;cmap&#34;, ModeConfig.cmap)
-        super().__init__(parent, view, **kwargs)
-        # self.view: viewPSD = self.view # type hint
-        self._cmap_set = False
-        self._cb_drawn = False
-
-        self.view.settings[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)
-        self.view.wg_sets[&#34;overlap&#34;].bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
-
-        self.view.settings[&#34;cmap&#34;].set(self.cmap)
-        self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
-        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
-
-        self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
-        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
-
-        self.set_y()
-
-    def update_f(self, f):
-        fmin, fmax, fnum = f
-        x_mul = [0.0,0.25,0.5,0.75,1.0]
-
-        x_tick = [self.x*m for m in x_mul]
-        x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
-        self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)
-
-    def set_y(self):
-        &#34;&#34;&#34;Set plot yticks and ylabels&#34;&#34;&#34;
-        y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-        y_max = self.y_top
-        y_min = self.y_btm
-        y_rng = abs(abs(y_max) - abs(y_min))
-        y_off = y_min if y_min &lt; 0 else -y_min
-
-        y_tick = [self.y*m for m in y_mul]
-        y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
-        self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-
-    def plot(self, freq, psd):
-        self._plot_persistent(psd)
-
-        self._show_y_location(psd)
-        self.update()
-
-    def _plot_persistent(self, psds):
-        self.view.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psds.shape[1]} FFTs&#34;)
-        mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
-        mat = mat / np.max(mat)
-
-        im = self.view.ax(&#34;pst&#34;).imshow(
-                mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
-                vmin=0, vmax=1,
-                aspect=&#34;auto&#34;,
-                interpolation=&#34;nearest&#34;, resample=False, rasterized=True
-        )
-
-        if not self._cb_drawn:
-            # print(&#34;Adding colorbar&#34;)
-            cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.ax(&#34;pst&#34;).ax, # type: ignore
-                pad=0.005, fraction=0.05
-            )
-            self.view.plotter.canvas.draw()
-            self._cb_drawn = True
-
-        if self._cmap_set:
-            self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-            self._cmap_set = False
-
-    # --- GUI bind events and setters --- #
-    def handle_event(self, event):
-        if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
-            self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
-        elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
-            self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
-        else:
-            super().handle_event(event)
-
-    def set_scale(self, scale):
-        prev = self.scale
-        super().set_scale(scale)
-        if not prev == self.scale:
-            self.set_y()
-    def set_ref_level(self, ref):
-        prev = self.ref_level
-        super().set_ref_level(ref)
-        if not prev == self.ref_level:
-            self.set_y()
-    def set_cmap(self, _cmap):
-        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-        self.cmap = _cmap
-        self._cmap_set = True
-
-    def set_overlap(self, overlap):
-        try:
-            overlap = float(overlap)
-            self.parent.model.overlap = overlap
-        except ValueError:
-            ref = self.ref_level
-        self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.x"><code class="name">var <span class="ident">x</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class PlotControllerRT(FreqPlotController):
-    &#34;&#34;&#34;Controller for ViewRT&#34;&#34;&#34;
-    __slots__ = (
-        &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
-        &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
-    )
-    def __init__(self, parent, view, **kwargs):
-        self.x = kwargs.get(&#34;x&#34;, ModeConfig.x)
-        self.y = kwargs.get(&#34;y&#34;, ModeConfig.y)
-        self.cmap = kwargs.get(&#34;cmap&#34;, ModeConfig.cmap)
-        super().__init__(parent, view, **kwargs)
-        # self.view: viewPSD = self.view # type hint
-        self._cmap_set = False
-        self._cb_drawn = False
-
-        self.view.settings[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)
-        self.view.wg_sets[&#34;overlap&#34;].bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
-
-        self.view.settings[&#34;cmap&#34;].set(self.cmap)
-        self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
-        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
-
-        self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
-        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
-
-        self.set_y()
-
-    def update_f(self, f):
-        fmin, fmax, fnum = f
-        x_mul = [0.0,0.25,0.5,0.75,1.0]
-
-        x_tick = [self.x*m for m in x_mul]
-        x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
-        self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)
-
-    def set_y(self):
-        &#34;&#34;&#34;Set plot yticks and ylabels&#34;&#34;&#34;
-        y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-        y_max = self.y_top
-        y_min = self.y_btm
-        y_rng = abs(abs(y_max) - abs(y_min))
-        y_off = y_min if y_min &lt; 0 else -y_min
-
-        y_tick = [self.y*m for m in y_mul]
-        y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
-        self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-
-    def plot(self, freq, psd):
-        self._plot_persistent(psd)
-
-        self._show_y_location(psd)
-        self.update()
-
-    def _plot_persistent(self, psds):
-        self.view.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psds.shape[1]} FFTs&#34;)
-        mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
-        mat = mat / np.max(mat)
-
-        im = self.view.ax(&#34;pst&#34;).imshow(
-                mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
-                vmin=0, vmax=1,
-                aspect=&#34;auto&#34;,
-                interpolation=&#34;nearest&#34;, resample=False, rasterized=True
-        )
-
-        if not self._cb_drawn:
-            # print(&#34;Adding colorbar&#34;)
-            cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.ax(&#34;pst&#34;).ax, # type: ignore
-                pad=0.005, fraction=0.05
-            )
-            self.view.plotter.canvas.draw()
-            self._cb_drawn = True
-
-        if self._cmap_set:
-            self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-            self._cmap_set = False
-
-    # --- GUI bind events and setters --- #
-    def handle_event(self, event):
-        if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
-            self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
-        elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
-            self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
-        else:
-            super().handle_event(event)
-
-    def set_scale(self, scale):
-        prev = self.scale
-        super().set_scale(scale)
-        if not prev == self.scale:
-            self.set_y()
-    def set_ref_level(self, ref):
-        prev = self.ref_level
-        super().set_ref_level(ref)
-        if not prev == self.ref_level:
-            self.set_y()
-    def set_cmap(self, _cmap):
-        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-        self.cmap = _cmap
-        self._cmap_set = True
-
-    def set_overlap(self, overlap):
-        try:
-            overlap = float(overlap)
-            self.parent.model.overlap = overlap
-        except ValueError:
-            ref = self.ref_level
-        self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.y"><code class="name">var <span class="ident">y</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class PlotControllerRT(FreqPlotController):
-    &#34;&#34;&#34;Controller for ViewRT&#34;&#34;&#34;
-    __slots__ = (
-        &#34;x&#34;, &#34;y&#34;, &#34;cmap&#34;,
-        &#34;_cmap_set&#34;, &#34;_cb_drawn&#34;
-    )
-    def __init__(self, parent, view, **kwargs):
-        self.x = kwargs.get(&#34;x&#34;, ModeConfig.x)
-        self.y = kwargs.get(&#34;y&#34;, ModeConfig.y)
-        self.cmap = kwargs.get(&#34;cmap&#34;, ModeConfig.cmap)
-        super().__init__(parent, view, **kwargs)
-        # self.view: viewPSD = self.view # type hint
-        self._cmap_set = False
-        self._cb_drawn = False
-
-        self.view.settings[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)
-        self.view.wg_sets[&#34;overlap&#34;].bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
-
-        self.view.settings[&#34;cmap&#34;].set(self.cmap)
-        self.view.wg_sets[&#34;cmap&#34;].configure(values=[k for k in cmap.keys()])
-        self.view.wg_sets[&#34;cmap&#34;].bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
-
-        self.view.ax(&#34;pst&#34;).ax.set_autoscale_on(False)
-        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
-        self.view.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
-        self.view.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
-
-        self.set_y()
-
-    def update_f(self, f):
-        fmin, fmax, fnum = f
-        x_mul = [0.0,0.25,0.5,0.75,1.0]
-
-        x_tick = [self.x*m for m in x_mul]
-        x_text = [f&#34;{m-self.x/2:.1f}&#34; for m in x_tick]
-        self.view.ax(&#34;pst&#34;).ax.set_xticks(x_tick, x_text)
-        self.view.ax(&#34;pst&#34;).set_xlim(0, self.x)
-
-    def set_y(self):
-        &#34;&#34;&#34;Set plot yticks and ylabels&#34;&#34;&#34;
-        y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-        y_max = self.y_top
-        y_min = self.y_btm
-        y_rng = abs(abs(y_max) - abs(y_min))
-        y_off = y_min if y_min &lt; 0 else -y_min
-
-        y_tick = [self.y*m for m in y_mul]
-        y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-        self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
-        self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-
-    def plot(self, freq, psd):
-        self._plot_persistent(psd)
-
-        self._show_y_location(psd)
-        self.update()
-
-    def _plot_persistent(self, psds):
-        self.view.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psds.shape[1]} FFTs&#34;)
-        mat = matrix.cvec(self.x, self.y, psds, self.y_top, self.y_btm)
-        mat = mat / np.max(mat)
-
-        im = self.view.ax(&#34;pst&#34;).imshow(
-                mat, name=&#34;mat&#34;, cmap=cmap[self.cmap],
-                vmin=0, vmax=1,
-                aspect=&#34;auto&#34;,
-                interpolation=&#34;nearest&#34;, resample=False, rasterized=True
-        )
-
-        if not self._cb_drawn:
-            # print(&#34;Adding colorbar&#34;)
-            cb = self.view.plotter.fig.colorbar(
-                im, ax=self.view.ax(&#34;pst&#34;).ax, # type: ignore
-                pad=0.005, fraction=0.05
-            )
-            self.view.plotter.canvas.draw()
-            self._cb_drawn = True
-
-        if self._cmap_set:
-            self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)
-            self._cmap_set = False
-
-    # --- GUI bind events and setters --- #
-    def handle_event(self, event):
-        if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
-            self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
-        elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
-            self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
-        else:
-            super().handle_event(event)
-
-    def set_scale(self, scale):
-        prev = self.scale
-        super().set_scale(scale)
-        if not prev == self.scale:
-            self.set_y()
-    def set_ref_level(self, ref):
-        prev = self.ref_level
-        super().set_ref_level(ref)
-        if not prev == self.ref_level:
-            self.set_y()
-    def set_cmap(self, _cmap):
-        &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-        self.cmap = _cmap
-        self._cmap_set = True
-
-    def set_overlap(self, overlap):
-        try:
-            overlap = float(overlap)
-            self.parent.model.overlap = overlap
-        except ValueError:
-            ref = self.ref_level
-        self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-</dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.handle_event"><code class="name flex">
-<span>def <span class="ident">handle_event</span></span>(<span>self, event)</span>
+<dt id="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_settings"><code class="name flex">
+<span>def <span class="ident">set_settings</span></span>(<span>self, child, pane)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def handle_event(self, event):
-    if event.widget == self.view.wg_sets[&#34;cmap&#34;]:
-        self.set_cmap(self.view.settings[&#34;cmap&#34;].get())
-    elif event.widget == self.view.wg_sets[&#34;overlap&#34;]:
-        self.set_overlap(self.view.settings[&#34;overlap&#34;].get())
-    else:
-        super().handle_event(event)</code></pre>
+<pre><code class="python">def set_settings(self, child, pane):
+    pane.cb_view.config(values=list(k for k in plots.keys()))
+    pane.cb_view.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, lambda e,c=child, p=pane: self.set_view(e,c,p))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_cmap"><code class="name flex">
-<span>def <span class="ident">set_cmap</span></span>(<span>self, _cmap)</span>
+<dt id="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_view"><code class="name flex">
+<span>def <span class="ident">set_view</span></span>(<span>self,<br>e,<br>child: <a title="pyspecan.view.tkGUI.panels.PanelChild" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelChild">PanelChild</a>,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_cmap(self, _cmap):
-    &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
-    self.cmap = _cmap
-    self._cmap_set = True</code></pre>
-</details>
-<div class="desc"><p>Set plot color mapping</p></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_overlap"><code class="name flex">
-<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_overlap(self, overlap):
-    try:
-        overlap = float(overlap)
-        self.parent.model.overlap = overlap
-    except ValueError:
-        ref = self.ref_level
-    self.view.settings[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+<pre><code class="python">def set_view(self, e, child: PanelChild, pane: Panel):
+    view = pane.var_view.get()
+    if view in plots:
+        if self.view[child][pane] is not None:
+            pane.wgts = {}
+            pane.sets = {}
+            for ch in pane.fr_main.winfo_children():
+                ch.destroy()
+            for ch in pane.settings.winfo_children():
+                ch.destroy()
+        plot = plots[view](self.parent, pane)
+        self.view[child][pane] = plot</code></pre>
 </details>
 <div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_y"><code class="name flex">
-<span>def <span class="ident">set_y</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_y(self):
-    &#34;&#34;&#34;Set plot yticks and ylabels&#34;&#34;&#34;
-    y_mul = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-    y_max = self.y_top
-    y_min = self.y_btm
-    y_rng = abs(abs(y_max) - abs(y_min))
-    y_off = y_min if y_min &lt; 0 else -y_min
-
-    y_tick = [self.y*m for m in y_mul]
-    y_text = [f&#34;{(y_rng*m)+y_off:.1f}&#34; for m in y_mul]
-    self.view.ax(&#34;pst&#34;).ax.set_yticks(y_tick, y_text)
-    self.view.ax(&#34;pst&#34;).set_ylim(0, self.y)</code></pre>
-</details>
-<div class="desc"><p>Set plot yticks and ylabels</p></div>
 </dd>
 </dl>
 <h3>Inherited members</h3>
 <ul class="hlist">
-<li><code><b><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></b></code>:
+<li><code><b><a title="pyspecan.controller.tkGUI.panels.PanelController" href="panels.html#pyspecan.controller.tkGUI.panels.PanelController">PanelController</a></b></code>:
 <ul class="hlist">
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.plot">plot</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale">set_scale</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f">update_f</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft">update_nfft</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.toggle_settings" href="panels.html#pyspecan.controller.tkGUI.panels.PanelController.toggle_settings">toggle_settings</a></code></li>
 </ul>
 </li>
 </ul>
@@ -789,15 +281,10 @@ el.replaceWith(d);
 </ul>
 </li>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT">PlotControllerRT</a></code></h4>
-<ul class="two-column">
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.cmap" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.cmap">cmap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.handle_event" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.handle_event">handle_event</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_cmap" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_cmap">set_cmap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_overlap" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_overlap">set_overlap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_y" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.set_y">set_y</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.x" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.x">x</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.y" href="#pyspecan.controller.tkGUI.mode_rt.PlotControllerRT.y">y</a></code></li>
+<h4><code><a title="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.PanelControllerRT">PanelControllerRT</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_settings" href="#pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_settings">set_settings</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_view" href="#pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_view">set_view</a></code></li>
 </ul>
 </li>
 </ul>
