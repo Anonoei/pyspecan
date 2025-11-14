@@ -22,7 +22,7 @@ from ...backend.mpl.plot import BlitPlot
 from ...backend.tk import theme as theme_tk
 
 from .panels import PanelController
-from .plot_base import FreqPlotController, BlitPlot
+from .plot_base import TimePlotController, FreqPlotController, BlitPlot
 
 def define_args(parser):
     ctrl = parser.add_argument_group("tkGUI")
@@ -93,6 +93,7 @@ class Controller(_Controller):
 
     def reset(self):
         self.stop()
+        self.on_reset()
         self.model.reset()
         self.panel.reset()
         self.draw_tb()
@@ -130,8 +131,9 @@ class Controller(_Controller):
                 self.view.lbl_msg.configure(text="")
                 time.sleep(wait)
             else:
-                self.model.skip_time(-wait)
-                self.view.lbl_msg.configure(text="OVERFLOW")
+                if not self.model.sweep_time == 0.0:
+                    self.model.skip_time(-wait)
+                    self.view.lbl_msg.configure(text="OVERFLOW")
 
     def _plot(self):
         if config.MON_MEM:
@@ -158,6 +160,8 @@ class Controller(_Controller):
                     vbw = float(pane.sets["vbw"].get())
                     window = pane.sets["window"].get()
                     view.plot(self.model.f, self.model.psd(vbw, window))
+                elif isinstance(view, TimePlotController):
+                    view.plot(self.model.samples)
 
     def on_update_f(self, f):
         for child in self.panel.rows:
@@ -176,6 +180,14 @@ class Controller(_Controller):
                     continue
                 if isinstance(view, FreqPlotController):
                     view.update_nfft(nfft)
+
+    def on_reset(self):
+        for child in self.panel.rows:
+            for pane in self.panel.cols[child]:
+                view = self.panel.view[child][pane]
+                if view is None:
+                    continue
+                view.reset()
 
     def _check_f(self):
         def _update_f():

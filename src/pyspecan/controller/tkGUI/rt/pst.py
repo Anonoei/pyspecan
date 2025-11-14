@@ -20,7 +20,7 @@ from ....backend.mpl.plot import _Plot, Plot, BlitPlot
 class PlotConfig:
     ref_level = 0
     scale_div = 10.0
-    vbw = 10.0
+    vbw = 0.0
     window = "blackman"
     x = 1001
     y = 600

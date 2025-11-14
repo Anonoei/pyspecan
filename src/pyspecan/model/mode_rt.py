@@ -20,11 +20,10 @@ class ModelRT(Model):
     def psd(self, vbw=None, win="blackman"): # type: ignore
         if self._samples is None:
             return None
-        if self._psd is None:
-            if vbw is not None and vbw <= 0.0:
-                vbw = None
-            psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
-            self._psd = psd
+        if vbw is not None and vbw <= 0.0:
+            vbw = None
+        psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
+        self._psd = psd
         return self._psd
 
     def update_blocksize(self):

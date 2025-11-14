@@ -52,7 +52,7 @@ class ControllerRT(Controller):
         self.panel = PanelControllerRT(self, self.view.panel)
         child = self.panel.rows[0]
         pane = self.panel.cols[child][0]
-        pane.var_view.set("PST")
+        pane.var_view.set("Persistent Histogram")
         self.panel.set_view(None, child, pane)
         self.draw()
 

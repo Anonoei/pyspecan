@@ -1,5 +1,7 @@
 from .pst import PST
+from .spg import SPG
 
 plots = {
-    "PST": PST
+    "Persistent Histogram": PST,
+    "Spectrogram": SPG
 }

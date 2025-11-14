@@ -48,6 +48,24 @@ class Ax:
                 print(f"plot kwargs: {kwargs}")
         return line
 
+    def plot3d(self, *args, **kwargs):
+        name = kwargs.get("name", None)
+        if name is not None:
+            del kwargs["name"]
+        else:
+            name = len(self._art)
+        if self.art(name) is None:
+            line, = self.ax.plot(*args, **kwargs)
+            self.add_artist(name, line)
+        else:
+            line = self.art(name)
+            if len(args) == 3:
+                line.set_data_3d(*args) # type: ignore
+            else:
+                print(f"plot args: {len(args)}")
+                print(f"plot kwargs: {kwargs}")
+        return line
+
     def imshow(self, *args, **kwargs):
         name = kwargs.get("name", None)
         if name is not None:
@@ -66,6 +84,30 @@ class Ax:
                     im.set(**{k: kwargs[k]}) # type: ignore
                     del kwargs[k]
         return im
+
+    def plot_wireframe(self, *args, **kwargs):
+        name = kwargs.get("name", None)
+        if name is not None:
+            del kwargs["name"]
+        else:
+            name = len(self._art)
+        if self.art(name) is None:
+            surf = self.ax.plot_wireframe(*args, **kwargs)
+            self.add_artist(name, surf)
+        else:
+            surf = self.art(name)
+            surf.set_data_3d(*args)
+        return surf
+
+    def plot_surface(self, *args, **kwargs):
+        name = kwargs.get("name", None)
+        if name is not None:
+            del kwargs["name"]
+        else:
+            name = len(self._art)
+        surf = self.ax.plot_surface(*args, **kwargs)
+        # self.add_artist(name, surf)
+        return surf
 
     def set_data(self, name, *args):
         self.art(name).set_data(*args) # type: ignore

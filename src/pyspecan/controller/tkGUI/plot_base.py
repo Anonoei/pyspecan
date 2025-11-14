@@ -49,8 +49,23 @@ class _PlotController:
         """Initialize settings panel"""
         raise NotImplementedError()
 
+class TimePlotController(_PlotController):
+    """Controller for view.tkGUI time-domain plots"""
+    def __init__(self, parent, pane: Panel, **kwargs):
+        super().__init__(parent, pane)
+        self.draw_settings()
+
+    def update(self):
+        self.plotter.canvas.draw()
+
+    def plot(self, samps):
+        raise NotImplementedError()
+
+    def draw_settings(self, row=0):
+        pass
+
 class FreqPlotController(_PlotController):
-    """Controller for view.tkGUI.GUIFreqPlot"""
+    """Controller for view.tkGUI frequency-domain plots"""
     __slots__ = (
         "window", "vbw", "scale", "ref_level",
         "lbl_lo", "lbl_hi"
