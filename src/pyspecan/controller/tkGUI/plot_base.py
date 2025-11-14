@@ -157,6 +157,7 @@ class FreqPlotController(_PlotController):
 
         var_window = tk.StringVar(self.pane.settings, str(self.window))
         cb_window = ttk.Combobox(self.pane.settings, textvariable=var_window, width=9)
+        cb_window.configure(values=[k for k in WindowLUT.keys()])
         cb_window.bind("<<ComboboxSelected>>", self.handle_event)
 
         self.pane.wgts["scale"] = ent_scale

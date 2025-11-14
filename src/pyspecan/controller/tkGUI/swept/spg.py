@@ -29,7 +29,7 @@ def define_args(parser: argparse.ArgumentParser):
 
 class SPG(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
-        self.max_count = 100
+        self.max_count = 256
         self.psds: np.ndarray = None # type: ignore
         self.fmin = None
         self.fmax = None
@@ -59,18 +59,18 @@ class SPG(FreqPlotController):
         self.update()
 
     def reset(self):
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float16)
         self.psds[:,:] = -np.inf
 
     def _plot(self, freq, psd):
         self.plotter.ax("spg").ax.set_title("Spectrogram")
+        psd = np.clip(psd, self.y_btm, self.y_top)
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
         im = self.plotter.ax("spg").imshow(
             self.psds, name="spg",
-            vmin=self.y_btm, vmax=self.y_top,
-            aspect="auto", origin="upper",
+            aspect="auto", origin="upper", cmap="magma",
             interpolation="nearest", resample=False, rasterized=True
         )
         self.update()
@@ -91,8 +91,9 @@ class SPG(FreqPlotController):
         self.plotter.ax("spg").ax.set_xticks(spg_tick, spg_text)
 
     def update_nfft(self, nfft):
-        self.psds = np.zeros((self.max_count, nfft), dtype=np.float32)
-        self.psds[:,:] = -np.inf
+        self.reset()
+        # self.psds = np.zeros((self.max_count, nfft), dtype=np.float32)
+        # self.psds[:,:] = -np.inf
         self.reset()
 
     def set_y(self):
@@ -131,7 +132,7 @@ class SPG(FreqPlotController):
             self.max_count = count
         except ValueError:
             count = self.max_count
-        self.pane.sets["count"].set(str(self.max_count))
+        self.pane.sets["max_count"].set(str(self.max_count))
         if not prev == self.max_count:
             self.reset()
 

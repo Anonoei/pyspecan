@@ -30,7 +30,7 @@ class Dispatch:
 
         self.state = STATE.WAITING
         self.running = True
-        self.thread = threading.Thread(target=self._run)
+        self.thread = threading.Thread(target=self._run, name="dispatcher")
 
         self._last_f = None
 
@@ -39,6 +39,7 @@ class Dispatch:
         self.thread.start()
 
     def stop(self):
+        self.queue.put(CMD.STOP)
         self.running = False
         self.thread.join(timeout=1)
 

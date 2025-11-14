@@ -102,8 +102,8 @@ class PanelController:
                 view.plotter.cla()
                 print("Cleared plot!")
             if isinstance(view, FreqPlotController):
-                vbw = float(view.pane.sets["vbw"].get())
-                window = view.pane.sets["window"].get()
+                vbw = view.vbw
+                window = view.window
                 view.plot(model.f, model.psd(vbw, window))
             elif isinstance(view, TimePlotController):
                 view.plot(model.samples)
