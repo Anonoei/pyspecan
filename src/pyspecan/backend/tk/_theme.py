@@ -93,6 +93,18 @@ class _Theme:
                 "font": ("TkDefaultFont", 6),
                 "padding": (5,0)
             },
+            "Close.TButton": {
+                "font": ("TkDefaultFont", 6),
+                "padding": (5,0)
+            },
+            "AddRow.TButton": {
+                "font": ("TkDefaultFont", 8),
+                "padding": (5,0)
+            },
+            "AddCol.TButton": {
+                "font": ("TkDefaultFont", 8),
+                "padding": (5,0)
+            },
         }
         cls.configure(style)
         maps = {
@@ -127,14 +139,14 @@ class _Theme:
                 ('disabled', cls.C_BG_DISABLED),
             ],
         }
-        cls._style.map(".", **default_maps)
+        cls._style.map(".", **default_maps) # type: ignore
         style = {
             "TEntry": {
                 "background": cls.C_BG_TEXT,
             },
             "TCheckbutton": {
                 "indicatorcolor": cls.C_BG, # color when off
-            }
+            },
         }
         cls.configure(style)
         maps = {

@@ -21,7 +21,8 @@ from ...view.tkGUI.base import View as GUI
 from ...backend.mpl.plot import BlitPlot
 from ...backend.tk import theme as theme_tk
 
-from .plot_base import FreqPlotController
+from .panels import PanelController
+from .plot_base import FreqPlotController, BlitPlot
 
 def define_args(parser):
     ctrl = parser.add_argument_group("tkGUI")
@@ -41,7 +42,7 @@ class Controller(_Controller):
         self.nfft_exp = int(math.log2(self.model.nfft))
         self.model.set_sweep_time(kwargs.get("sweep", 50.0))
         self._last_f = None
-        self.plot: FreqPlotController = None # type: ignore
+        self.panel: PanelController = None # type: ignore
 
         self.view.sld_samp.scale.config(from_=0, to=self.model.reader.max_samp) # resolution=self.model.block_size
         self.view.sld_samp.scale.config(command=self.handle_sld_samp)
@@ -93,7 +94,7 @@ class Controller(_Controller):
     def reset(self):
         self.stop()
         self.model.reset()
-        self.plot.reset()
+        self.panel.reset()
         self.draw_tb()
 
     def prev(self):
@@ -103,6 +104,20 @@ class Controller(_Controller):
     def next(self):
         self.stop()
         return self._next()
+
+    def _prev(self):
+        valid = self.model.prev()
+        tplot = None
+        if valid:
+            tplot = self._plot()
+        return (valid, tplot)
+
+    def _next(self):
+        valid = self.model.next()
+        tplot = None
+        if valid:
+            tplot = self._plot()
+        return (valid, tplot)
 
     def loop(self):
         while self.running:
@@ -122,45 +137,57 @@ class Controller(_Controller):
         if config.MON_MEM:
             Memory().peak()
         ptime = time.perf_counter()
-        if isinstance(self.plot, FreqPlotController):
-            vbw = self.plot.vbw
-            window = self.plot.window
-            if not isinstance(self.view.plot.plotter, BlitPlot):
-                self.view.plot.plotter.cla()
-                print("Cleared plot!")
-            self._check_f()
-            self.plot.plot(self.model.f, self.model.psd(vbw, window))
-            # self.plot.update()
-
+        self._check_f()
+        self.on_plot()
         ptime = (time.perf_counter() - ptime)
         self.view.var_draw_time.set(f"{ptime:06.3f}s")
         self.draw_tb()
         # print(f"Plotted in {ptime*1000:.1f}ms / {self.time_show}")
         return ptime
 
+    def on_plot(self):
+        for child in self.panel.rows:
+            for pane in self.panel.cols[child]:
+                view = self.panel.view[child][pane]
+                if view is None:
+                    continue
+                if not isinstance(view.plotter, BlitPlot):
+                    view.plotter.cla()
+                    print("Cleared plot!")
+                if isinstance(view, FreqPlotController):
+                    vbw = float(pane.sets["vbw"].get())
+                    window = pane.sets["window"].get()
+                    view.plot(self.model.f, self.model.psd(vbw, window))
+
+    def on_update_f(self, f):
+        for child in self.panel.rows:
+            for pane in self.panel.cols[child]:
+                view = self.panel.view[child][pane]
+                if view is None:
+                    continue
+                if isinstance(view, FreqPlotController):
+                    view.update_f(f)
+
+    def on_update_nfft(self, nfft):
+        for child in self.panel.rows:
+            for pane in self.panel.cols[child]:
+                view = self.panel.view[child][pane]
+                if view is None:
+                    continue
+                if isinstance(view, FreqPlotController):
+                    view.update_nfft(nfft)
+
     def _check_f(self):
         def _update_f():
             return (self.model.f[0], self.model.f[-1]+(self.model.f[-1]-self.model.f[-2]), len(self.model.f))
         if self._last_f is None:
             self._last_f = _update_f()
-            self.plot.update_f(self._last_f)
+            self.on_update_f(self._last_f)
         elif not self.model.f[0] == self._last_f[0] and not len(self.model.f) == self._last_f[2]:
             self._last_f = _update_f()
-            self.plot.update_f(self._last_f)
-
-    def _prev(self):
-        valid = self.model.prev()
-        tplot = None
-        if valid:
-            tplot = self._plot()
-        return (valid, tplot)
-
-    def _next(self):
-        valid = self.model.next()
-        tplot = None
-        if valid:
-            tplot = self._plot()
-        return (valid, tplot)
+            self.on_update_f(self._last_f)
+        else:
+            self.on_update_f(self._last_f)
 
     def draw(self):
         self.draw_tb()
@@ -257,5 +284,5 @@ class Controller(_Controller):
         self.model.nfft = 2**exp
         self.view.var_nfft_exp.set(str(self.nfft_exp))
         self.view.lbl_nfft.config(text=str(self.model.nfft))
-        self.plot.update_nfft(self.model.nfft)
+        self.on_update_nfft(self.model.nfft)
         self.draw_ctrl()

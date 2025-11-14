@@ -3,18 +3,21 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from ..base import View as _View
-from ...config import config
+from ...config import config, Mode
 
 from ...backend.tk import widgets
 from ...backend.mpl import theme as theme_mpl
 
-from .plot_base import GUIFreqPlot
+from .panels import PanelView
 
 class View(_View):
     """Parent tkGUI view class"""
     def __init__(self, root=tk.Tk(), **kwargs):
         self.root = root
-        self.plot: GUIFreqPlot = None # type: ignore
+        if config.MODE == Mode.SWEPT:
+            self.root.title("pyspecan | Swept")
+        elif config.MODE == Mode.RT:
+            self.root.title("pyspecan | Real-Time")
 
         theme_mpl.get(kwargs.get("theme", "Dark"))() # Set matplotlib theme
 
@@ -33,6 +36,7 @@ class View(_View):
         self.main.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         self.fr_view = ttk.Frame(self.main)
+        self.panel = PanelView(self.fr_view)
 
         self.fr_ctrl = ttk.Frame(self.main, width=100)
         self.draw_ctrl(self.fr_ctrl)
@@ -47,7 +51,6 @@ class View(_View):
         self.sld_samp = widgets.Scale(
             parent, variable=self.var_samp, length=150
         )
-        ttk.LabeledScale
         self.sld_samp.grid(row=0,rowspan=2,column=col, sticky=tk.NSEW)
         col += 1
         self.var_time_cur = tk.StringVar(parent)

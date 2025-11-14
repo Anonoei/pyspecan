@@ -1,10 +1,7 @@
 """Create a tkGUI view"""
 
 from ..config import Mode
-from .tkGUI.modes import ViewSwept, ViewRT
+from .tkGUI.base import View
 
 def GetView(mode):
-    if mode == Mode.SWEPT:
-        return ViewSwept
-    elif mode == Mode.RT:
-        return ViewRT
+    return View

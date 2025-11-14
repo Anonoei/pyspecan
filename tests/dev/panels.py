@@ -74,14 +74,34 @@ class Panel:
         self.master = master
         self.root = ttk.Frame(master)
         self.root.pack(fill=tk.BOTH, expand=True)
-        self.main = ttk.Frame(self.root)
-        self.main.pack(fill=tk.BOTH, expand=True)
+        self.settings = {}
+        self.wg_sets = {}
 
-        self.btn_settings = ttk.Button(self.main, text="Settings", command=self.settings)
-        self.btn_settings.place(relx=1,rely=1, anchor=tk.SE)
+        self._fr_sets = ttk.Frame(self.root)
+        self._fr_sets.pack(side=tk.LEFT, fill=tk.Y)
 
-    def settings(self):
-        pass
+        self.var_view = tk.StringVar(self._fr_sets)
+        self.cb_view = ttk.Combobox(self._fr_sets, textvariable=self.var_view, width=20)
+        self.cb_view.pack()
+
+        self.fr_sets = ttk.Frame(self._fr_sets)
+        self.fr_sets.pack(side=tk.TOP, fill=tk.BOTH)
+        self._fr_sets.pack_forget()
+
+        self.fr_main = ttk.Frame(self.root)
+        self.fr_main.pack(fill=tk.BOTH, expand=True)
+
+        self.btn_toggle = ttk.Button(self.root, text="Settings", command=self.toggle_settings, style="Settings.TButton")
+        self.btn_toggle.place(relx=1,rely=1, anchor=tk.SE)
+
+    def toggle_settings(self, *args, **kwargs):
+        """Toggle settings panel visibility"""
+        if self._fr_sets.winfo_ismapped():
+            self._fr_sets.forget()
+            # self.btn_toggle.config(text="Show Settings")
+        else:
+            self._fr_sets.pack(side=tk.LEFT, fill=tk.Y, before=self.fr_main)
+            # self.btn_toggle.config(text="Hide Settings")
 
 
 # Example usage
