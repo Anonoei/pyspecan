@@ -1,10 +1,11 @@
 """Initialize tkGUI Controller"""
 import math
-import threading
 import time
 import datetime as dt
 
 import tkinter as tk
+
+from .dispatch import Dispatch, CMD
 
 from ..base import Controller as _Controller
 
@@ -36,8 +37,7 @@ class Controller(_Controller):
     def __init__(self, model: Model, view: GUI, **kwargs):
         super().__init__(model, view)
         self.view: GUI = self.view # type hints
-        self.running = False
-        self._stop = False
+        self.dispatch: Dispatch = Dispatch(self)
         self.time_show = kwargs.get("show", 50.0)
         self.nfft_exp = int(math.log2(self.model.nfft))
         self.model.set_sweep_time(kwargs.get("sweep", 50.0))
@@ -66,109 +66,40 @@ class Controller(_Controller):
         self.view.ent_cf.bind("<Return>", self.handle_event)
         self.view.ent_nfft_exp.bind("<Return>", self.handle_event)
 
-        self.thread: threading.Thread = None # type: ignore
+        self.dispatch.start()
 
         style = kwargs.get("theme", "Dark")
 
         theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]
 
+        self.view.root.protocol("WM_DELETE_WINDOW", self.quit)
+
     def start(self):
-        if self.running:
-            return
         if self.model.reader.path is None:
             return
-        self.running = True
         self.view.btn_start.config(state=tk.DISABLED)
         self.view.btn_stop.config(state=tk.ACTIVE)
-        self.thread = threading.Thread(target=self.loop)
-        self.thread.start()
+        self.dispatch.queue.put(CMD.START)
 
     def stop(self):
-        if not self._stop and not self.running:
-            return
-        self.running = False
         self.view.btn_stop.config(state=tk.DISABLED)
         self.view.btn_start.config(state=tk.ACTIVE)
-        self.thread.join(timeout=0.2)
+        self.dispatch.queue.put(CMD.STOP)
 
     def reset(self):
+        self.dispatch.queue.put(CMD.RESET)
         self.stop()
-        self.on_reset()
-        self.model.reset()
-        self.draw_tb()
 
     def prev(self):
-        self.stop()
-        return self._prev()
+        self.dispatch.queue.put(CMD.PREV)
 
     def next(self):
-        self.stop()
-        return self._next()
+        self.dispatch.queue.put(CMD.NEXT)
 
-    def _prev(self):
-        valid = self.model.prev()
-        tplot = None
-        if valid:
-            tplot = self._plot()
-        return (valid, tplot)
-
-    def _next(self):
-        valid = self.model.next()
-        tplot = None
-        if valid:
-            tplot = self._plot()
-        return (valid, tplot)
-
-    def loop(self):
-        while self.running:
-            time_show = self.time_show/1000 # convert ms to s
-            valid, ptime = self._next()
-            if not valid or ptime is None:
-                break
-            wait = time_show-ptime
-            if wait > 0:
-                self.view.lbl_msg.configure(text="")
-                time.sleep(wait)
-            else:
-                if not self.model.sweep_time == 0.0:
-                    self.model.skip_time(-wait)
-                    self.view.lbl_msg.configure(text="OVERFLOW")
-
-    def _plot(self):
-        if config.MON_MEM:
-            Memory().peak()
-        ptime = time.perf_counter()
-        self._check_f()
-        self.on_plot()
-        ptime = (time.perf_counter() - ptime)
-        self.view.var_draw_time.set(f"{ptime:06.3f}s")
-        self.draw_tb()
-        # print(f"Plotted in {ptime*1000:.1f}ms / {self.time_show}")
-        return ptime
-
-    def on_plot(self):
-        self.panel.on_plot(self.model)
-
-    def on_update_f(self, f):
-        self.panel.on_update_f(f)
-
-    def on_update_nfft(self, nfft):
-        self.panel.on_update_nfft(nfft)
-
-    def on_reset(self):
-        self.panel.on_reset()
-
-    def _check_f(self):
-        def _update_f():
-            return (self.model.f[0], self.model.f[-1]+(self.model.f[-1]-self.model.f[-2]), len(self.model.f))
-        if self._last_f is None:
-            self._last_f = _update_f()
-            self.on_update_f(self._last_f)
-        elif not self.model.f[0] == self._last_f[0] and not len(self.model.f) == self._last_f[2]:
-            self._last_f = _update_f()
-            self.on_update_f(self._last_f)
-        else:
-            self.on_update_f(self._last_f)
+    def quit(self):
+        self.dispatch.stop()
+        self.view.root.quit()
+        self.view.root.destroy()
 
     def draw(self):
         self.draw_tb()

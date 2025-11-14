@@ -14,6 +14,8 @@ class View(_View):
     """Parent tkGUI view class"""
     def __init__(self, root=tk.Tk(), **kwargs):
         self.root = root
+        self.root.title("pyspecan")
+
         if config.MODE == Mode.SWEPT:
             self.root.title("pyspecan | Swept")
         elif config.MODE == Mode.RT:
@@ -22,8 +24,6 @@ class View(_View):
         theme_mpl.get(kwargs.get("theme", "Dark"))() # Set matplotlib theme
 
         # self.style = ttk.Style(root)
-        self.root.title(f"pyspecan")
-        self.root.protocol("WM_DELETE_WINDOW", self.quit)
 
         self._main = ttk.Frame(self.root)
         self._main.pack(expand=True, fill=tk.BOTH)
@@ -162,7 +162,3 @@ class View(_View):
 
     def mainloop(self):
         self.root.mainloop()
-
-    def quit(self):
-        self.root.quit()
-        self.root.destroy()
