@@ -7,9 +7,11 @@
 # Examples
 tkGUI, SWEPT mode
 ![tkGUI_Swept](/media/SWEPT_tkGUI.png)
+![tkGUI_Swept](/media/SWEPT_tkGUI2.png)
 
 tkGUI, RT mode
 ![tkGUI_RT](/media/RT_tkGUI.png)
+![tkGUI_RT](/media/RT_tkGUI2.png)
 
 # Usage
 ## Module

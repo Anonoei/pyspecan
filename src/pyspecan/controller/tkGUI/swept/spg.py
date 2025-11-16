@@ -66,12 +66,17 @@ class SPG(FreqPlotController):
         psd = self.psd(samps)
         self.plotter.ax("spg").ax.set_title("Spectrogram")
         psd = np.clip(psd, self.y_btm, self.y_top)
+        y_rng = abs(self.y_btm - self.y_top)
+        psd += (0 - self.y_btm)
+        psd = psd / y_rng
+
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
         im = self.plotter.ax("spg").imshow(
             self.psds, name="spg",
             aspect="auto", origin="upper", cmap="magma",
+            vmin=0.0, vmax=1.0,
             interpolation="nearest", resample=False, rasterized=True
         )
         self.update()
