@@ -66,6 +66,24 @@ class Ax:
                 print(f"plot kwargs: {kwargs}")
         return line
 
+    def scatter(self, *args, **kwargs):
+        name = kwargs.get("name", None)
+        if name is not None:
+            del kwargs["name"]
+        else:
+            name = len(self._art)
+        if self.art(name) is None:
+            line, = self.ax.plot(*args, **kwargs)
+            self.add_artist(name, line)
+        else:
+            line = self.art(name)
+            if len(args) == 2:
+                line.set_data(*args) # type: ignore
+            else:
+                print(f"plot args: {len(args)}")
+                print(f"plot kwargs: {kwargs}")
+        return line
+
     def imshow(self, *args, **kwargs):
         name = kwargs.get("name", None)
         if name is not None:

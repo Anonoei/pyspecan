@@ -196,5 +196,5 @@ class Controller(_Controller):
         self.model.nfft = 2**exp
         self.view.var_nfft_exp.set(str(self.nfft_exp))
         self.view.lbl_nfft.config(text=str(self.model.nfft))
-        self.on_update_nfft(self.model.nfft)
+        self.dispatch.queue.put(CMD.UPDATE_NFFT)
         self.draw_ctrl()

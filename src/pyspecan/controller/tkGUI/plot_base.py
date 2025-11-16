@@ -9,6 +9,8 @@ import numpy as np
 from .panels import Panel
 
 from ...utils.window import WindowLUT
+from ...utils.psd import psd
+from ...utils.stft import psd as psd_rt
 
 from ...backend.mpl.plot import _Plot, Plot, BlitPlot
 
@@ -50,16 +52,19 @@ class _PlotController:
         """Update view plot"""
         self.plotter.update()
 
+    def update_fs(self, fs):
+        """Update sample rate"""
+
     def reset(self):
         """Reset plot view"""
         pass
 
-    def plot(self, *args, **kwargs):
+    def plot(self, samps, **kwargs):
         """Update plot data"""
         if not self.enabled:
             return None
         ptime = time.perf_counter()
-        self._plot(*args, **kwargs)
+        self._plot(samps, **kwargs)
         ptime = time.perf_counter() - ptime
         try: # catch threading state mismatch
             self.lbl_time.config(text=f"{ptime:06.3f}s")
@@ -67,7 +72,7 @@ class _PlotController:
             pass
         return ptime
 
-    def _plot(self, *args, **kwargs):
+    def _plot(self, samps, **kwargs):
         raise NotImplementedError()
 
     def draw_settings(self, row=0):
@@ -106,8 +111,10 @@ class FreqPlotController(_PlotController):
 
         self.set_ref_level(self.pane.sets["ref_level"].get())
 
-        self.lbl_lo = ttk.Label(self.fr_canv, text="V")
-        self.lbl_hi = ttk.Label(self.fr_canv, text="^")
+        self.lbl_lo = ttk.Label(self.pane.fr_main, text="V")
+        self.lbl_hi = ttk.Label(self.pane.fr_main, text="^")
+        self.lbl_lo.lift()
+        self.lbl_hi.lift()
 
     def update(self):
         self.plotter.canvas.draw()
@@ -118,8 +125,14 @@ class FreqPlotController(_PlotController):
     def update_nfft(self, nfft):
         """Update plot nfft"""
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
         raise NotImplementedError()
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw <= 0:
+            vbw = None
+        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -225,3 +238,46 @@ class FreqPlotController(_PlotController):
     def set_window(self, window):
         """Set plot window function"""
         self.window = window
+
+class FreqPlotControllerRT(FreqPlotController):
+    def __init__(self, parent, pane: Panel, **kwargs):
+        self.overlap = kwargs.get("overlap", 0.6)
+        super().__init__(parent, pane, **kwargs)
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw <= 0:
+            vbw = None
+        return psd_rt(samps, self.parent.model.nfft, self.overlap, self.parent.model.Fs.raw, vbw, self.window)
+
+    def _plot(self, samps):
+        raise NotImplementedError()
+
+    def draw_settings(self, row=0):
+        row = super().draw_settings(row)
+        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.overlap))
+        ent_overlap = ttk.Entry(self.pane.settings, textvariable=var_overlap, width=4)
+        ent_overlap.bind("<Return>", self.handle_event)
+
+        self.pane.wgts["overlap"] = ent_overlap
+        self.pane.sets["overlap"] = var_overlap
+
+        ttk.Label(self.pane.settings, text="Overlap").grid(row=row, column=0)
+        ent_overlap.grid(row=row, column=1)
+        row += 1
+        return row
+
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.pane.wgts["overlap"]:
+            self.set_overlap(self.pane.sets["overlap"].get())
+        else:
+            super().handle_event(event)
+
+    def set_overlap(self, overlap):
+        try:
+            overlap = float(overlap)
+            self.parent.model.overlap = overlap
+        except ValueError:
+            overlap = self.parent.model.overlap
+        self.pane.sets["overlap"].set(f"{self.parent.model.overlap:.2f}")

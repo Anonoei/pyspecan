@@ -15,8 +15,10 @@ class CMD(Enum):
 
     PLOT = auto()
     RESET = auto()
+
     UPDATE_F = auto()
     UPDATE_NFFT = auto()
+    UPDATE_FS = auto()
 
 class STATE(Enum):
     WAITING = auto()
@@ -77,7 +79,8 @@ class Dispatch:
                     self._update_f()
                 elif cmd is CMD.UPDATE_NFFT:
                     self.ctrl.panel.on_update_nfft(self.ctrl.model.nfft)
-
+                elif cmd is CMD.UPDATE_FS:
+                    self.ctrl.panel.on_update_fs(self.ctrl.model.Fs)
 
     def on_plot(self):
         ptime = time.perf_counter()
@@ -103,7 +106,8 @@ class Dispatch:
             time.sleep(wait)
         else:
             if not self.ctrl.model.sweep_time == 0.0:
-                self.ctrl.model.skip_time(-wait)
+                if config.MODE == Mode.SWEPT:
+                    self.ctrl.model.skip_time(-wait)
                 self.ctrl.view.lbl_msg.configure(text="OVERFLOW")
 
     def _prev(self):

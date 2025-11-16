@@ -17,15 +17,6 @@ class ModelRT(Model):
         self._block_max = kwargs.get("block_max", 102400)
         self.update_blocksize()
 
-    def psd(self, vbw=None, win="blackman"): # type: ignore
-        if self._samples is None:
-            return None
-        if vbw is not None and vbw <= 0.0:
-            vbw = None
-        psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
-        # self._psd = psd
-        return psd
-
     def update_blocksize(self):
         self.block_size = int(self.Fs * (self._sweep_time/1000))
         if self.block_size > self._block_max:

@@ -8,15 +8,6 @@ def args_swept(parser: argparse.ArgumentParser):
     define_args(parser)
 
 class ModelSwept(Model):
-    def psd(self, vbw=None, win="blackman"): # type: ignore
-        if self._samples is None:
-            return None
-        if vbw is not None and vbw <= 0.0:
-            vbw = None
-        psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
-        # self._psd = psd
-        return psd
-
     def next(self):
         if self.sweep_time <= 0.0:
             return super().next()
