@@ -72,15 +72,6 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class ModelSwept(Model):
-    def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
-        if self._samples is None:
-            return None
-        if vbw is not None and vbw &lt;= 0.0:
-            vbw = None
-        psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
-        # self._psd = psd
-        return psd
-
     def next(self):
         if self.sweep_time &lt;= 0.0:
             return super().next()
@@ -174,25 +165,6 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.mode_swept.ModelSwept.psd"><code class="name flex">
-<span>def <span class="ident">psd</span></span>(<span>self, vbw=None, win='blackman')</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
-    if self._samples is None:
-        return None
-    if vbw is not None and vbw &lt;= 0.0:
-        vbw = None
-    psd = _psd.psd(self._samples, self.Fs.raw, vbw, win)
-    # self._psd = psd
-    return psd</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 <dt id="pyspecan.model.mode_swept.ModelSwept.set_nfft"><code class="name flex">
 <span>def <span class="ident">set_nfft</span></span>(<span>self, nfft)</span>
 </code></dt>
@@ -231,12 +203,11 @@ el.replaceWith(d);
 <ul>
 <li>
 <h4><code><a title="pyspecan.model.mode_swept.ModelSwept" href="#pyspecan.model.mode_swept.ModelSwept">ModelSwept</a></code></h4>
-<ul class="two-column">
+<ul class="">
 <li><code><a title="pyspecan.model.mode_swept.ModelSwept.get_nfft" href="#pyspecan.model.mode_swept.ModelSwept.get_nfft">get_nfft</a></code></li>
 <li><code><a title="pyspecan.model.mode_swept.ModelSwept.next" href="#pyspecan.model.mode_swept.ModelSwept.next">next</a></code></li>
 <li><code><a title="pyspecan.model.mode_swept.ModelSwept.nfft" href="#pyspecan.model.mode_swept.ModelSwept.nfft">nfft</a></code></li>
 <li><code><a title="pyspecan.model.mode_swept.ModelSwept.prev" href="#pyspecan.model.mode_swept.ModelSwept.prev">prev</a></code></li>
-<li><code><a title="pyspecan.model.mode_swept.ModelSwept.psd" href="#pyspecan.model.mode_swept.ModelSwept.psd">psd</a></code></li>
 <li><code><a title="pyspecan.model.mode_swept.ModelSwept.set_nfft" href="#pyspecan.model.mode_swept.ModelSwept.set_nfft">set_nfft</a></code></li>
 </ul>
 </li>

@@ -92,8 +92,10 @@ el.replaceWith(d);
 
         self.set_ref_level(self.pane.sets[&#34;ref_level&#34;].get())
 
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.pane.fr_main, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.pane.fr_main, text=&#34;^&#34;)
+        self.lbl_lo.lift()
+        self.lbl_hi.lift()
 
     def update(self):
         self.plotter.canvas.draw()
@@ -104,8 +106,14 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
         raise NotImplementedError()
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw &lt;= 0:
+            vbw = None
+        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -219,8 +227,8 @@ el.replaceWith(d);
 </ul>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.rt.pst.PST" href="rt/pst.html#pyspecan.controller.tkGUI.rt.pst.PST">PST</a></li>
-<li><a title="pyspecan.controller.tkGUI.rt.spg.SPG" href="rt/spg.html#pyspecan.controller.tkGUI.rt.spg.SPG">SPG</a></li>
+<li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT">FreqPlotControllerRT</a></li>
+<li><a title="pyspecan.controller.tkGUI.swept.freq.Freq" href="swept/freq.html#pyspecan.controller.tkGUI.swept.freq.Freq">Freq</a></li>
 <li><a title="pyspecan.controller.tkGUI.swept.psd.PSD" href="swept/psd.html#pyspecan.controller.tkGUI.swept.psd.PSD">PSD</a></li>
 <li><a title="pyspecan.controller.tkGUI.swept.spg.SPG" href="swept/spg.html#pyspecan.controller.tkGUI.swept.spg.SPG">SPG</a></li>
 <li><a title="pyspecan.controller.tkGUI.swept.spg3d.SPG3D" href="swept/spg3d.html#pyspecan.controller.tkGUI.swept.spg3d.SPG3D">SPG3D</a></li>
@@ -250,8 +258,10 @@ el.replaceWith(d);
 
         self.set_ref_level(self.pane.sets[&#34;ref_level&#34;].get())
 
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.pane.fr_main, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.pane.fr_main, text=&#34;^&#34;)
+        self.lbl_lo.lift()
+        self.lbl_hi.lift()
 
     def update(self):
         self.plotter.canvas.draw()
@@ -262,8 +272,14 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
         raise NotImplementedError()
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw &lt;= 0:
+            vbw = None
+        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -395,8 +411,10 @@ el.replaceWith(d);
 
         self.set_ref_level(self.pane.sets[&#34;ref_level&#34;].get())
 
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.pane.fr_main, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.pane.fr_main, text=&#34;^&#34;)
+        self.lbl_lo.lift()
+        self.lbl_hi.lift()
 
     def update(self):
         self.plotter.canvas.draw()
@@ -407,8 +425,14 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
         raise NotImplementedError()
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw &lt;= 0:
+            vbw = None
+        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -540,8 +564,10 @@ el.replaceWith(d);
 
         self.set_ref_level(self.pane.sets[&#34;ref_level&#34;].get())
 
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.pane.fr_main, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.pane.fr_main, text=&#34;^&#34;)
+        self.lbl_lo.lift()
+        self.lbl_hi.lift()
 
     def update(self):
         self.plotter.canvas.draw()
@@ -552,8 +578,14 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
         raise NotImplementedError()
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw &lt;= 0:
+            vbw = None
+        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -685,8 +717,10 @@ el.replaceWith(d);
 
         self.set_ref_level(self.pane.sets[&#34;ref_level&#34;].get())
 
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.pane.fr_main, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.pane.fr_main, text=&#34;^&#34;)
+        self.lbl_lo.lift()
+        self.lbl_hi.lift()
 
     def update(self):
         self.plotter.canvas.draw()
@@ -697,8 +731,14 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
         raise NotImplementedError()
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw &lt;= 0:
+            vbw = None
+        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -830,8 +870,10 @@ el.replaceWith(d);
 
         self.set_ref_level(self.pane.sets[&#34;ref_level&#34;].get())
 
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.pane.fr_main, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.pane.fr_main, text=&#34;^&#34;)
+        self.lbl_lo.lift()
+        self.lbl_hi.lift()
 
     def update(self):
         self.plotter.canvas.draw()
@@ -842,8 +884,14 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
         raise NotImplementedError()
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw &lt;= 0:
+            vbw = None
+        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -975,8 +1023,10 @@ el.replaceWith(d);
 
         self.set_ref_level(self.pane.sets[&#34;ref_level&#34;].get())
 
-        self.lbl_lo = ttk.Label(self.fr_canv, text=&#34;V&#34;)
-        self.lbl_hi = ttk.Label(self.fr_canv, text=&#34;^&#34;)
+        self.lbl_lo = ttk.Label(self.pane.fr_main, text=&#34;V&#34;)
+        self.lbl_hi = ttk.Label(self.pane.fr_main, text=&#34;^&#34;)
+        self.lbl_lo.lift()
+        self.lbl_hi.lift()
 
     def update(self):
         self.plotter.canvas.draw()
@@ -987,8 +1037,14 @@ el.replaceWith(d);
     def update_nfft(self, nfft):
         &#34;&#34;&#34;Update plot nfft&#34;&#34;&#34;
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
         raise NotImplementedError()
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw &lt;= 0:
+            vbw = None
+        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -1197,6 +1253,22 @@ def y_top(self):
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotController.psd"><code class="name flex">
+<span>def <span class="ident">psd</span></span>(<span>self, samps)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def psd(self, samps):
+    vbw = self.vbw
+    if vbw &lt;= 0:
+        vbw = None
+    return psd(samps, self.parent.model.Fs.raw, vbw, self.window)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level"><code class="name flex">
 <span>def <span class="ident">set_ref_level</span></span>(<span>self, ref)</span>
 </code></dt>
@@ -1311,6 +1383,140 @@ def y_top(self):
 </dd>
 </dl>
 </dd>
+<dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT"><code class="flex name class">
+<span>class <span class="ident">FreqPlotControllerRT</span></span>
+<span>(</span><span>parent,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>,<br>**kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class FreqPlotControllerRT(FreqPlotController):
+    def __init__(self, parent, pane: Panel, **kwargs):
+        self.overlap = kwargs.get(&#34;overlap&#34;, 0.6)
+        super().__init__(parent, pane, **kwargs)
+
+    def psd(self, samps):
+        vbw = self.vbw
+        if vbw &lt;= 0:
+            vbw = None
+        return psd_rt(samps, self.parent.model.nfft, self.overlap, self.parent.model.Fs.raw, vbw, self.window)
+
+    def _plot(self, samps):
+        raise NotImplementedError()
+
+    def draw_settings(self, row=0):
+        row = super().draw_settings(row)
+        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.overlap))
+        ent_overlap = ttk.Entry(self.pane.settings, textvariable=var_overlap, width=4)
+        ent_overlap.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+
+        self.pane.wgts[&#34;overlap&#34;] = ent_overlap
+        self.pane.sets[&#34;overlap&#34;] = var_overlap
+
+        ttk.Label(self.pane.settings, text=&#34;Overlap&#34;).grid(row=row, column=0)
+        ent_overlap.grid(row=row, column=1)
+        row += 1
+        return row
+
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.pane.wgts[&#34;overlap&#34;]:
+            self.set_overlap(self.pane.sets[&#34;overlap&#34;].get())
+        else:
+            super().handle_event(event)
+
+    def set_overlap(self, overlap):
+        try:
+            overlap = float(overlap)
+            self.parent.model.overlap = overlap
+        except ValueError:
+            overlap = self.parent.model.overlap
+        self.pane.sets[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+</details>
+<div class="desc"><p>Controller for view.tkGUI frequency-domain plots</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></li>
+<li>pyspecan.controller.tkGUI.plot_base._PlotController</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.tkGUI.rt.pst.PST" href="rt/pst.html#pyspecan.controller.tkGUI.rt.pst.PST">PST</a></li>
+<li><a title="pyspecan.controller.tkGUI.rt.spg.SPG" href="rt/spg.html#pyspecan.controller.tkGUI.rt.spg.SPG">SPG</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.handle_event"><code class="name flex">
+<span>def <span class="ident">handle_event</span></span>(<span>self, event)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def handle_event(self, event):
+    if event.widget == self.pane.wgts[&#34;overlap&#34;]:
+        self.set_overlap(self.pane.sets[&#34;overlap&#34;].get())
+    else:
+        super().handle_event(event)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.psd"><code class="name flex">
+<span>def <span class="ident">psd</span></span>(<span>self, samps)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def psd(self, samps):
+    vbw = self.vbw
+    if vbw &lt;= 0:
+        vbw = None
+    return psd_rt(samps, self.parent.model.nfft, self.overlap, self.parent.model.Fs.raw, vbw, self.window)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_overlap"><code class="name flex">
+<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_overlap(self, overlap):
+    try:
+        overlap = float(overlap)
+        self.parent.model.overlap = overlap
+    except ValueError:
+        overlap = self.parent.model.overlap
+    self.pane.sets[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></b></code>:
+<ul class="hlist">
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings">draw_settings</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale">set_scale</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f">update_f</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft">update_nfft</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
 <dt id="pyspecan.controller.tkGUI.plot_base.TimePlotController"><code class="flex name class">
 <span>class <span class="ident">TimePlotController</span></span>
 <span>(</span><span>parent,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>,<br>**kwargs)</span>
@@ -1342,12 +1548,10 @@ def y_top(self):
 </ul>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.rt.iq.IQ" href="rt/iq.html#pyspecan.controller.tkGUI.rt.iq.IQ">IQ</a></li>
-<li><a title="pyspecan.controller.tkGUI.rt.iq3d.IQ3D" href="rt/iq3d.html#pyspecan.controller.tkGUI.rt.iq3d.IQ3D">IQ3D</a></li>
-<li><a title="pyspecan.controller.tkGUI.rt.pmf.PMF" href="rt/pmf.html#pyspecan.controller.tkGUI.rt.pmf.PMF">PMF</a></li>
-<li><a title="pyspecan.controller.tkGUI.swept.iq.IQ" href="swept/iq.html#pyspecan.controller.tkGUI.swept.iq.IQ">IQ</a></li>
-<li><a title="pyspecan.controller.tkGUI.swept.iq3d.IQ3D" href="swept/iq3d.html#pyspecan.controller.tkGUI.swept.iq3d.IQ3D">IQ3D</a></li>
-<li><a title="pyspecan.controller.tkGUI.swept.pmf.PMF" href="swept/pmf.html#pyspecan.controller.tkGUI.swept.pmf.PMF">PMF</a></li>
+<li><a title="pyspecan.controller.tkGUI.shared.iq.IQ" href="shared/iq.html#pyspecan.controller.tkGUI.shared.iq.IQ">IQ</a></li>
+<li><a title="pyspecan.controller.tkGUI.shared.iq3d.IQ3D" href="shared/iq3d.html#pyspecan.controller.tkGUI.shared.iq3d.IQ3D">IQ3D</a></li>
+<li><a title="pyspecan.controller.tkGUI.shared.phasor.Phasor" href="shared/phasor.html#pyspecan.controller.tkGUI.shared.phasor.Phasor">Phasor</a></li>
+<li><a title="pyspecan.controller.tkGUI.shared.pmf.PMF" href="shared/pmf.html#pyspecan.controller.tkGUI.shared.pmf.PMF">PMF</a></li>
 </ul>
 <h3>Methods</h3>
 <dl>
@@ -1406,6 +1610,7 @@ def y_top(self):
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.handle_event" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.handle_event">handle_event</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.lbl_hi" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.lbl_hi">lbl_hi</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.lbl_lo" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.lbl_lo">lbl_lo</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.psd" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.psd">psd</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.ref_level" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.ref_level">ref_level</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.scale" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.scale">scale</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
@@ -1419,6 +1624,14 @@ def y_top(self):
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.window" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.window">window</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT">FreqPlotControllerRT</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.handle_event" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.handle_event">handle_event</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.psd" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.psd">psd</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_overlap" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_overlap">set_overlap</a></code></li>
 </ul>
 </li>
 <li>

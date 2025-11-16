@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.tkGUI.rt.iq3d API documentation</title>
+<title>pyspecan.controller.tkGUI.shared.pmf API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.tkGUI.rt.iq3d</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.tkGUI.shared.pmf</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -44,7 +44,7 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.iq3d.define_args"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.shared.pmf.define_args"><code class="name flex">
 <span>def <span class="ident">define_args</span></span>(<span>parser: argparse.ArgumentParser)</span>
 </code></dt>
 <dd>
@@ -62,8 +62,8 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.iq3d.IQ3D"><code class="flex name class">
-<span>class <span class="ident">IQ3D</span></span>
+<dt id="pyspecan.controller.tkGUI.shared.pmf.PMF"><code class="flex name class">
+<span>class <span class="ident">PMF</span></span>
 <span>(</span><span>parent,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>,<br>**kwargs)</span>
 </code></dt>
 <dd>
@@ -71,10 +71,9 @@ el.replaceWith(d);
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class IQ3D(TimePlotController):
+<pre><code class="python">class PMF(TimePlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
-        self.amp_max = 0
-        self.x_arr = np.arange(0, dtype=np.float16)
+        self.pmf = ComplexPMF(256)
         super().__init__(parent, pane, **kwargs)
         fig = plt.figure(figsize=(5,5), layout=&#34;constrained&#34;)
 
@@ -82,33 +81,24 @@ el.replaceWith(d);
         self.plotter = BlitPlot(fig) # type: ignore
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-        self.plotter.add_ax(&#34;iq&#34;, fig.add_subplot(projection=&#34;3d&#34;))
+        self.plotter.add_ax(&#34;pmf&#34;, fig.add_subplot())
 
-        self.plotter.ax(&#34;iq&#34;).ax.set_autoscale_on(False)
-        self.plotter.ax(&#34;iq&#34;).ax.grid(True, alpha=0.2)
+        self.plotter.ax(&#34;pmf&#34;).ax.grid(True, alpha=0.2)
 
         self.update()
 
     def reset(self):
-        self.amp_max = 0
+        self.pmf = ComplexPMF(256)
 
     def _plot(self, samps):
-        self.plotter.ax(&#34;iq&#34;).ax.set_title(&#34;IQ 3D&#34;)
-        prev_max = self.amp_max
-        self.amp_max = np.max((self.amp_max, -np.min(samps.real), np.max(samps.real), -np.min(samps.imag), np.max(samps.imag)))
-        if not self.amp_max == prev_max:
-            self.plotter.ax(&#34;iq&#34;).set_ylim(-self.amp_max, self.amp_max)
-            self.plotter.ax(&#34;iq&#34;).ax.set_zlim(-self.amp_max, self.amp_max) # type: ignore
-        s_len = len(samps)
-        if not s_len == len(self.x_arr):
-            self.x_arr = np.arange(s_len) / s_len
-            self.plotter.ax(&#34;iq&#34;).set_xlim(0, 1)
+        self.plotter.ax(&#34;pmf&#34;).ax.set_title(&#34;PMF&#34;)
+        self.pmf.update(samps)
 
-        r = np.repeat(self.amp_max, s_len)
+        x = self.pmf.x
+        y = self.pmf.y
 
-        line_i = self.plotter.ax(&#34;iq&#34;).plot3d(self.x_arr, samps.real, -r, name=&#34;i&#34;, color=&#34;r&#34;, linestyle=&#34;solid&#34;, linewidth=1, alpha=0.5)
-        line_q = self.plotter.ax(&#34;iq&#34;).plot3d(self.x_arr, r, samps.imag, name=&#34;q&#34;, color=&#34;b&#34;, linestyle=&#34;solid&#34;, linewidth=1, alpha=0.5)
-        line_iq = self.plotter.ax(&#34;iq&#34;).plot3d(self.x_arr, samps.real, samps.imag, name=&#34;iq&#34;, color=&#34;g&#34;, linestyle=&#34;solid&#34;, marker=&#34;.&#34;, linewidth=3)
+        line_real = self.plotter.ax(&#34;pmf&#34;).plot(y.real, x.real, name=&#34;real&#34;)
+        line_imag = self.plotter.ax(&#34;pmf&#34;).plot(y.imag, x.imag, name=&#34;imag&#34;)
 
         self.update()
 
@@ -123,7 +113,7 @@ el.replaceWith(d);
 </ul>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.rt.iq3d.IQ3D.reset"><code class="name flex">
+<dt id="pyspecan.controller.tkGUI.shared.pmf.PMF.reset"><code class="name flex">
 <span>def <span class="ident">reset</span></span>(<span>self)</span>
 </code></dt>
 <dd>
@@ -132,7 +122,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def reset(self):
-    self.amp_max = 0</code></pre>
+    self.pmf = ComplexPMF(256)</code></pre>
 </details>
 <div class="desc"><p>Reset plot view</p></div>
 </dd>
@@ -147,7 +137,7 @@ el.replaceWith(d);
 </li>
 </ul>
 </dd>
-<dt id="pyspecan.controller.tkGUI.rt.iq3d.PlotConfig"><code class="flex name class">
+<dt id="pyspecan.controller.tkGUI.shared.pmf.PlotConfig"><code class="flex name class">
 <span>class <span class="ident">PlotConfig</span></span>
 </code></dt>
 <dd>
@@ -170,24 +160,24 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.controller.tkGUI.rt" href="index.html">pyspecan.controller.tkGUI.rt</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.shared" href="index.html">pyspecan.controller.tkGUI.shared</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.rt.iq3d.define_args" href="#pyspecan.controller.tkGUI.rt.iq3d.define_args">define_args</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.shared.pmf.define_args" href="#pyspecan.controller.tkGUI.shared.pmf.define_args">define_args</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.rt.iq3d.IQ3D" href="#pyspecan.controller.tkGUI.rt.iq3d.IQ3D">IQ3D</a></code></h4>
+<h4><code><a title="pyspecan.controller.tkGUI.shared.pmf.PMF" href="#pyspecan.controller.tkGUI.shared.pmf.PMF">PMF</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.rt.iq3d.IQ3D.reset" href="#pyspecan.controller.tkGUI.rt.iq3d.IQ3D.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.shared.pmf.PMF.reset" href="#pyspecan.controller.tkGUI.shared.pmf.PMF.reset">reset</a></code></li>
 </ul>
 </li>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.rt.iq3d.PlotConfig" href="#pyspecan.controller.tkGUI.rt.iq3d.PlotConfig">PlotConfig</a></code></h4>
+<h4><code><a title="pyspecan.controller.tkGUI.shared.pmf.PlotConfig" href="#pyspecan.controller.tkGUI.shared.pmf.PlotConfig">PlotConfig</a></code></h4>
 </li>
 </ul>
 </li>

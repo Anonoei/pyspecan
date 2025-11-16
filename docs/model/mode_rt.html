@@ -81,15 +81,6 @@ el.replaceWith(d);
         self._block_max = kwargs.get(&#34;block_max&#34;, 102400)
         self.update_blocksize()
 
-    def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
-        if self._samples is None:
-            return None
-        if vbw is not None and vbw &lt;= 0.0:
-            vbw = None
-        psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
-        # self._psd = psd
-        return psd
-
     def update_blocksize(self):
         self.block_size = int(self.Fs * (self._sweep_time/1000))
         if self.block_size &gt; self._block_max:
@@ -200,25 +191,6 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.psd"><code class="name flex">
-<span>def <span class="ident">psd</span></span>(<span>self, vbw=None, win='blackman')</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def psd(self, vbw=None, win=&#34;blackman&#34;): # type: ignore
-    if self._samples is None:
-        return None
-    if vbw is not None and vbw &lt;= 0.0:
-        vbw = None
-    psd = stft.psd(self._samples, self.nfft, self.overlap, self.Fs.raw, vbw, win)
-    # self._psd = psd
-    return psd</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 <dt id="pyspecan.model.mode_rt.ModelRT.set_fs"><code class="name flex">
 <span>def <span class="ident">set_fs</span></span>(<span>self, fs)</span>
 </code></dt>
@@ -308,7 +280,6 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.get_overlap" href="#pyspecan.model.mode_rt.ModelRT.get_overlap">get_overlap</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.get_sweep_time" href="#pyspecan.model.mode_rt.ModelRT.get_sweep_time">get_sweep_time</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.overlap" href="#pyspecan.model.mode_rt.ModelRT.overlap">overlap</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.psd" href="#pyspecan.model.mode_rt.ModelRT.psd">psd</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.set_fs" href="#pyspecan.model.mode_rt.ModelRT.set_fs">set_fs</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.set_overlap" href="#pyspecan.model.mode_rt.ModelRT.set_overlap">set_overlap</a></code></li>
 <li><code><a title="pyspecan.model.mode_rt.ModelRT.set_sweep_time" href="#pyspecan.model.mode_rt.ModelRT.set_sweep_time">set_sweep_time</a></code></li>

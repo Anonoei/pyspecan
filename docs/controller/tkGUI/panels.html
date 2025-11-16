@@ -48,7 +48,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.controller.tkGUI.panels.PanelController"><code class="flex name class">
 <span>class <span class="ident">PanelController</span></span>
-<span>(</span><span>parent,<br>panel: <a title="pyspecan.view.tkGUI.panels.PanelView" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelView">PanelView</a>)</span>
+<span>(</span><span>parent,<br>panel: <a title="pyspecan.view.tkGUI.panels.PanelView" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelView">PanelView</a>,<br>plots)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -56,13 +56,14 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class PanelController:
-    def __init__(self, parent, panel: PanelView):
+    def __init__(self, parent, panel: PanelView, plots):
         self.parent = parent
         self.panel = panel
         self.rows = []
         self.cols = {}
         self.view = {}
         self.active = []
+        self.plots = plots
 
         self.panel.btn_row.configure(command=self.add_row)
         self.add_row()
@@ -129,10 +130,23 @@ el.replaceWith(d);
             # self.btn_toggle.config(text=&#34;Hide Settings&#34;)
 
     def set_settings(self, child: PanelChild, pane: Panel):
-        raise NotImplementedError
+        pane.cb_view.config(values=list(k for k in self.plots.keys()))
+        pane.cb_view.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, lambda e,c=child, p=pane: self.set_view(e,c,p))
 
     def set_view(self, e, child: PanelChild, pane: Panel):
-        raise NotImplementedError
+        view = pane.var_view.get()
+        if view in self.plots:
+            if self.view[child][pane] is not None:
+                pane.wgts = {}
+                pane.sets = {}
+                for ch in pane.fr_main.winfo_children():
+                    ch.destroy()
+                for ch in pane.settings.winfo_children():
+                    ch.destroy()
+                self.del_active(child, pane, self.view[child][pane])
+            plot = self.plots[view](self.parent, pane)
+            self.view[child][pane] = plot
+            self.add_active(child, pane, plot)
 
     def get_pane(self, child: PanelChild, pane: Panel):
         return self.cols[child][self.cols[child].index(pane)]
@@ -148,16 +162,14 @@ el.replaceWith(d);
         self.active.pop(self.active.index(plot))
 
     def on_plot(self, model):
+        if len(self.active) == 0:
+            self.parent.dispatch.queue.put(CMD.STOP)
         for view in self.active:
             if not isinstance(view.plotter, BlitPlot):
                 view.plotter.cla()
                 print(&#34;Cleared plot!&#34;)
-            if isinstance(view, FreqPlotController):
-                vbw = view.vbw
-                window = view.window
-                view.plot(model.f, model.psd(vbw, window))
-            elif isinstance(view, TimePlotController):
-                view.plot(model.samples)
+            view.plot(model.samples)
+
     def on_update_f(self, f):
         for view in self.active:
             if isinstance(view, FreqPlotController):
@@ -168,16 +180,15 @@ el.replaceWith(d);
             if isinstance(view, FreqPlotController):
                 view.update_nfft(nfft)
 
+    def on_update_fs(self, Fs):
+        for view in self.active:
+            view.update_fs(Fs)
+
     def on_reset(self):
         for view in self.active:
             view.reset()</code></pre>
 </details>
 <div class="desc"></div>
-<h3>Subclasses</h3>
-<ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT" href="mode_rt.html#pyspecan.controller.tkGUI.mode_rt.PanelControllerRT">PanelControllerRT</a></li>
-<li><a title="pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept" href="mode_swept.html#pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept">PanelControllerSwept</a></li>
-</ul>
 <h3>Methods</h3>
 <dl>
 <dt id="pyspecan.controller.tkGUI.panels.PanelController.add_active"><code class="name flex">
@@ -334,16 +345,13 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def on_plot(self, model):
+    if len(self.active) == 0:
+        self.parent.dispatch.queue.put(CMD.STOP)
     for view in self.active:
         if not isinstance(view.plotter, BlitPlot):
             view.plotter.cla()
             print(&#34;Cleared plot!&#34;)
-        if isinstance(view, FreqPlotController):
-            vbw = view.vbw
-            window = view.window
-            view.plot(model.f, model.psd(vbw, window))
-        elif isinstance(view, TimePlotController):
-            view.plot(model.samples)</code></pre>
+        view.plot(model.samples)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -376,6 +384,20 @@ el.replaceWith(d);
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.controller.tkGUI.panels.PanelController.on_update_fs"><code class="name flex">
+<span>def <span class="ident">on_update_fs</span></span>(<span>self, Fs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def on_update_fs(self, Fs):
+    for view in self.active:
+        view.update_fs(Fs)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.controller.tkGUI.panels.PanelController.on_update_nfft"><code class="name flex">
 <span>def <span class="ident">on_update_nfft</span></span>(<span>self, nfft)</span>
 </code></dt>
@@ -400,7 +422,8 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_settings(self, child: PanelChild, pane: Panel):
-    raise NotImplementedError</code></pre>
+    pane.cb_view.config(values=list(k for k in self.plots.keys()))
+    pane.cb_view.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, lambda e,c=child, p=pane: self.set_view(e,c,p))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -413,7 +436,19 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_view(self, e, child: PanelChild, pane: Panel):
-    raise NotImplementedError</code></pre>
+    view = pane.var_view.get()
+    if view in self.plots:
+        if self.view[child][pane] is not None:
+            pane.wgts = {}
+            pane.sets = {}
+            for ch in pane.fr_main.winfo_children():
+                ch.destroy()
+            for ch in pane.settings.winfo_children():
+                ch.destroy()
+            self.del_active(child, pane, self.view[child][pane])
+        plot = self.plots[view](self.parent, pane)
+        self.view[child][pane] = plot
+        self.add_active(child, pane, plot)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -467,6 +502,7 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.on_plot" href="#pyspecan.controller.tkGUI.panels.PanelController.on_plot">on_plot</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.on_reset" href="#pyspecan.controller.tkGUI.panels.PanelController.on_reset">on_reset</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.on_update_f" href="#pyspecan.controller.tkGUI.panels.PanelController.on_update_f">on_update_f</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.on_update_fs" href="#pyspecan.controller.tkGUI.panels.PanelController.on_update_fs">on_update_fs</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.on_update_nfft" href="#pyspecan.controller.tkGUI.panels.PanelController.on_update_nfft">on_update_nfft</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.set_settings" href="#pyspecan.controller.tkGUI.panels.PanelController.set_settings">set_settings</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.set_view" href="#pyspecan.controller.tkGUI.panels.PanelController.set_view">set_view</a></code></li>

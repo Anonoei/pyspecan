@@ -64,8 +64,10 @@ el.replaceWith(d);
 
     PLOT = auto()
     RESET = auto()
+
     UPDATE_F = auto()
-    UPDATE_NFFT = auto()</code></pre>
+    UPDATE_NFFT = auto()
+    UPDATE_FS = auto()</code></pre>
 </details>
 <div class="desc"><p>Create a collection of name/value pairs.</p>
 <p>Example enumeration:</p>
@@ -151,6 +153,10 @@ attributes &ndash; see the documentation for details.</p></div>
 <dd>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.controller.tkGUI.dispatch.CMD.UPDATE_FS"><code class="name">var <span class="ident">UPDATE_FS</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.controller.tkGUI.dispatch.CMD.UPDATE_NFFT"><code class="name">var <span class="ident">UPDATE_NFFT</span></code></dt>
 <dd>
 <div class="desc"></div>
@@ -220,7 +226,8 @@ attributes &ndash; see the documentation for details.</p></div>
                     self._update_f()
                 elif cmd is CMD.UPDATE_NFFT:
                     self.ctrl.panel.on_update_nfft(self.ctrl.model.nfft)
-
+                elif cmd is CMD.UPDATE_FS:
+                    self.ctrl.panel.on_update_fs(self.ctrl.model.Fs)
 
     def on_plot(self):
         ptime = time.perf_counter()
@@ -246,7 +253,8 @@ attributes &ndash; see the documentation for details.</p></div>
             time.sleep(wait)
         else:
             if not self.ctrl.model.sweep_time == 0.0:
-                self.ctrl.model.skip_time(-wait)
+                if config.MODE == Mode.SWEPT:
+                    self.ctrl.model.skip_time(-wait)
                 self.ctrl.view.lbl_msg.configure(text=&#34;OVERFLOW&#34;)
 
     def _prev(self):
@@ -432,6 +440,7 @@ attributes &ndash; see the documentation for details.</p></div>
 <li><code><a title="pyspecan.controller.tkGUI.dispatch.CMD.START" href="#pyspecan.controller.tkGUI.dispatch.CMD.START">START</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.dispatch.CMD.STOP" href="#pyspecan.controller.tkGUI.dispatch.CMD.STOP">STOP</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.dispatch.CMD.UPDATE_F" href="#pyspecan.controller.tkGUI.dispatch.CMD.UPDATE_F">UPDATE_F</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.dispatch.CMD.UPDATE_FS" href="#pyspecan.controller.tkGUI.dispatch.CMD.UPDATE_FS">UPDATE_FS</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.dispatch.CMD.UPDATE_NFFT" href="#pyspecan.controller.tkGUI.dispatch.CMD.UPDATE_NFFT">UPDATE_NFFT</a></code></li>
 </ul>
 </li>

@@ -109,24 +109,25 @@ el.replaceWith(d);
         self.psd_min = None
         self.psd_max = None
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
+        psd = self.psd(samps)
         self.plotter.ax(&#34;psd&#34;).ax.set_title(&#34;PSD&#34;)
 
         if self.pane.sets[&#34;show_max&#34;].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))
             self.psd_max[psd &gt; self.psd_max] = psd[psd &gt; self.psd_max]
-            line_max = self.plotter.ax(&#34;psd&#34;).plot(freq, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
+            line_max = self.plotter.ax(&#34;psd&#34;).plot(self.parent.model.f, self.psd_max, name=&#34;psd_max&#34;, color=&#34;r&#34;)
         else:
             line_max = None
         if self.pane.sets[&#34;show_min&#34;].get() == 1:
             if self.psd_min is None:
                 self.psd_min = np.repeat(np.inf, len(psd))
             self.psd_min[psd &lt; self.psd_min] = psd[psd &lt; self.psd_min]
-            line_min = self.plotter.ax(&#34;psd&#34;).plot(freq, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
+            line_min = self.plotter.ax(&#34;psd&#34;).plot(self.parent.model.f, self.psd_min, name=&#34;psd_min&#34;, color=&#34;b&#34;)
         else:
             line_min = None
-        line_psd = self.plotter.ax(&#34;psd&#34;).plot(freq, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
+        line_psd = self.plotter.ax(&#34;psd&#34;).plot(self.parent.model.f, psd, name=&#34;psd&#34;, color=&#34;y&#34;)
 
         self._show_y_location(psd)
         self.update()

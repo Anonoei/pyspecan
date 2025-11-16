@@ -80,26 +80,12 @@ el.replaceWith(d);
 <pre><code class="python">class ControllerRT(Controller):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.panel = PanelControllerRT(self, self.view.panel)
+        self.panel = PanelController(self, self.view.panel, plots)
         child = self.panel.rows[0]
         pane = self.panel.cols[child][0]
         pane.var_view.set(&#34;Persistent Histogram&#34;)
         self.panel.set_view(None, child, pane)
-        self.draw()
-
-    def loop(self):
-        while self.running:
-            time_show = self.time_show/1000 # convert ms to s
-            valid, ptime = self._next()
-            if not valid or ptime is None:
-                break
-            wait = time_show-ptime
-            if wait &gt; 0:
-                self.view.lbl_msg.configure(text=&#34;&#34;)
-                time.sleep(wait)
-            else:
-                # self.model.skip_time(-wait)
-                self.view.lbl_msg.configure(text=&#34;OVERFLOW&#34;)</code></pre>
+        self.draw()</code></pre>
 </details>
 <div class="desc"><p>tkGUI Controller</p></div>
 <h3>Ancestors</h3>
@@ -107,33 +93,6 @@ el.replaceWith(d);
 <li><a title="pyspecan.controller.tkGUI.base.Controller" href="base.html#pyspecan.controller.tkGUI.base.Controller">Controller</a></li>
 <li><a title="pyspecan.controller.base.Controller" href="../base.html#pyspecan.controller.base.Controller">Controller</a></li>
 </ul>
-<h3>Methods</h3>
-<dl>
-<dt id="pyspecan.controller.tkGUI.mode_rt.ControllerRT.loop"><code class="name flex">
-<span>def <span class="ident">loop</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def loop(self):
-    while self.running:
-        time_show = self.time_show/1000 # convert ms to s
-        valid, ptime = self._next()
-        if not valid or ptime is None:
-            break
-        wait = time_show-ptime
-        if wait &gt; 0:
-            self.view.lbl_msg.configure(text=&#34;&#34;)
-            time.sleep(wait)
-        else:
-            # self.model.skip_time(-wait)
-            self.view.lbl_msg.configure(text=&#34;OVERFLOW&#34;)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-</dl>
 </dd>
 <dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig"><code class="flex name class">
 <span>class <span class="ident">ModeConfig</span></span>
@@ -165,87 +124,6 @@ el.replaceWith(d);
 </dd>
 </dl>
 </dd>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT"><code class="flex name class">
-<span>class <span class="ident">PanelControllerRT</span></span>
-<span>(</span><span>parent,<br>panel: <a title="pyspecan.view.tkGUI.panels.PanelView" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelView">PanelView</a>)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class PanelControllerRT(PanelController):
-    def set_settings(self, child, pane):
-        pane.cb_view.config(values=list(k for k in plots.keys()))
-        pane.cb_view.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, lambda e,c=child, p=pane: self.set_view(e,c,p))
-
-    def set_view(self, e, child: PanelChild, pane: Panel):
-        view = pane.var_view.get()
-        if view in plots:
-            if self.view[child][pane] is not None:
-                pane.wgts = {}
-                pane.sets = {}
-                for ch in pane.fr_main.winfo_children():
-                    ch.destroy()
-                for ch in pane.settings.winfo_children():
-                    ch.destroy()
-            plot = plots[view](self.parent, pane)
-            self.view[child][pane] = plot</code></pre>
-</details>
-<div class="desc"></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.panels.PanelController" href="panels.html#pyspecan.controller.tkGUI.panels.PanelController">PanelController</a></li>
-</ul>
-<h3>Methods</h3>
-<dl>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_settings"><code class="name flex">
-<span>def <span class="ident">set_settings</span></span>(<span>self, child, pane)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_settings(self, child, pane):
-    pane.cb_view.config(values=list(k for k in plots.keys()))
-    pane.cb_view.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, lambda e,c=child, p=pane: self.set_view(e,c,p))</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_view"><code class="name flex">
-<span>def <span class="ident">set_view</span></span>(<span>self,<br>e,<br>child: <a title="pyspecan.view.tkGUI.panels.PanelChild" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelChild">PanelChild</a>,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_view(self, e, child: PanelChild, pane: Panel):
-    view = pane.var_view.get()
-    if view in plots:
-        if self.view[child][pane] is not None:
-            pane.wgts = {}
-            pane.sets = {}
-            for ch in pane.fr_main.winfo_children():
-                ch.destroy()
-            for ch in pane.settings.winfo_children():
-                ch.destroy()
-        plot = plots[view](self.parent, pane)
-        self.view[child][pane] = plot</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-</dl>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pyspecan.controller.tkGUI.panels.PanelController" href="panels.html#pyspecan.controller.tkGUI.panels.PanelController">PanelController</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.toggle_settings" href="panels.html#pyspecan.controller.tkGUI.panels.PanelController.toggle_settings">toggle_settings</a></code></li>
-</ul>
-</li>
-</ul>
-</dd>
 </dl>
 </section>
 </article>
@@ -268,9 +146,6 @@ el.replaceWith(d);
 <ul>
 <li>
 <h4><code><a title="pyspecan.controller.tkGUI.mode_rt.ControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.ControllerRT">ControllerRT</a></code></h4>
-<ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.ControllerRT.loop" href="#pyspecan.controller.tkGUI.mode_rt.ControllerRT.loop">loop</a></code></li>
-</ul>
 </li>
 <li>
 <h4><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig">ModeConfig</a></code></h4>
@@ -278,13 +153,6 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.cmap" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.cmap">cmap</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.x" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.x">x</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.y" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.y">y</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.PanelControllerRT">PanelControllerRT</a></code></h4>
-<ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_settings" href="#pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_settings">set_settings</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_view" href="#pyspecan.controller.tkGUI.mode_rt.PanelControllerRT.set_view">set_view</a></code></li>
 </ul>
 </li>
 </ul>

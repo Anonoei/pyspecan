@@ -79,7 +79,7 @@ el.replaceWith(d);
 <pre><code class="python">class ControllerSwept(Controller):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.panel = PanelControllerSwept(self, self.view.panel)
+        self.panel = PanelController(self, self.view.panel, plots)
         child = self.panel.rows[0]
         pane = self.panel.cols[child][0]
         pane.var_view.set(&#34;PSD&#34;)
@@ -118,91 +118,6 @@ el.replaceWith(d);
 </dd>
 </dl>
 </dd>
-<dt id="pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept"><code class="flex name class">
-<span>class <span class="ident">PanelControllerSwept</span></span>
-<span>(</span><span>parent,<br>panel: <a title="pyspecan.view.tkGUI.panels.PanelView" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelView">PanelView</a>)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class PanelControllerSwept(PanelController):
-    def set_settings(self, child, pane):
-        pane.cb_view.config(values=list(k for k in plots.keys()))
-        pane.cb_view.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, lambda e,c=child, p=pane: self.set_view(e,c,p))
-
-    def set_view(self, e, child: PanelChild, pane: Panel):
-        view = pane.var_view.get()
-        if view in plots:
-            if self.view[child][pane] is not None:
-                pane.wgts = {}
-                pane.sets = {}
-                for ch in pane.fr_main.winfo_children():
-                    ch.destroy()
-                for ch in pane.settings.winfo_children():
-                    ch.destroy()
-                self.del_active(child, pane, self.view[child][pane])
-            plot = plots[view](self.parent, pane)
-            self.view[child][pane] = plot
-            self.add_active(child, pane, plot)</code></pre>
-</details>
-<div class="desc"></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.panels.PanelController" href="panels.html#pyspecan.controller.tkGUI.panels.PanelController">PanelController</a></li>
-</ul>
-<h3>Methods</h3>
-<dl>
-<dt id="pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept.set_settings"><code class="name flex">
-<span>def <span class="ident">set_settings</span></span>(<span>self, child, pane)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_settings(self, child, pane):
-    pane.cb_view.config(values=list(k for k in plots.keys()))
-    pane.cb_view.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, lambda e,c=child, p=pane: self.set_view(e,c,p))</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept.set_view"><code class="name flex">
-<span>def <span class="ident">set_view</span></span>(<span>self,<br>e,<br>child: <a title="pyspecan.view.tkGUI.panels.PanelChild" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.PanelChild">PanelChild</a>,<br>pane: <a title="pyspecan.view.tkGUI.panels.Panel" href="../../view/tkGUI/panels.html#pyspecan.view.tkGUI.panels.Panel">Panel</a>)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_view(self, e, child: PanelChild, pane: Panel):
-    view = pane.var_view.get()
-    if view in plots:
-        if self.view[child][pane] is not None:
-            pane.wgts = {}
-            pane.sets = {}
-            for ch in pane.fr_main.winfo_children():
-                ch.destroy()
-            for ch in pane.settings.winfo_children():
-                ch.destroy()
-            self.del_active(child, pane, self.view[child][pane])
-        plot = plots[view](self.parent, pane)
-        self.view[child][pane] = plot
-        self.add_active(child, pane, plot)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-</dl>
-<h3>Inherited members</h3>
-<ul class="hlist">
-<li><code><b><a title="pyspecan.controller.tkGUI.panels.PanelController" href="panels.html#pyspecan.controller.tkGUI.panels.PanelController">PanelController</a></b></code>:
-<ul class="hlist">
-<li><code><a title="pyspecan.controller.tkGUI.panels.PanelController.toggle_settings" href="panels.html#pyspecan.controller.tkGUI.panels.PanelController.toggle_settings">toggle_settings</a></code></li>
-</ul>
-</li>
-</ul>
-</dd>
 </dl>
 </section>
 </article>
@@ -231,13 +146,6 @@ el.replaceWith(d);
 <ul class="">
 <li><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeConfig.psd" href="#pyspecan.controller.tkGUI.mode_swept.ModeConfig.psd">psd</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeConfig.spg" href="#pyspecan.controller.tkGUI.mode_swept.ModeConfig.spg">spg</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept" href="#pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept">PanelControllerSwept</a></code></h4>
-<ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept.set_settings" href="#pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept.set_settings">set_settings</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept.set_view" href="#pyspecan.controller.tkGUI.mode_swept.PanelControllerSwept.set_view">set_view</a></code></li>
 </ul>
 </li>
 </ul>

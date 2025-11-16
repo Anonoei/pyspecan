@@ -121,6 +121,24 @@ el.replaceWith(d);
                 print(f&#34;plot kwargs: {kwargs}&#34;)
         return line
 
+    def scatter(self, *args, **kwargs):
+        name = kwargs.get(&#34;name&#34;, None)
+        if name is not None:
+            del kwargs[&#34;name&#34;]
+        else:
+            name = len(self._art)
+        if self.art(name) is None:
+            line, = self.ax.plot(*args, **kwargs)
+            self.add_artist(name, line)
+        else:
+            line = self.art(name)
+            if len(args) == 2:
+                line.set_data(*args) # type: ignore
+            else:
+                print(f&#34;plot args: {len(args)}&#34;)
+                print(f&#34;plot kwargs: {kwargs}&#34;)
+        return line
+
     def imshow(self, *args, **kwargs):
         name = kwargs.get(&#34;name&#34;, None)
         if name is not None:
@@ -407,6 +425,34 @@ def fig(self):
 </details>
 <div class="desc"></div>
 </dd>
+<dt id="pyspecan.backend.mpl.ax.Ax.scatter"><code class="name flex">
+<span>def <span class="ident">scatter</span></span>(<span>self, *args, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def scatter(self, *args, **kwargs):
+    name = kwargs.get(&#34;name&#34;, None)
+    if name is not None:
+        del kwargs[&#34;name&#34;]
+    else:
+        name = len(self._art)
+    if self.art(name) is None:
+        line, = self.ax.plot(*args, **kwargs)
+        self.add_artist(name, line)
+    else:
+        line = self.art(name)
+        if len(args) == 2:
+            line.set_data(*args) # type: ignore
+        else:
+            print(f&#34;plot args: {len(args)}&#34;)
+            print(f&#34;plot kwargs: {kwargs}&#34;)
+    return line</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.backend.mpl.ax.Ax.set_data"><code class="name flex">
 <span>def <span class="ident">set_data</span></span>(<span>self, name, *args)</span>
 </code></dt>
@@ -577,6 +623,7 @@ def fig(self):
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.plot_surface" href="#pyspecan.backend.mpl.ax.Ax.plot_surface">plot_surface</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.plot_wireframe" href="#pyspecan.backend.mpl.ax.Ax.plot_wireframe">plot_wireframe</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.relim" href="#pyspecan.backend.mpl.ax.Ax.relim">relim</a></code></li>
+<li><code><a title="pyspecan.backend.mpl.ax.Ax.scatter" href="#pyspecan.backend.mpl.ax.Ax.scatter">scatter</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.set_data" href="#pyspecan.backend.mpl.ax.Ax.set_data">set_data</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.set_xdata" href="#pyspecan.backend.mpl.ax.Ax.set_xdata">set_xdata</a></code></li>
 <li><code><a title="pyspecan.backend.mpl.ax.Ax.set_xlim" href="#pyspecan.backend.mpl.ax.Ax.set_xlim">set_xlim</a></code></li>

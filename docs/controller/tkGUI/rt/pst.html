@@ -74,7 +74,7 @@ el.replaceWith(d);
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class PST(FreqPlotController):
+<pre><code class="python">class PST(FreqPlotControllerRT):
     def __init__(self, parent, pane: Panel, **kwargs):
         self.x = kwargs.get(&#34;x&#34;, PlotConfig.x)
         self.y = kwargs.get(&#34;y&#34;, PlotConfig.y)
@@ -89,6 +89,8 @@ el.replaceWith(d);
             kwargs[&#34;vbw&#34;] = PlotConfig.vbw
         if not &#34;window&#34; in kwargs:
             kwargs[&#34;vbw&#34;] = PlotConfig.vbw
+        if not &#34;overlap&#34; in kwargs:
+            kwargs[&#34;overlap&#34;] = PlotConfig.overlap
         super().__init__(parent, pane, **kwargs)
         self._cmap_set = False
         self._cb_drawn = False
@@ -110,10 +112,10 @@ el.replaceWith(d);
         self.update()
 
     def reset(self):
-        self.psd_min = None
-        self.psd_max = None
+        pass
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
+        psd = self.psd(samps)
         self.plotter.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psd.shape[1]} FFTs&#34;)
 
         mat = matrix.cvec(self.x, self.y, psd, self.y_top, self.y_btm)
@@ -176,25 +178,16 @@ el.replaceWith(d);
 
     def draw_settings(self, row=0):
         row = super().draw_settings(row)
-        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.overlap))
-        ent_overlap = ttk.Entry(self.pane.settings, textvariable=var_overlap, width=4)
-        ent_overlap.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
 
         var_cmap = tk.StringVar(self.pane.settings, str(self.cmap))
         cb_cmap = ttk.Combobox(self.pane.settings, textvariable=var_cmap, width=9)
         cb_cmap.configure(values=[k for k in cmap.keys()])
         cb_cmap.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
-        self.pane.wgts[&#34;overlap&#34;] = ent_overlap
-        self.pane.sets[&#34;overlap&#34;] = var_overlap
-
         self.pane.wgts[&#34;cmap&#34;] = cb_cmap
         self.pane.sets[&#34;cmap&#34;] = var_cmap
 
         ttk.Separator(self.pane.settings, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-        row += 1
-        ttk.Label(self.pane.settings, text=&#34;Overlap&#34;).grid(row=row, column=0)
-        ent_overlap.grid(row=row, column=1)
         row += 1
         ttk.Label(self.pane.settings, text=&#34;Colors&#34;).grid(row=row, column=0)
         cb_cmap.grid(row=row, column=1)
@@ -205,8 +198,6 @@ el.replaceWith(d);
     def handle_event(self, event):
         if event.widget == self.pane.wgts[&#34;cmap&#34;]:
             self.set_cmap(self.pane.sets[&#34;cmap&#34;].get())
-        elif event.widget == self.pane.wgts[&#34;overlap&#34;]:
-            self.set_overlap(self.pane.sets[&#34;overlap&#34;].get())
         else:
             super().handle_event(event)
     def set_scale(self, scale):
@@ -230,19 +221,12 @@ el.replaceWith(d);
     def set_cmap(self, _cmap):
         &#34;&#34;&#34;Set plot color mapping&#34;&#34;&#34;
         self.cmap = _cmap
-        self._cmap_set = True
-
-    def set_overlap(self, overlap):
-        try:
-            overlap = float(overlap)
-            self.parent.model.overlap = overlap
-        except ValueError:
-            overlap = self.parent.model.overlap
-        self.pane.sets[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+        self._cmap_set = True</code></pre>
 </details>
 <div class="desc"><p>Controller for view.tkGUI frequency-domain plots</p></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
+<li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT">FreqPlotControllerRT</a></li>
 <li><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></li>
 <li>pyspecan.controller.tkGUI.plot_base._PlotController</li>
 </ul>
@@ -259,8 +243,6 @@ el.replaceWith(d);
 <pre><code class="python">def handle_event(self, event):
     if event.widget == self.pane.wgts[&#34;cmap&#34;]:
         self.set_cmap(self.pane.sets[&#34;cmap&#34;].get())
-    elif event.widget == self.pane.wgts[&#34;overlap&#34;]:
-        self.set_overlap(self.pane.sets[&#34;overlap&#34;].get())
     else:
         super().handle_event(event)</code></pre>
 </details>
@@ -275,8 +257,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def reset(self):
-    self.psd_min = None
-    self.psd_max = None</code></pre>
+    pass</code></pre>
 </details>
 <div class="desc"><p>Reset plot view</p></div>
 </dd>
@@ -294,24 +275,6 @@ el.replaceWith(d);
     self._cmap_set = True</code></pre>
 </details>
 <div class="desc"><p>Set plot color mapping</p></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PST.set_overlap"><code class="name flex">
-<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_overlap(self, overlap):
-    try:
-        overlap = float(overlap)
-        self.parent.model.overlap = overlap
-    except ValueError:
-        overlap = self.parent.model.overlap
-    self.pane.sets[&#34;ref_level&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
-</details>
-<div class="desc"></div>
 </dd>
 <dt id="pyspecan.controller.tkGUI.rt.pst.PST.set_y"><code class="name flex">
 <span>def <span class="ident">set_y</span></span>(<span>self)</span>
@@ -340,18 +303,18 @@ el.replaceWith(d);
 </dl>
 <h3>Inherited members</h3>
 <ul class="hlist">
-<li><code><b><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController">FreqPlotController</a></b></code>:
+<li><code><b><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT">FreqPlotControllerRT</a></b></code>:
 <ul class="hlist">
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings">draw_settings</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale">set_scale</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f">update_f</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft">update_nfft</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.draw_settings" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.draw_settings">draw_settings</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_ref_level" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_ref_level">set_ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_scale" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_scale">set_scale</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_vbw" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_vbw">set_vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_window" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.set_window">set_window</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.update" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update">update</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.update_f" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_f">update_f</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.update_nfft" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.update_nfft">update_nfft</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.y_btm" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_btm">y_btm</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.y_top" href="../plot_base.html#pyspecan.controller.tkGUI.plot_base.FreqPlotController.y_top">y_top</a></code></li>
 </ul>
 </li>
 </ul>
@@ -369,6 +332,7 @@ el.replaceWith(d);
     scale_div = 10.0
     vbw = 0.0
     window = &#34;blackman&#34;
+    overlap = 0.6
     x = 1001
     y = 600
     cmap = &#34;hot&#34;</code></pre>
@@ -377,6 +341,10 @@ el.replaceWith(d);
 <h3>Class variables</h3>
 <dl>
 <dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.overlap"><code class="name">var <span class="ident">overlap</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -432,7 +400,6 @@ el.replaceWith(d);
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.handle_event" href="#pyspecan.controller.tkGUI.rt.pst.PST.handle_event">handle_event</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.reset" href="#pyspecan.controller.tkGUI.rt.pst.PST.reset">reset</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.set_cmap" href="#pyspecan.controller.tkGUI.rt.pst.PST.set_cmap">set_cmap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.set_overlap" href="#pyspecan.controller.tkGUI.rt.pst.PST.set_overlap">set_overlap</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PST.set_y" href="#pyspecan.controller.tkGUI.rt.pst.PST.set_y">set_y</a></code></li>
 </ul>
 </li>
@@ -440,6 +407,7 @@ el.replaceWith(d);
 <h4><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig">PlotConfig</a></code></h4>
 <ul class="two-column">
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.cmap" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.cmap">cmap</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.overlap" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.overlap">overlap</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.ref_level" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.ref_level">ref_level</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.scale_div" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.scale_div">scale_div</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.vbw" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.vbw">vbw</a></code></li>
