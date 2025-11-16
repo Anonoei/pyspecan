@@ -29,6 +29,7 @@ def define_args(parser: argparse.ArgumentParser):
 
 class Freq(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text="Freq")
         self.mag_min = None
         self.mag_max = None
         self.fmin = None
@@ -76,8 +77,6 @@ class Freq(FreqPlotController):
         fft = np.fft.fftshift(fft)
         mag = np.abs(fft)
         pha = np.angle(fft)
-
-        self.plotter.ax("mag").ax.set_title("Freq")
 
         if self.pane.sets["show_max"].get() == 1:
             if self.mag_max is None:

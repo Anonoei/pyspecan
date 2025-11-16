@@ -20,6 +20,7 @@ def define_args(parser: argparse.ArgumentParser):
     pass
 class IQ3D(TimePlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text="IQ 3D")
         self.amp_max = 0
         self.x_arr = np.arange(0, dtype=np.float16)
         super().__init__(parent, pane, **kwargs)
@@ -41,7 +42,6 @@ class IQ3D(TimePlotController):
         self.amp_max = 0
 
     def _plot(self, samps):
-        self.plotter.ax("iq").ax.set_title("IQ 3D")
         prev_max = self.amp_max
         self.amp_max = np.max((self.amp_max, -np.min(samps.real), np.max(samps.real), -np.min(samps.imag), np.max(samps.imag)))
         if not self.amp_max == prev_max:

@@ -29,6 +29,7 @@ def define_args(parser: argparse.ArgumentParser):
 
 class SPG(FreqPlotControllerRT):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text="Spectrogram")
         self.max_count = 256
         self.psds: np.ndarray = None # type: ignore
         self.fmin = None
@@ -70,7 +71,6 @@ class SPG(FreqPlotControllerRT):
         psd += (0 - self.y_btm)
         psd = psd / y_rng
 
-        self.plotter.ax("spg").ax.set_title("Spectrogram")
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)

@@ -33,6 +33,7 @@ def define_args(parser: argparse.ArgumentParser):
 
 class PST(FreqPlotControllerRT):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text="Persistent")
         self.x = kwargs.get("x", PlotConfig.x)
         self.y = kwargs.get("y", PlotConfig.y)
         self.cmap = kwargs.get("cmap", PlotConfig.cmap)
@@ -73,7 +74,7 @@ class PST(FreqPlotControllerRT):
 
     def _plot(self, samps):
         psd = self.psd(samps)
-        self.plotter.ax("pst").ax.set_title(f"Persistent - {psd.shape[1]} FFTs")
+        self.pane.master.config(text=f"Persistent - {psd.shape[1]} FFTs")
 
         mat = matrix.cvec(self.x, self.y, psd, self.y_top, self.y_btm)
         mat = mat / np.max(mat)

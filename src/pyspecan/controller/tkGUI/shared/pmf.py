@@ -20,6 +20,7 @@ def define_args(parser: argparse.ArgumentParser):
     pass
 class PMF(TimePlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text="PMF")
         self.pmf = ComplexPMF(256)
         super().__init__(parent, pane, **kwargs)
         fig = plt.figure(figsize=(5,5), layout="constrained")
@@ -38,7 +39,6 @@ class PMF(TimePlotController):
         self.pmf = ComplexPMF(256)
 
     def _plot(self, samps):
-        self.plotter.ax("pmf").ax.set_title("PMF")
         self.pmf.update(samps)
 
         x = self.pmf.x

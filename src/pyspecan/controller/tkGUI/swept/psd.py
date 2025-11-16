@@ -29,6 +29,7 @@ def define_args(parser: argparse.ArgumentParser):
 
 class PSD(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text="PSD")
         self.psd_min = None
         self.psd_max = None
         self.fmin = None
@@ -64,8 +65,6 @@ class PSD(FreqPlotController):
 
     def _plot(self, samps):
         psd = self.psd(samps)
-        self.plotter.ax("psd").ax.set_title("PSD")
-
         if self.pane.sets["show_max"].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))

@@ -29,6 +29,7 @@ def define_args(parser: argparse.ArgumentParser):
 
 class SPG3D(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text="Spectrogram 3D")
         self.max_count = 20
         self.cur_count = 0
         self.psds: np.ndarray = None # type: ignore
@@ -72,7 +73,6 @@ class SPG3D(FreqPlotController):
 
     def _plot(self, samps):
         psd = self.psd(samps)
-        self.plotter.ax("spg").ax.set_title("Spectrogram 3D")
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # if self.cur_count < self.max_count:

@@ -20,6 +20,7 @@ def define_args(parser: argparse.ArgumentParser):
     pass
 class IQ(TimePlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text="IQ")
         self.y_max = 0
         self.x_arr = np.arange(0, dtype=np.float16)
         super().__init__(parent, pane, **kwargs)
@@ -40,7 +41,6 @@ class IQ(TimePlotController):
         self.y_max = 0
 
     def _plot(self, samps):
-        self.plotter.ax("iq").ax.set_title("IQ")
         prev_max = self.y_max
         self.y_max = np.max((self.y_max, -np.min(samps.real), np.max(samps.real), -np.min(samps.imag), np.max(samps.imag)))
         if not self.y_max == prev_max:

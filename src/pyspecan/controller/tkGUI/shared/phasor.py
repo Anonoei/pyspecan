@@ -20,6 +20,7 @@ def define_args(parser: argparse.ArgumentParser):
     pass
 class Phasor(TimePlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text="Phasor")
         super().__init__(parent, pane, **kwargs)
         fig = plt.figure(figsize=(5,5), layout="constrained")
 
@@ -42,7 +43,7 @@ class Phasor(TimePlotController):
 
     def _plot(self, samps):
         s_max = np.max((samps.real, samps.imag))
-        self.plotter.ax("iq").ax.set_title(f"Phasor (norm {s_max:03.2f})")
+        self.pane.master.config(text=f"Phasor (norm {s_max:03.2f})")
         samps = samps / s_max
 
         self.plotter.ax("iq").scatter(
