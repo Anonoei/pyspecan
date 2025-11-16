@@ -148,12 +148,17 @@ el.replaceWith(d);
         psd = self.psd(samps)
         self.plotter.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
         psd = np.clip(psd, self.y_btm, self.y_top)
+        y_rng = abs(self.y_btm - self.y_top)
+        psd += (0 - self.y_btm)
+        psd = psd / y_rng
+
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)
         im = self.plotter.ax(&#34;spg&#34;).imshow(
             self.psds, name=&#34;spg&#34;,
             aspect=&#34;auto&#34;, origin=&#34;upper&#34;, cmap=&#34;magma&#34;,
+            vmin=0.0, vmax=1.0,
             interpolation=&#34;nearest&#34;, resample=False, rasterized=True
         )
         self.update()
