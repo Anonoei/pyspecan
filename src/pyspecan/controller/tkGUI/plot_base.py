@@ -88,7 +88,7 @@ class TimePlotController(_PlotController):
     def update(self):
         self.plotter.canvas.draw()
 
-    def _plot(self, samps):
+    def _plot(self, samps): # type: ignore
         raise NotImplementedError()
 
     def draw_settings(self, row=0):
@@ -125,7 +125,7 @@ class FreqPlotController(_PlotController):
     def update_nfft(self, nfft):
         """Update plot nfft"""
 
-    def _plot(self, samps):
+    def _plot(self, samps): # type: ignore
         raise NotImplementedError()
 
     def psd(self, samps):

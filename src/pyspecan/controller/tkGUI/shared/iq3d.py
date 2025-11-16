@@ -33,7 +33,7 @@ class IQ3D(TimePlotController):
 
         self.plotter.ax("iq").ax.set_autoscale_on(False)
         self.plotter.ax("iq").ax.grid(True, alpha=0.2)
-        self.plotter.ax("iq").ax.set_box_aspect((3,1,1))
+        self.plotter.ax("iq").ax.set_box_aspect((3,1,1)) # type: ignore
 
         self.update()
 
