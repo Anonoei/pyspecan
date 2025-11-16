@@ -16,8 +16,8 @@ from ....utils.window import WindowLUT
 from ....backend.mpl.plot import _Plot, Plot, BlitPlot
 
 class PlotConfig:
-    ref_level = 0
-    scale_div = 10.0
+    ref_level = 50
+    scale_div = 5
     vbw = 10.0
     window = "blackman"
 
@@ -27,10 +27,10 @@ def define_args(parser: argparse.ArgumentParser):
     parser.add_argument("-vb", "--vbw", default=PlotConfig.vbw, type=float, help="video bandwidth")
     parser.add_argument("-w", "--window", default=PlotConfig.window, choices=[k for k in WindowLUT.keys()], help="FFT window function")
 
-class PSD(FreqPlotController):
+class Freq(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
-        self.psd_min = None
-        self.psd_max = None
+        self.mag_min = None
+        self.mag_max = None
         self.fmin = None
         self.fmax = None
         if not "ref_level" in kwargs:
@@ -48,41 +48,55 @@ class PSD(FreqPlotController):
         self.plotter = BlitPlot(fig) # type: ignore
         self.plotter.canvas.draw()
         self.plotter.canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True) # type: ignore
-        self.plotter.add_ax("psd", fig.add_subplot())
+        self.plotter.add_ax("mag", fig.add_subplot(2,1,1))
+        self.plotter.add_ax("pha", fig.add_subplot(2,1,2))
 
-        self.plotter.ax("psd").ax.set_autoscale_on(False)
-        self.plotter.ax("psd").ax.locator_params(axis="x", nbins=5)
-        self.plotter.ax("psd").ax.locator_params(axis="y", nbins=10)
-        self.plotter.ax("psd").ax.grid(True, alpha=0.2)
+        self.plotter.ax("mag").ax.set_autoscale_on(False)
+        self.plotter.ax("mag").ax.locator_params(axis="x", nbins=5)
+        self.plotter.ax("mag").ax.locator_params(axis="y", nbins=10)
+        self.plotter.ax("mag").ax.grid(True, alpha=0.2)
+
+        self.plotter.ax("pha").ax.set_autoscale_on(False)
+        self.plotter.ax("pha").ax.locator_params(axis="x", nbins=5)
+        self.plotter.ax("pha").ax.locator_params(axis="y", nbins=10)
+        self.plotter.ax("pha").ax.grid(True, alpha=0.2)
+
+        # self.plotter.fig.set_layout_engine("constrained")
+        # self.plotter.fig.get_layout_engine().execute(self.plotter.fig) # type: ignore
 
         self.set_y()
         self.update()
 
     def reset(self):
-        self.psd_min = None
-        self.psd_max = None
+        self.mag_min = None
+        self.mag_max = None
 
     def _plot(self, samps):
-        psd = self.psd(samps)
-        self.plotter.ax("psd").ax.set_title("PSD")
+        fft = np.fft.fft(samps)
+        fft = np.fft.fftshift(fft)
+        mag = np.abs(fft)
+        pha = np.angle(fft)
+
+        self.plotter.ax("mag").ax.set_title("Freq")
 
         if self.pane.sets["show_max"].get() == 1:
-            if self.psd_max is None:
-                self.psd_max = np.repeat(-np.inf, len(psd))
-            self.psd_max[psd > self.psd_max] = psd[psd > self.psd_max]
-            line_max = self.plotter.ax("psd").plot(self.parent.model.f, self.psd_max, name="psd_max", color="r")
+            if self.mag_max is None:
+                self.mag_max = np.repeat(-np.inf, len(mag))
+            self.mag_max[mag > self.mag_max] = mag[mag > self.mag_max]
+            line_max = self.plotter.ax("mag").plot(self.parent.model.f, self.mag_max, name="max", color="r")
         else:
             line_max = None
         if self.pane.sets["show_min"].get() == 1:
-            if self.psd_min is None:
-                self.psd_min = np.repeat(np.inf, len(psd))
-            self.psd_min[psd < self.psd_min] = psd[psd < self.psd_min]
-            line_min = self.plotter.ax("psd").plot(self.parent.model.f, self.psd_min, name="psd_min", color="b")
+            if self.mag_min is None:
+                self.mag_min = np.repeat(np.inf, len(mag))
+            self.mag_min[mag < self.mag_min] = mag[mag < self.mag_min]
+            line_min = self.plotter.ax("mag").plot(self.parent.model.f, self.mag_min, name="min", color="b")
         else:
             line_min = None
-        line_psd = self.plotter.ax("psd").plot(self.parent.model.f, psd, name="psd", color="y")
+        line_mag = self.plotter.ax("mag").plot(self.parent.model.f, mag, name="fft", color="y")
+        line_pha = self.plotter.ax("pha").plot(self.parent.model.f, pha, name="pha", color="b")
 
-        self._show_y_location(psd)
+        self._show_y_location(mag)
         self.update()
 
     def update_f(self, f):
@@ -92,10 +106,12 @@ class PSD(FreqPlotController):
         else:
             self.fmin = fmin
             self.fmax = fmax
-        psd_tick = np.linspace(fmin, fmax, 5)
-        psd_text = [str(Frequency.get(f)) for f in psd_tick]
-        self.plotter.ax("psd").set_xlim(fmin, fmax)
-        self.plotter.ax("psd").ax.set_xticks(psd_tick, psd_text)
+        mag_tick = np.linspace(fmin, fmax, 5)
+        mag_text = [str(Frequency.get(f)) for f in mag_tick]
+        self.plotter.ax("mag").set_xlim(fmin, fmax)
+        self.plotter.ax("mag").ax.set_xticks(mag_tick, mag_text)
+        self.plotter.ax("pha").set_xlim(fmin, fmax)
+        self.plotter.ax("pha").ax.set_xticks(mag_tick, mag_text)
         self.update()
 
     def update_nfft(self, nfft):
@@ -103,7 +119,8 @@ class PSD(FreqPlotController):
 
     def set_y(self):
         """Set plot ylimits"""
-        self.plotter.ax("psd").set_ylim(self.y_btm, self.y_top)
+        self.plotter.ax("mag").set_ylim(self.y_btm, self.y_top)
+        self.plotter.ax("pha").set_ylim(-4, 4)
 
     def draw_settings(self, row=0):
         row = super().draw_settings(row)
@@ -121,7 +138,7 @@ class PSD(FreqPlotController):
 
         ttk.Separator(self.pane.settings, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
         row += 1
-        ttk.Label(self.pane.settings, text="PSD").grid(row=row, column=0,columnspan=2)
+        ttk.Label(self.pane.settings, text="FFT Magnitude").grid(row=row, column=0,columnspan=2)
         row += 1
         ttk.Label(self.pane.settings, text="Max Hold").grid(row=row, column=0)
         chk_show_max.grid(row=row, column=1)
@@ -148,16 +165,16 @@ class PSD(FreqPlotController):
         prev = float(self.vbw)
         super().set_vbw(smooth)
         if not prev == self.vbw:
-            self.psd_min = None
-            self.psd_max = None
+            self.mag_min = None
+            self.mag_max = None
 
     def toggle_psd_min(self):
         """Toggle PSD min-hold visibility"""
-        art = self.plotter.ax("psd").art("psd_min")
+        art = self.plotter.ax("mag").art("min")
         if art is None:
             return
         if self.pane.sets["show_min"].get() == 0:
-            self.psd_max = None
+            self.mag_max = None
             art.set_visible(False)
         else:
             art.set_visible(True)
@@ -165,11 +182,11 @@ class PSD(FreqPlotController):
 
     def toggle_psd_max(self):
         """Toggle PSD max-hold visibility"""
-        art = self.plotter.ax("psd").art("psd_max")
+        art = self.plotter.ax("mag").art("max")
         if art is None:
             return
         if self.pane.sets["show_max"].get() == 0:
-            self.psd_min = None
+            self.mag_min = None
             art.set_visible(False)
         else:
             art.set_visible(True)

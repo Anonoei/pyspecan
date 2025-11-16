@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ..panels import Panel
-from ..plot_base import FreqPlotController
+from ..plot_base import FreqPlotControllerRT
 
 from ....utils import vbw as _vbw
 from ....obj import Frequency
@@ -27,7 +27,7 @@ def define_args(parser: argparse.ArgumentParser):
     parser.add_argument("-vb", "--vbw", default=PlotConfig.vbw, type=float, help="video bandwidth")
     parser.add_argument("-w", "--window", default=PlotConfig.window, choices=[k for k in WindowLUT.keys()], help="FFT window function")
 
-class SPG(FreqPlotController):
+class SPG(FreqPlotControllerRT):
     def __init__(self, parent, pane: Panel, **kwargs):
         self.max_count = 256
         self.psds: np.ndarray = None # type: ignore
@@ -62,9 +62,12 @@ class SPG(FreqPlotController):
         self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
-    def _plot(self, freq, psd):
-        self.plotter.ax("spg").ax.set_title("Spectrogram")
+    def _plot(self, samps):
+        psd = self.psd(samps)
         psd = np.clip(psd, self.y_btm, self.y_top)
+        psd = np.sum(psd, axis=1) / samps.shape[0]
+
+        self.plotter.ax("spg").ax.set_title("Spectrogram")
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # print(self.psds.shape)

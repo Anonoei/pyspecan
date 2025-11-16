@@ -8,12 +8,10 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ..panels import Panel
-from ..plot_base import FreqPlotController
+from ..plot_base import FreqPlotControllerRT
 
 from ....utils import matrix
 from ....backend.mpl.color import cmap
-from ....utils import vbw as _vbw
-from ....obj import Frequency
 from ....utils.window import WindowLUT
 from ....backend.mpl.plot import _Plot, Plot, BlitPlot
 
@@ -22,6 +20,7 @@ class PlotConfig:
     scale_div = 10.0
     vbw = 0.0
     window = "blackman"
+    overlap = 0.6
     x = 1001
     y = 600
     cmap = "hot"
@@ -32,7 +31,7 @@ def define_args(parser: argparse.ArgumentParser):
     parser.add_argument("-vb", "--vbw", default=PlotConfig.vbw, type=float, help="video bandwidth")
     parser.add_argument("-w", "--window", default=PlotConfig.window, choices=[k for k in WindowLUT.keys()], help="FFT window function")
 
-class PST(FreqPlotController):
+class PST(FreqPlotControllerRT):
     def __init__(self, parent, pane: Panel, **kwargs):
         self.x = kwargs.get("x", PlotConfig.x)
         self.y = kwargs.get("y", PlotConfig.y)
@@ -47,6 +46,8 @@ class PST(FreqPlotController):
             kwargs["vbw"] = PlotConfig.vbw
         if not "window" in kwargs:
             kwargs["vbw"] = PlotConfig.vbw
+        if not "overlap" in kwargs:
+            kwargs["overlap"] = PlotConfig.overlap
         super().__init__(parent, pane, **kwargs)
         self._cmap_set = False
         self._cb_drawn = False
@@ -68,10 +69,10 @@ class PST(FreqPlotController):
         self.update()
 
     def reset(self):
-        self.psd_min = None
-        self.psd_max = None
+        pass
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
+        psd = self.psd(samps)
         self.plotter.ax("pst").ax.set_title(f"Persistent - {psd.shape[1]} FFTs")
 
         mat = matrix.cvec(self.x, self.y, psd, self.y_top, self.y_btm)
@@ -134,25 +135,16 @@ class PST(FreqPlotController):
 
     def draw_settings(self, row=0):
         row = super().draw_settings(row)
-        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.overlap))
-        ent_overlap = ttk.Entry(self.pane.settings, textvariable=var_overlap, width=4)
-        ent_overlap.bind("<Return>", self.handle_event)
 
         var_cmap = tk.StringVar(self.pane.settings, str(self.cmap))
         cb_cmap = ttk.Combobox(self.pane.settings, textvariable=var_cmap, width=9)
         cb_cmap.configure(values=[k for k in cmap.keys()])
         cb_cmap.bind("<<ComboboxSelected>>", self.handle_event)
 
-        self.pane.wgts["overlap"] = ent_overlap
-        self.pane.sets["overlap"] = var_overlap
-
         self.pane.wgts["cmap"] = cb_cmap
         self.pane.sets["cmap"] = var_cmap
 
         ttk.Separator(self.pane.settings, orient=tk.HORIZONTAL).grid(row=row,column=0,columnspan=3, pady=5, sticky=tk.EW)
-        row += 1
-        ttk.Label(self.pane.settings, text="Overlap").grid(row=row, column=0)
-        ent_overlap.grid(row=row, column=1)
         row += 1
         ttk.Label(self.pane.settings, text="Colors").grid(row=row, column=0)
         cb_cmap.grid(row=row, column=1)
@@ -163,8 +155,6 @@ class PST(FreqPlotController):
     def handle_event(self, event):
         if event.widget == self.pane.wgts["cmap"]:
             self.set_cmap(self.pane.sets["cmap"].get())
-        elif event.widget == self.pane.wgts["overlap"]:
-            self.set_overlap(self.pane.sets["overlap"].get())
         else:
             super().handle_event(event)
     def set_scale(self, scale):
@@ -189,11 +179,3 @@ class PST(FreqPlotController):
         """Set plot color mapping"""
         self.cmap = _cmap
         self._cmap_set = True
-
-    def set_overlap(self, overlap):
-        try:
-            overlap = float(overlap)
-            self.parent.model.overlap = overlap
-        except ValueError:
-            overlap = self.parent.model.overlap
-        self.pane.sets["ref_level"].set(f"{self.parent.model.overlap:.2f}")

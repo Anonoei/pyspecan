@@ -70,7 +70,8 @@ class SPG3D(FreqPlotController):
         self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
-    def _plot(self, freq, psd):
+    def _plot(self, samps):
+        psd = self.psd(samps)
         self.plotter.ax("spg").ax.set_title("Spectrogram 3D")
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
