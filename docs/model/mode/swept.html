@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.model.mode_swept API documentation</title>
+<title>pyspecan.model.mode.swept API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.model.mode_swept</code></h1>
+<h1 class="title">Module <code>pyspecan.model.mode.swept</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -44,7 +44,7 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.model.mode_swept.args_swept"><code class="name flex">
+<dt id="pyspecan.model.mode.swept.args_swept"><code class="name flex">
 <span>def <span class="ident">args_swept</span></span>(<span>parser: argparse.ArgumentParser)</span>
 </code></dt>
 <dd>
@@ -53,7 +53,8 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def args_swept(parser: argparse.ArgumentParser):
-    define_args(parser)</code></pre>
+    mode = args.get_group(parser, &#34;Mode (SWEPT)&#34;)
+    args_mode(mode)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -62,124 +63,24 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.model.mode_swept.ModelSwept"><code class="flex name class">
-<span>class <span class="ident">ModelSwept</span></span>
-<span>(</span><span>**kwargs)</span>
+<dt id="pyspecan.model.mode.swept.ModeSwept"><code class="flex name class">
+<span>class <span class="ident">ModeSwept</span></span>
+<span>(</span><span>model, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ModelSwept(Model):
-    def next(self):
-        if self.sweep_time &lt;= 0.0:
-            return super().next()
-        if super().next():
-            self.reader.cur_samp += int(self.Fs * (self.sweep_time/1000))
-            return True
-        return False
-
-    def prev(self):
-        if self.sweep_time &lt;= 0.0:
-            return super().prev()
-        if super().prev():
-            self.reader.cur_samp -= int(self.Fs * (self.sweep_time/1000))
-            return True
-        return False
-
-    def get_nfft(self):
-        return super().get_nfft()
-    def set_nfft(self, nfft):
-        super().set_nfft(nfft)
-        self.block_size = self._nfft
-    nfft = property(get_nfft, set_nfft)</code></pre>
+<pre><code class="python">class ModeSwept(Mode):
+    def __init__(self, model, **kwargs):
+        super().__init__(model)</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.model.base.Model" href="base.html#pyspecan.model.base.Model">Model</a></li>
+<li><a title="pyspecan.model.mode.mode.Mode" href="mode.html#pyspecan.model.mode.mode.Mode">Mode</a></li>
 </ul>
-<h3>Instance variables</h3>
-<dl>
-<dt id="pyspecan.model.mode_swept.ModelSwept.nfft"><code class="name">prop <span class="ident">nfft</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_nfft(self):
-    return super().get_nfft()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-</dl>
-<h3>Methods</h3>
-<dl>
-<dt id="pyspecan.model.mode_swept.ModelSwept.get_nfft"><code class="name flex">
-<span>def <span class="ident">get_nfft</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_nfft(self):
-    return super().get_nfft()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.model.mode_swept.ModelSwept.next"><code class="name flex">
-<span>def <span class="ident">next</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def next(self):
-    if self.sweep_time &lt;= 0.0:
-        return super().next()
-    if super().next():
-        self.reader.cur_samp += int(self.Fs * (self.sweep_time/1000))
-        return True
-    return False</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.model.mode_swept.ModelSwept.prev"><code class="name flex">
-<span>def <span class="ident">prev</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def prev(self):
-    if self.sweep_time &lt;= 0.0:
-        return super().prev()
-    if super().prev():
-        self.reader.cur_samp -= int(self.Fs * (self.sweep_time/1000))
-        return True
-    return False</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.model.mode_swept.ModelSwept.set_nfft"><code class="name flex">
-<span>def <span class="ident">set_nfft</span></span>(<span>self, nfft)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_nfft(self, nfft):
-    super().set_nfft(nfft)
-    self.block_size = self._nfft</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-</dl>
 </dd>
 </dl>
 </section>
@@ -191,25 +92,18 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.model" href="index.html">pyspecan.model</a></code></li>
+<li><code><a title="pyspecan.model.mode" href="index.html">pyspecan.model.mode</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pyspecan.model.mode_swept.args_swept" href="#pyspecan.model.mode_swept.args_swept">args_swept</a></code></li>
+<li><code><a title="pyspecan.model.mode.swept.args_swept" href="#pyspecan.model.mode.swept.args_swept">args_swept</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.model.mode_swept.ModelSwept" href="#pyspecan.model.mode_swept.ModelSwept">ModelSwept</a></code></h4>
-<ul class="">
-<li><code><a title="pyspecan.model.mode_swept.ModelSwept.get_nfft" href="#pyspecan.model.mode_swept.ModelSwept.get_nfft">get_nfft</a></code></li>
-<li><code><a title="pyspecan.model.mode_swept.ModelSwept.next" href="#pyspecan.model.mode_swept.ModelSwept.next">next</a></code></li>
-<li><code><a title="pyspecan.model.mode_swept.ModelSwept.nfft" href="#pyspecan.model.mode_swept.ModelSwept.nfft">nfft</a></code></li>
-<li><code><a title="pyspecan.model.mode_swept.ModelSwept.prev" href="#pyspecan.model.mode_swept.ModelSwept.prev">prev</a></code></li>
-<li><code><a title="pyspecan.model.mode_swept.ModelSwept.set_nfft" href="#pyspecan.model.mode_swept.ModelSwept.set_nfft">set_nfft</a></code></li>
-</ul>
+<h4><code><a title="pyspecan.model.mode.swept.ModeSwept" href="#pyspecan.model.mode.swept.ModeSwept">ModeSwept</a></code></h4>
 </li>
 </ul>
 </li>

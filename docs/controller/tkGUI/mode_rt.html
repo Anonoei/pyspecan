@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
 <title>pyspecan.controller.tkGUI.mode_rt API documentation</title>
-<meta name="description" content="Controller for RT mode">
+<meta name="description" content="tkGUI RT mode">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -36,7 +36,7 @@ el.replaceWith(d);
 <h1 class="title">Module <code>pyspecan.controller.tkGUI.mode_rt</code></h1>
 </header>
 <section id="section-intro">
-<p>Controller for RT mode</p>
+<p>tkGUI RT mode</p>
 </section>
 <section>
 </section>
@@ -54,9 +54,8 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def args_rt(parser: argparse.ArgumentParser):
-    ctrl = base_args(parser)
-    # freq_args(parser)
-    mode = parser.add_argument_group(&#34;RT mode&#34;)
+    mode = args.get_group(parser, &#34;Mode (RT)&#34;)
+    args_mode(mode)
     mode.add_argument(&#34;--x&#34;, default=ModeConfig.x, type=int, help=&#34;histogram x pixels&#34;)
     mode.add_argument(&#34;--y&#34;, default=ModeConfig.y, type=int, help=&#34;histogram y pixels&#34;)
     mode.add_argument(&#34;--cmap&#34;, default=ModeConfig.cmap, choices=[k for k in cmap.keys()], help=&#34;histogram color map&#34;)</code></pre>
@@ -68,32 +67,6 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.mode_rt.ControllerRT"><code class="flex name class">
-<span>class <span class="ident">ControllerRT</span></span>
-<span>(</span><span>*args, **kwargs)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class ControllerRT(Controller):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.panel = PanelController(self, self.view.panel, plots)
-        child = self.panel.rows[0]
-        pane = self.panel.cols[child][0]
-        pane.var_view.set(&#34;Persistent Histogram&#34;)
-        self.panel.set_view(None, child, pane)
-        self.draw()</code></pre>
-</details>
-<div class="desc"><p>tkGUI Controller</p></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.base.Controller" href="base.html#pyspecan.controller.tkGUI.base.Controller">Controller</a></li>
-<li><a title="pyspecan.controller.base.Controller" href="../base.html#pyspecan.controller.base.Controller">Controller</a></li>
-</ul>
-</dd>
 <dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig"><code class="flex name class">
 <span>class <span class="ident">ModeConfig</span></span>
 </code></dt>
@@ -103,6 +76,10 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class ModeConfig:
+    ref_level = 0
+    scale_div = 10.0
+    vbw = 0.0
+    window = &#34;blackman&#34;
     x = 1001
     y = 600
     cmap = &#34;hot&#34;</code></pre>
@@ -111,6 +88,22 @@ el.replaceWith(d);
 <h3>Class variables</h3>
 <dl>
 <dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig.ref_level"><code class="name">var <span class="ident">ref_level</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig.scale_div"><code class="name">var <span class="ident">scale_div</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig.vbw"><code class="name">var <span class="ident">vbw</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ModeConfig.window"><code class="name">var <span class="ident">window</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -123,6 +116,30 @@ el.replaceWith(d);
 <div class="desc"></div>
 </dd>
 </dl>
+</dd>
+<dt id="pyspecan.controller.tkGUI.mode_rt.ModeRT"><code class="flex name class">
+<span>class <span class="ident">ModeRT</span></span>
+<span>(</span><span>ctrl, **kwargs)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ModeRT(Mode):
+    def __init__(self, ctrl, **kwargs):
+        super().__init__(ctrl)
+        self.panel = PanelController(self.ctrl, self.ctrl.view.panel, plots)
+        child = self.panel.rows[0]
+        pane = self.panel.cols[child][0]
+        pane.var_view.set(&#34;Persistent Histogram&#34;)
+        self.panel.set_view(None, child, pane)</code></pre>
+</details>
+<div class="desc"></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="pyspecan.controller.tkGUI.mode.Mode" href="mode.html#pyspecan.controller.tkGUI.mode.Mode">Mode</a></li>
+</ul>
 </dd>
 </dl>
 </section>
@@ -145,15 +162,19 @@ el.replaceWith(d);
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.mode_rt.ControllerRT" href="#pyspecan.controller.tkGUI.mode_rt.ControllerRT">ControllerRT</a></code></h4>
-</li>
-<li>
 <h4><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig">ModeConfig</a></code></h4>
-<ul class="">
+<ul class="two-column">
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.cmap" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.cmap">cmap</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.ref_level" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.ref_level">ref_level</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.scale_div" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.scale_div">scale_div</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.vbw" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.vbw">vbw</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.window" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.window">window</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.x" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.x">x</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeConfig.y" href="#pyspecan.controller.tkGUI.mode_rt.ModeConfig.y">y</a></code></li>
 </ul>
+</li>
+<li>
+<h4><code><a title="pyspecan.controller.tkGUI.mode_rt.ModeRT" href="#pyspecan.controller.tkGUI.mode_rt.ModeRT">ModeRT</a></code></h4>
 </li>
 </ul>
 </li>

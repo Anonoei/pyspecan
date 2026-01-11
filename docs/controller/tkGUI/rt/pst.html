@@ -76,6 +76,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class PST(FreqPlotControllerRT):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text=&#34;Persistent&#34;)
         self.x = kwargs.get(&#34;x&#34;, PlotConfig.x)
         self.y = kwargs.get(&#34;y&#34;, PlotConfig.y)
         self.cmap = kwargs.get(&#34;cmap&#34;, PlotConfig.cmap)
@@ -116,7 +117,7 @@ el.replaceWith(d);
 
     def _plot(self, samps):
         psd = self.psd(samps)
-        self.plotter.ax(&#34;pst&#34;).ax.set_title(f&#34;Persistent - {psd.shape[1]} FFTs&#34;)
+        self.pane.master.config(text=f&#34;Persistent - {psd.shape[1]} FFTs&#34;)
 
         mat = matrix.cvec(self.x, self.y, psd, self.y_top, self.y_btm)
         mat = mat / np.max(mat)

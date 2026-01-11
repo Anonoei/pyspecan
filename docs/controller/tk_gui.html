@@ -46,34 +46,73 @@ el.replaceWith(d);
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="pyspecan.controller.tk_gui.ControllerArgs"><code class="name flex">
-<span>def <span class="ident">ControllerArgs</span></span>(<span>mode)</span>
+<span>def <span class="ident">ControllerArgs</span></span>(<span>mode, sink, parser)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def ControllerArgs(mode):
+<pre><code class="python">def ControllerArgs(mode, sink, parser):
+    args_ctrl(parser)
     if mode == Mode.SWEPT:
-        return args_swept
+        args_swept(parser)
     elif mode == Mode.RT:
-        return args_rt</code></pre>
+        args_rt(parser)
+
+    if sink == Sink.FILE:
+        args_file(parser)
+    elif sink == Sink.LIVE:
+        args_live(parser)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.controller.tk_gui.GetController"><code class="name flex">
-<span>def <span class="ident">GetController</span></span>(<span>mode)</span>
+<span>def <span class="ident">GetController</span></span>(<span>mode, sink)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def GetController(mode):
+<pre><code class="python">def GetController(mode, sink):
+    m: Mode = GetMode(mode) # type: ignore
+    s: Sink = GetSink(sink) # type: ignore
+    return lambda model, view, m=m, s=s, **kwargs: Controller(model, view, m, s, **kwargs)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tk_gui.GetMode"><code class="name flex">
+<span>def <span class="ident">GetMode</span></span>(<span>mode)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def GetMode(mode):
     if mode == Mode.SWEPT:
-        return ControllerSwept
+        return ModeSwept
     elif mode == Mode.RT:
-        return ControllerRT</code></pre>
+        return ModeRT
+    raise err.UnknownOption(f&#34;Unknown mode: {mode}&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.controller.tk_gui.GetSink"><code class="name flex">
+<span>def <span class="ident">GetSink</span></span>(<span>sink)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def GetSink(sink):
+    if sink == Sink.FILE:
+        return SinkFile
+    elif sink == Sink.LIVE:
+        return SinkLive
+    raise err.UnknownOption(f&#34;Unknown sink: {sink}&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -96,6 +135,8 @@ el.replaceWith(d);
 <ul class="">
 <li><code><a title="pyspecan.controller.tk_gui.ControllerArgs" href="#pyspecan.controller.tk_gui.ControllerArgs">ControllerArgs</a></code></li>
 <li><code><a title="pyspecan.controller.tk_gui.GetController" href="#pyspecan.controller.tk_gui.GetController">GetController</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.GetMode" href="#pyspecan.controller.tk_gui.GetMode">GetMode</a></code></li>
+<li><code><a title="pyspecan.controller.tk_gui.GetSink" href="#pyspecan.controller.tk_gui.GetSink">GetSink</a></code></li>
 </ul>
 </li>
 </ul>

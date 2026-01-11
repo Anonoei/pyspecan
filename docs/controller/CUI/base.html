@@ -117,32 +117,32 @@ el.replaceWith(d);
         if len(args) == 0 or args[0] in (&#34;h&#34;, &#34;help&#34;):
             show_help()
             return
-        if args[0] in (&#34;s&#34;, &#34;show&#34;):
-            print(&#34; &#34;*ind + f&#34;  {self.model.cur_time():.2f}s/{self.model.tot_time():.2f}s&#34;)
-            print(&#34; &#34;*ind + &#34;  Reader:&#34;)
-            self.model.reader.show(ind+2)
+        # if args[0] in (&#34;s&#34;, &#34;show&#34;):
+        #     print(&#34; &#34;*ind + f&#34;  {self.model.cur_time():.2f}s/{self.model.tot_time():.2f}s&#34;)
+        #     print(&#34; &#34;*ind + &#34;  Reader:&#34;)
+        #     self.model.reader.show(ind+2)
 
-            print(f&#34;  Fs: {self.model.Fs} | cf: {self.model.cf}&#34;)
-            print(f&#34;  nfft: {self.model.nfft} | Sweep time: {self.model.sweep_time}&#34;)
-        elif args[0] in (&#34;f&#34;, &#34;path&#34;):
-            if len(args) == 2:
-                self.model.reader.path = args[1]
-                print(&#34; &#34;*ind + str(self.model.reader.path))
-        elif args[0] in (&#34;d&#34;, &#34;fmt&#34;) and len(args) == 2:
-            self.model.reader.fmt = args[1]
-            print(&#34; &#34;*ind + str(self.model.reader.fmt))
-        elif args[0] in (&#34;fs&#34;,) and len(args) == 2:
-            self.model.Fs = args[1]
-            print(&#34; &#34;*ind + str(self.model.Fs))
-        elif args[0] in (&#34;cf&#34;,) and len(args) == 2:
-            self.model.cf = args[1]
-            print(&#34; &#34;*ind + str(self.model.cf))
-        elif args[0] in (&#34;n&#34;, &#34;nfft&#34;) and len(args) == 2:
-            self.model.nfft = args[1]
-            print(&#34; &#34;*ind + str(self.model.nfft))
-        elif args[0] in (&#34;st&#34;, &#34;sweep_time&#34;) and len(args) == 2:
-            self.model.sweep_time = args[1]
-            print(&#34; &#34;*ind + str(self.model.sweep_time))
+        #     print(f&#34;  Fs: {self.model.Fs} | cf: {self.model.cf}&#34;)
+        #     print(f&#34;  nfft: {self.model.nfft} | Sweep time: {self.model.sweep_time}&#34;)
+        # elif args[0] in (&#34;f&#34;, &#34;path&#34;):
+        #     if len(args) == 2:
+        #         self.model.reader.path = args[1]
+        #         print(&#34; &#34;*ind + str(self.model.reader.path))
+        # elif args[0] in (&#34;d&#34;, &#34;fmt&#34;) and len(args) == 2:
+        #     self.model.reader.fmt = args[1]
+        #     print(&#34; &#34;*ind + str(self.model.reader.fmt))
+        # elif args[0] in (&#34;fs&#34;,) and len(args) == 2:
+        #     self.model.Fs = args[1]
+        #     print(&#34; &#34;*ind + str(self.model.Fs))
+        # elif args[0] in (&#34;cf&#34;,) and len(args) == 2:
+        #     self.model.cf = args[1]
+        #     print(&#34; &#34;*ind + str(self.model.cf))
+        # elif args[0] in (&#34;n&#34;, &#34;nfft&#34;) and len(args) == 2:
+        #     self.model.nfft = args[1]
+        #     print(&#34; &#34;*ind + str(self.model.nfft))
+        # elif args[0] in (&#34;st&#34;, &#34;sweep_time&#34;) and len(args) == 2:
+        #     self.model.sweep_time = args[1]
+        #     print(&#34; &#34;*ind + str(self.model.sweep_time))
 
     def cmd_state(self, args, ind=4):
         def show_help():
@@ -152,12 +152,12 @@ el.replaceWith(d);
         if len(args) == 0 or args[0] in (&#34;h&#34;, &#34;help&#34;):
             show_help()
             return
-        elif args[0] in (&#34;n&#34;, &#34;next&#34;):
-            valid = self.model.next()
-            print(&#34; &#34;*ind + f&#34;{valid}&#34;)
-        elif args[0] in (&#34;p&#34;, &#34;prev&#34;):
-            valid = self.model.prev()
-            print(&#34; &#34;*ind + f&#34;{valid}&#34;)
+        # elif args[0] in (&#34;n&#34;, &#34;next&#34;):
+        #     valid = self.model.next()
+        #     print(&#34; &#34;*ind + f&#34;{valid}&#34;)
+        # elif args[0] in (&#34;p&#34;, &#34;prev&#34;):
+        #     valid = self.model.prev()
+        #     print(&#34; &#34;*ind + f&#34;{valid}&#34;)
 
     def cmd_view(self, args, ind=4):
         def show_help():
@@ -199,32 +199,32 @@ el.replaceWith(d);
     if len(args) == 0 or args[0] in (&#34;h&#34;, &#34;help&#34;):
         show_help()
         return
-    if args[0] in (&#34;s&#34;, &#34;show&#34;):
-        print(&#34; &#34;*ind + f&#34;  {self.model.cur_time():.2f}s/{self.model.tot_time():.2f}s&#34;)
-        print(&#34; &#34;*ind + &#34;  Reader:&#34;)
-        self.model.reader.show(ind+2)
+    # if args[0] in (&#34;s&#34;, &#34;show&#34;):
+    #     print(&#34; &#34;*ind + f&#34;  {self.model.cur_time():.2f}s/{self.model.tot_time():.2f}s&#34;)
+    #     print(&#34; &#34;*ind + &#34;  Reader:&#34;)
+    #     self.model.reader.show(ind+2)
 
-        print(f&#34;  Fs: {self.model.Fs} | cf: {self.model.cf}&#34;)
-        print(f&#34;  nfft: {self.model.nfft} | Sweep time: {self.model.sweep_time}&#34;)
-    elif args[0] in (&#34;f&#34;, &#34;path&#34;):
-        if len(args) == 2:
-            self.model.reader.path = args[1]
-            print(&#34; &#34;*ind + str(self.model.reader.path))
-    elif args[0] in (&#34;d&#34;, &#34;fmt&#34;) and len(args) == 2:
-        self.model.reader.fmt = args[1]
-        print(&#34; &#34;*ind + str(self.model.reader.fmt))
-    elif args[0] in (&#34;fs&#34;,) and len(args) == 2:
-        self.model.Fs = args[1]
-        print(&#34; &#34;*ind + str(self.model.Fs))
-    elif args[0] in (&#34;cf&#34;,) and len(args) == 2:
-        self.model.cf = args[1]
-        print(&#34; &#34;*ind + str(self.model.cf))
-    elif args[0] in (&#34;n&#34;, &#34;nfft&#34;) and len(args) == 2:
-        self.model.nfft = args[1]
-        print(&#34; &#34;*ind + str(self.model.nfft))
-    elif args[0] in (&#34;st&#34;, &#34;sweep_time&#34;) and len(args) == 2:
-        self.model.sweep_time = args[1]
-        print(&#34; &#34;*ind + str(self.model.sweep_time))</code></pre>
+    #     print(f&#34;  Fs: {self.model.Fs} | cf: {self.model.cf}&#34;)
+    #     print(f&#34;  nfft: {self.model.nfft} | Sweep time: {self.model.sweep_time}&#34;)
+    # elif args[0] in (&#34;f&#34;, &#34;path&#34;):
+    #     if len(args) == 2:
+    #         self.model.reader.path = args[1]
+    #         print(&#34; &#34;*ind + str(self.model.reader.path))
+    # elif args[0] in (&#34;d&#34;, &#34;fmt&#34;) and len(args) == 2:
+    #     self.model.reader.fmt = args[1]
+    #     print(&#34; &#34;*ind + str(self.model.reader.fmt))
+    # elif args[0] in (&#34;fs&#34;,) and len(args) == 2:
+    #     self.model.Fs = args[1]
+    #     print(&#34; &#34;*ind + str(self.model.Fs))
+    # elif args[0] in (&#34;cf&#34;,) and len(args) == 2:
+    #     self.model.cf = args[1]
+    #     print(&#34; &#34;*ind + str(self.model.cf))
+    # elif args[0] in (&#34;n&#34;, &#34;nfft&#34;) and len(args) == 2:
+    #     self.model.nfft = args[1]
+    #     print(&#34; &#34;*ind + str(self.model.nfft))
+    # elif args[0] in (&#34;st&#34;, &#34;sweep_time&#34;) and len(args) == 2:
+    #     self.model.sweep_time = args[1]
+    #     print(&#34; &#34;*ind + str(self.model.sweep_time))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -244,12 +244,12 @@ el.replaceWith(d);
     if len(args) == 0 or args[0] in (&#34;h&#34;, &#34;help&#34;):
         show_help()
         return
-    elif args[0] in (&#34;n&#34;, &#34;next&#34;):
-        valid = self.model.next()
-        print(&#34; &#34;*ind + f&#34;{valid}&#34;)
-    elif args[0] in (&#34;p&#34;, &#34;prev&#34;):
-        valid = self.model.prev()
-        print(&#34; &#34;*ind + f&#34;{valid}&#34;)</code></pre>
+    # elif args[0] in (&#34;n&#34;, &#34;next&#34;):
+    #     valid = self.model.next()
+    #     print(&#34; &#34;*ind + f&#34;{valid}&#34;)
+    # elif args[0] in (&#34;p&#34;, &#34;prev&#34;):
+    #     valid = self.model.prev()
+    #     print(&#34; &#34;*ind + f&#34;{valid}&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>

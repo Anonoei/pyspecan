@@ -44,39 +44,74 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.model.model.GetModel"><code class="name flex">
-<span>def <span class="ident">GetModel</span></span>(<span>mode)</span>
+<dt id="pyspecan.model.model.GetMode"><code class="name flex">
+<span>def <span class="ident">GetMode</span></span>(<span>mode)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def GetModel(mode):
-    if mode == Mode.SWEPT:
-        return ModelSwept
-    elif mode == Mode.RT:
-        return ModelRT
-    else:
-        raise err.UnknownOption(f&#34;Unknown mode specified: {mode}&#34;)</code></pre>
+<pre><code class="python">def GetMode(mode):
+    if mode == _Mode.SWEPT:
+        return ModeSwept
+    elif mode == _Mode.RT:
+        return ModeRT
+    raise err.UnknownOption(f&#34;Unknown mode: {mode}&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.model.GetModel"><code class="name flex">
+<span>def <span class="ident">GetModel</span></span>(<span>mode, sink)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def GetModel(mode, sink):
+    mode = GetMode(mode)
+    sink = GetSink(sink)
+    return lambda m=mode, s=sink, **kwargs: Model(m, s, **kwargs)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.model.GetSink"><code class="name flex">
+<span>def <span class="ident">GetSink</span></span>(<span>sink)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def GetSink(sink):
+    if sink == _Sink.FILE:
+        return SinkFile
+    elif sink == _Sink.LIVE:
+        return SinkLive
+    raise err.UnknownOption(f&#34;Unknown sink: {sink}&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.model.model.ModelArgs"><code class="name flex">
-<span>def <span class="ident">ModelArgs</span></span>(<span>mode) ‑> Callable</span>
+<span>def <span class="ident">ModelArgs</span></span>(<span>mode, sink, parser)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def ModelArgs(mode) -&gt; Callable:
-    if mode == Mode.SWEPT:
-        return args_swept
-    elif mode == Mode.RT:
-        return args_rt
-    else:
-        raise err.UnknownOption(f&#34;Unknown mode specified: {mode}&#34;)</code></pre>
+<pre><code class="python">def ModelArgs(mode, sink, parser):
+    args_model(parser)
+    if mode == _Mode.SWEPT:
+        args_swept(parser)
+    elif mode == _Mode.RT:
+        args_rt(parser)
+
+    if sink == _Sink.FILE:
+        args_file(parser)
+    elif sink == _Sink.LIVE:
+        args_live(parser)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -97,7 +132,9 @@ el.replaceWith(d);
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
+<li><code><a title="pyspecan.model.model.GetMode" href="#pyspecan.model.model.GetMode">GetMode</a></code></li>
 <li><code><a title="pyspecan.model.model.GetModel" href="#pyspecan.model.model.GetModel">GetModel</a></code></li>
+<li><code><a title="pyspecan.model.model.GetSink" href="#pyspecan.model.model.GetSink">GetSink</a></code></li>
 <li><code><a title="pyspecan.model.model.ModelArgs" href="#pyspecan.model.model.ModelArgs">ModelArgs</a></code></li>
 </ul>
 </li>

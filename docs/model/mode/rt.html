@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.tkGUI.mode_swept API documentation</title>
-<meta name="description" content="tkGUI SWEPT mode">
+<title>pyspecan.model.mode.rt API documentation</title>
+<meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -33,10 +33,9 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.tkGUI.mode_swept</code></h1>
+<h1 class="title">Module <code>pyspecan.model.mode.rt</code></h1>
 </header>
 <section id="section-intro">
-<p>tkGUI SWEPT mode</p>
 </section>
 <section>
 </section>
@@ -45,21 +44,19 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.mode_swept.args_swept"><code class="name flex">
-<span>def <span class="ident">args_swept</span></span>(<span>parser: argparse.ArgumentParser)</span>
+<dt id="pyspecan.model.mode.rt.args_rt"><code class="name flex">
+<span>def <span class="ident">args_rt</span></span>(<span>parser: argparse.ArgumentParser)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def args_swept(parser: argparse.ArgumentParser):
-    mode = args.get_group(parser, &#34;Mode (SWEPT)&#34;)
+<pre><code class="python">def args_rt(parser: argparse.ArgumentParser):
+    mode = args.get_group(parser, &#34;Mode (RT)&#34;)
     args_mode(mode)
-    # freq_args(parser)
-    # mode = parser.add_argument_group(&#34;SWEPT mode&#34;)
-    # mode.add_argument(&#34;--psd&#34;, action=&#34;store_false&#34;, help=&#34;show psd&#34;)
-    # mode.add_argument(&#34;--spg&#34;, action=&#34;store_true&#34;, help=&#34;show spectrogram&#34;)</code></pre>
+    mode.add_argument(&#34;--overlap&#34;, default=ModeConfig.overlap, type=float)
+    mode.add_argument(&#34;--block_max&#34;, default=ModeConfig.block_max, type=int)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -68,7 +65,7 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.mode_swept.ModeConfig"><code class="flex name class">
+<dt id="pyspecan.model.mode.rt.ModeConfig"><code class="flex name class">
 <span>class <span class="ident">ModeConfig</span></span>
 </code></dt>
 <dd>
@@ -77,45 +74,139 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class ModeConfig:
-    psd = True
-    spg = False</code></pre>
+    overlap = 0.6
+    block_max = 102400</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Class variables</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.mode_swept.ModeConfig.psd"><code class="name">var <span class="ident">psd</span></code></dt>
+<dt id="pyspecan.model.mode.rt.ModeConfig.block_max"><code class="name">var <span class="ident">block_max</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.mode_swept.ModeConfig.spg"><code class="name">var <span class="ident">spg</span></code></dt>
+<dt id="pyspecan.model.mode.rt.ModeConfig.overlap"><code class="name">var <span class="ident">overlap</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
 </dl>
 </dd>
-<dt id="pyspecan.controller.tkGUI.mode_swept.ModeSwept"><code class="flex name class">
-<span>class <span class="ident">ModeSwept</span></span>
-<span>(</span><span>ctrl, **kwargs)</span>
+<dt id="pyspecan.model.mode.rt.ModeRT"><code class="flex name class">
+<span>class <span class="ident">ModeRT</span></span>
+<span>(</span><span>model, **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ModeSwept(Mode):
-    def __init__(self, ctrl, **kwargs):
-        super().__init__(ctrl)
-        self.panel = PanelController(self.ctrl, self.ctrl.view.panel, plots)
-        child = self.panel.rows[0]
-        pane = self.panel.cols[child][0]
-        pane.var_view.set(&#34;PSD&#34;)
-        self.panel.set_view(None, child, pane)</code></pre>
+<pre><code class="python">class ModeRT(Mode):
+    __slots__ = (
+        &#34;_overlap&#34;, &#34;_block_max&#34;
+    )
+    def __init__(self, model, **kwargs):
+        super().__init__(model)
+        self._overlap = kwargs.get(&#34;overlap&#34;, ModeConfig.overlap)
+        self._block_max = kwargs.get(&#34;block_max&#34;, ModeConfig.block_max)
+        self.update_blocksize()
+
+    def update_blocksize(self):
+        self._block_size = int(self.model.get_fs() * (self._sweep_time/1000))
+        if self._block_size &gt; self._block_max:
+            self._block_size = self._block_max
+            super().set_sweep_time((self._block_size/self.model.get_fs())*1000)
+
+    def get_overlap(self):
+        return self._overlap
+    def set_overlap(self, overlap):
+        if overlap &lt;= 0.0 or overlap &gt; 1.0:
+            raise ValueError
+        self._overlap = float(overlap)
+    overlap = property(get_overlap, set_overlap)
+
+    def set_sweep_time(self, ts):
+        super().set_sweep_time(ts)
+        self.update_blocksize()</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.mode.Mode" href="mode.html#pyspecan.controller.tkGUI.mode.Mode">Mode</a></li>
+<li><a title="pyspecan.model.mode.mode.Mode" href="mode.html#pyspecan.model.mode.mode.Mode">Mode</a></li>
 </ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="pyspecan.model.mode.rt.ModeRT.overlap"><code class="name">prop <span class="ident">overlap</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_overlap(self):
+    return self._overlap</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="pyspecan.model.mode.rt.ModeRT.get_overlap"><code class="name flex">
+<span>def <span class="ident">get_overlap</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_overlap(self):
+    return self._overlap</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode.rt.ModeRT.set_overlap"><code class="name flex">
+<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_overlap(self, overlap):
+    if overlap &lt;= 0.0 or overlap &gt; 1.0:
+        raise ValueError
+    self._overlap = float(overlap)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode.rt.ModeRT.set_sweep_time"><code class="name flex">
+<span>def <span class="ident">set_sweep_time</span></span>(<span>self, ts)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_sweep_time(self, ts):
+    super().set_sweep_time(ts)
+    self.update_blocksize()</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.model.mode.rt.ModeRT.update_blocksize"><code class="name flex">
+<span>def <span class="ident">update_blocksize</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_blocksize(self):
+    self._block_size = int(self.model.get_fs() * (self._sweep_time/1000))
+    if self._block_size &gt; self._block_max:
+        self._block_size = self._block_max
+        super().set_sweep_time((self._block_size/self.model.get_fs())*1000)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
 </dd>
 </dl>
 </section>
@@ -127,25 +218,32 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.controller.tkGUI" href="index.html">pyspecan.controller.tkGUI</a></code></li>
+<li><code><a title="pyspecan.model.mode" href="index.html">pyspecan.model.mode</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.mode_swept.args_swept" href="#pyspecan.controller.tkGUI.mode_swept.args_swept">args_swept</a></code></li>
+<li><code><a title="pyspecan.model.mode.rt.args_rt" href="#pyspecan.model.mode.rt.args_rt">args_rt</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeConfig" href="#pyspecan.controller.tkGUI.mode_swept.ModeConfig">ModeConfig</a></code></h4>
+<h4><code><a title="pyspecan.model.mode.rt.ModeConfig" href="#pyspecan.model.mode.rt.ModeConfig">ModeConfig</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeConfig.psd" href="#pyspecan.controller.tkGUI.mode_swept.ModeConfig.psd">psd</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeConfig.spg" href="#pyspecan.controller.tkGUI.mode_swept.ModeConfig.spg">spg</a></code></li>
+<li><code><a title="pyspecan.model.mode.rt.ModeConfig.block_max" href="#pyspecan.model.mode.rt.ModeConfig.block_max">block_max</a></code></li>
+<li><code><a title="pyspecan.model.mode.rt.ModeConfig.overlap" href="#pyspecan.model.mode.rt.ModeConfig.overlap">overlap</a></code></li>
 </ul>
 </li>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeSwept" href="#pyspecan.controller.tkGUI.mode_swept.ModeSwept">ModeSwept</a></code></h4>
+<h4><code><a title="pyspecan.model.mode.rt.ModeRT" href="#pyspecan.model.mode.rt.ModeRT">ModeRT</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.model.mode.rt.ModeRT.get_overlap" href="#pyspecan.model.mode.rt.ModeRT.get_overlap">get_overlap</a></code></li>
+<li><code><a title="pyspecan.model.mode.rt.ModeRT.overlap" href="#pyspecan.model.mode.rt.ModeRT.overlap">overlap</a></code></li>
+<li><code><a title="pyspecan.model.mode.rt.ModeRT.set_overlap" href="#pyspecan.model.mode.rt.ModeRT.set_overlap">set_overlap</a></code></li>
+<li><code><a title="pyspecan.model.mode.rt.ModeRT.set_sweep_time" href="#pyspecan.model.mode.rt.ModeRT.set_sweep_time">set_sweep_time</a></code></li>
+<li><code><a title="pyspecan.model.mode.rt.ModeRT.update_blocksize" href="#pyspecan.model.mode.rt.ModeRT.update_blocksize">update_blocksize</a></code></li>
+</ul>
 </li>
 </ul>
 </li>

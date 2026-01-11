@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
 <title>pyspecan.controller.tkGUI.plot_base API documentation</title>
-<meta name="description" content="Base Controllers for tkGUI Controller">
+<meta name="description" content="tkGUI base PlotController">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -36,7 +36,7 @@ el.replaceWith(d);
 <h1 class="title">Module <code>pyspecan.controller.tkGUI.plot_base</code></h1>
 </header>
 <section id="section-intro">
-<p>Base Controllers for tkGUI Controller</p>
+<p>tkGUI base PlotController</p>
 </section>
 <section>
 </section>
@@ -45,15 +45,15 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.plot_base.define_args"><code class="name flex">
-<span>def <span class="ident">define_args</span></span>(<span>parser: argparse.ArgumentParser, cfg)</span>
+<dt id="pyspecan.controller.tkGUI.plot_base.args_plot"><code class="name flex">
+<span>def <span class="ident">args_plot</span></span>(<span>parser, cfg)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def define_args(parser: argparse.ArgumentParser, cfg):
+<pre><code class="python">def args_plot(parser, cfg):
     parser.add_argument(&#34;-rl&#34;, &#34;--ref_level&#34;, default=cfg.ref_level, type=float, help=&#34;ref Level&#34;)
     parser.add_argument(&#34;-sd&#34;, &#34;--scale_div&#34;, default=cfg.scale_div, type=float, help=&#34;scale per division&#34;)
     parser.add_argument(&#34;-vb&#34;, &#34;--vbw&#34;, default=cfg.vbw, type=float, help=&#34;video bandwidth&#34;)
@@ -113,7 +113,7 @@ el.replaceWith(d);
         vbw = self.vbw
         if vbw &lt;= 0:
             vbw = None
-        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
+        return psd(samps, self.parent.model.sink.get_fs().raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -279,7 +279,7 @@ el.replaceWith(d);
         vbw = self.vbw
         if vbw &lt;= 0:
             vbw = None
-        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
+        return psd(samps, self.parent.model.sink.get_fs().raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -432,7 +432,7 @@ el.replaceWith(d);
         vbw = self.vbw
         if vbw &lt;= 0:
             vbw = None
-        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
+        return psd(samps, self.parent.model.sink.get_fs().raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -585,7 +585,7 @@ el.replaceWith(d);
         vbw = self.vbw
         if vbw &lt;= 0:
             vbw = None
-        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
+        return psd(samps, self.parent.model.sink.get_fs().raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -738,7 +738,7 @@ el.replaceWith(d);
         vbw = self.vbw
         if vbw &lt;= 0:
             vbw = None
-        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
+        return psd(samps, self.parent.model.sink.get_fs().raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -891,7 +891,7 @@ el.replaceWith(d);
         vbw = self.vbw
         if vbw &lt;= 0:
             vbw = None
-        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
+        return psd(samps, self.parent.model.sink.get_fs().raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -1044,7 +1044,7 @@ el.replaceWith(d);
         vbw = self.vbw
         if vbw &lt;= 0:
             vbw = None
-        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
+        return psd(samps, self.parent.model.sink.get_fs().raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -1265,7 +1265,7 @@ def y_top(self):
     vbw = self.vbw
     if vbw &lt;= 0:
         vbw = None
-    return psd(samps, self.parent.model.Fs.raw, vbw, self.window)</code></pre>
+    return psd(samps, self.parent.model.sink.get_fs().raw, vbw, self.window)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -1401,14 +1401,14 @@ def y_top(self):
         vbw = self.vbw
         if vbw &lt;= 0:
             vbw = None
-        return psd_rt(samps, self.parent.model.nfft, self.overlap, self.parent.model.Fs.raw, vbw, self.window)
+        return psd_rt(samps, self.parent.model.get_nfft(), self.overlap, self.parent.model.get_fs().raw, vbw, self.window)
 
     def _plot(self, samps):
         raise NotImplementedError()
 
     def draw_settings(self, row=0):
         row = super().draw_settings(row)
-        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.overlap))
+        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.mode.get_overlap()))
         ent_overlap = ttk.Entry(self.pane.settings, textvariable=var_overlap, width=4)
         ent_overlap.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
 
@@ -1430,10 +1430,10 @@ def y_top(self):
     def set_overlap(self, overlap):
         try:
             overlap = float(overlap)
-            self.parent.model.overlap = overlap
+            self.parent.model.mode.set_overlap(overlap)
         except ValueError:
-            overlap = self.parent.model.overlap
-        self.pane.sets[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+            overlap = self.parent.model.get_overlap()
+        self.pane.sets[&#34;overlap&#34;].set(f&#34;{self.parent.model.get_overlap():.2f}&#34;)</code></pre>
 </details>
 <div class="desc"><p>Controller for view.tkGUI frequency-domain plots</p></div>
 <h3>Ancestors</h3>
@@ -1476,7 +1476,7 @@ def y_top(self):
     vbw = self.vbw
     if vbw &lt;= 0:
         vbw = None
-    return psd_rt(samps, self.parent.model.nfft, self.overlap, self.parent.model.Fs.raw, vbw, self.window)</code></pre>
+    return psd_rt(samps, self.parent.model.get_nfft(), self.overlap, self.parent.model.get_fs().raw, vbw, self.window)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -1491,10 +1491,10 @@ def y_top(self):
 <pre><code class="python">def set_overlap(self, overlap):
     try:
         overlap = float(overlap)
-        self.parent.model.overlap = overlap
+        self.parent.model.mode.set_overlap(overlap)
     except ValueError:
-        overlap = self.parent.model.overlap
-    self.pane.sets[&#34;overlap&#34;].set(f&#34;{self.parent.model.overlap:.2f}&#34;)</code></pre>
+        overlap = self.parent.model.get_overlap()
+    self.pane.sets[&#34;overlap&#34;].set(f&#34;{self.parent.model.get_overlap():.2f}&#34;)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -1598,7 +1598,7 @@ def y_top(self):
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.define_args" href="#pyspecan.controller.tkGUI.plot_base.define_args">define_args</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.plot_base.args_plot" href="#pyspecan.controller.tkGUI.plot_base.args_plot">args_plot</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>

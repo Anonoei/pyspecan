@@ -111,6 +111,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class SPG(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text=&#34;Spectrogram&#34;)
         self.max_count = 256
         self.psds: np.ndarray = None # type: ignore
         self.fmin = None
@@ -141,12 +142,11 @@ el.replaceWith(d);
         self.update()
 
     def reset(self):
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float16)
+        self.psds = np.zeros((self.max_count, self.parent.model.get_nfft()), dtype=np.float16)
         self.psds[:,:] = -np.inf
 
     def _plot(self, samps):
         psd = self.psd(samps)
-        self.plotter.ax(&#34;spg&#34;).ax.set_title(&#34;Spectrogram&#34;)
         psd = np.clip(psd, self.y_btm, self.y_top)
         y_rng = abs(self.y_btm - self.y_top)
         psd += (0 - self.y_btm)
@@ -276,7 +276,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def reset(self):
-    self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float16)
+    self.psds = np.zeros((self.max_count, self.parent.model.get_nfft()), dtype=np.float16)
     self.psds[:,:] = -np.inf</code></pre>
 </details>
 <div class="desc"><p>Reset plot view</p></div>

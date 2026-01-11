@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.tkGUI.mode_swept API documentation</title>
-<meta name="description" content="tkGUI SWEPT mode">
+<title>pyspecan.model.sink API documentation</title>
+<meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -33,91 +33,32 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.tkGUI.mode_swept</code></h1>
+<h1 class="title">Module <code>pyspecan.model.sink</code></h1>
 </header>
 <section id="section-intro">
-<p>tkGUI SWEPT mode</p>
 </section>
 <section>
-</section>
-<section>
-</section>
-<section>
-<h2 class="section-title" id="header-functions">Functions</h2>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.mode_swept.args_swept"><code class="name flex">
-<span>def <span class="ident">args_swept</span></span>(<span>parser: argparse.ArgumentParser)</span>
-</code></dt>
+<dt><code class="name"><a title="pyspecan.model.sink.file" href="file.html">pyspecan.model.sink.file</a></code></dt>
 <dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def args_swept(parser: argparse.ArgumentParser):
-    mode = args.get_group(parser, &#34;Mode (SWEPT)&#34;)
-    args_mode(mode)
-    # freq_args(parser)
-    # mode = parser.add_argument_group(&#34;SWEPT mode&#34;)
-    # mode.add_argument(&#34;--psd&#34;, action=&#34;store_false&#34;, help=&#34;show psd&#34;)
-    # mode.add_argument(&#34;--spg&#34;, action=&#34;store_true&#34;, help=&#34;show spectrogram&#34;)</code></pre>
-</details>
+<div class="desc"><p>File reader</p></div>
+</dd>
+<dt><code class="name"><a title="pyspecan.model.sink.live" href="live.html">pyspecan.model.sink.live</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="pyspecan.model.sink.sink" href="sink.html">pyspecan.model.sink.sink</a></code></dt>
+<dd>
 <div class="desc"></div>
 </dd>
 </dl>
 </section>
 <section>
-<h2 class="section-title" id="header-classes">Classes</h2>
-<dl>
-<dt id="pyspecan.controller.tkGUI.mode_swept.ModeConfig"><code class="flex name class">
-<span>class <span class="ident">ModeConfig</span></span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class ModeConfig:
-    psd = True
-    spg = False</code></pre>
-</details>
-<div class="desc"></div>
-<h3>Class variables</h3>
-<dl>
-<dt id="pyspecan.controller.tkGUI.mode_swept.ModeConfig.psd"><code class="name">var <span class="ident">psd</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.mode_swept.ModeConfig.spg"><code class="name">var <span class="ident">spg</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-</dl>
-</dd>
-<dt id="pyspecan.controller.tkGUI.mode_swept.ModeSwept"><code class="flex name class">
-<span>class <span class="ident">ModeSwept</span></span>
-<span>(</span><span>ctrl, **kwargs)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">class ModeSwept(Mode):
-    def __init__(self, ctrl, **kwargs):
-        super().__init__(ctrl)
-        self.panel = PanelController(self.ctrl, self.ctrl.view.panel, plots)
-        child = self.panel.rows[0]
-        pane = self.panel.cols[child][0]
-        pane.var_view.set(&#34;PSD&#34;)
-        self.panel.set_view(None, child, pane)</code></pre>
-</details>
-<div class="desc"></div>
-<h3>Ancestors</h3>
-<ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.mode.Mode" href="mode.html#pyspecan.controller.tkGUI.mode.Mode">Mode</a></li>
-</ul>
-</dd>
-</dl>
+</section>
+<section>
+</section>
+<section>
 </section>
 </article>
 <nav id="sidebar">
@@ -127,26 +68,14 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.controller.tkGUI" href="index.html">pyspecan.controller.tkGUI</a></code></li>
+<li><code><a title="pyspecan.model" href="../index.html">pyspecan.model</a></code></li>
 </ul>
 </li>
-<li><h3><a href="#header-functions">Functions</a></h3>
-<ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.mode_swept.args_swept" href="#pyspecan.controller.tkGUI.mode_swept.args_swept">args_swept</a></code></li>
-</ul>
-</li>
-<li><h3><a href="#header-classes">Classes</a></h3>
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
-<li>
-<h4><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeConfig" href="#pyspecan.controller.tkGUI.mode_swept.ModeConfig">ModeConfig</a></code></h4>
-<ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeConfig.psd" href="#pyspecan.controller.tkGUI.mode_swept.ModeConfig.psd">psd</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeConfig.spg" href="#pyspecan.controller.tkGUI.mode_swept.ModeConfig.spg">spg</a></code></li>
-</ul>
-</li>
-<li>
-<h4><code><a title="pyspecan.controller.tkGUI.mode_swept.ModeSwept" href="#pyspecan.controller.tkGUI.mode_swept.ModeSwept">ModeSwept</a></code></h4>
-</li>
+<li><code><a title="pyspecan.model.sink.file" href="file.html">pyspecan.model.sink.file</a></code></li>
+<li><code><a title="pyspecan.model.sink.live" href="live.html">pyspecan.model.sink.live</a></code></li>
+<li><code><a title="pyspecan.model.sink.sink" href="sink.html">pyspecan.model.sink.sink</a></code></li>
 </ul>
 </li>
 </ul>

@@ -45,15 +45,15 @@ el.replaceWith(d);
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="pyspecan.view.view.GetView"><code class="name flex">
-<span>def <span class="ident">GetView</span></span>(<span>view, mode)</span>
+<span>def <span class="ident">GetView</span></span>(<span>view, mode, sink)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def GetView(view, mode):
-    return importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).GetView(mode)</code></pre>
+<pre><code class="python">def GetView(view, mode, sink):
+    return importlib.import_module(f&#34;.view.{view.path}&#34;, &#34;pyspecan&#34;).GetView(mode, sink)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>

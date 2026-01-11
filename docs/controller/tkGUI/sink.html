@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.model.mode_rt API documentation</title>
+<title>pyspecan.controller.tkGUI.sink API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.model.mode_rt</code></h1>
+<h1 class="title">Module <code>pyspecan.controller.tkGUI.sink</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -44,18 +44,16 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.model.mode_rt.args_rt"><code class="name flex">
-<span>def <span class="ident">args_rt</span></span>(<span>parser: argparse.ArgumentParser)</span>
+<dt id="pyspecan.controller.tkGUI.sink.args_sink"><code class="name flex">
+<span>def <span class="ident">args_sink</span></span>(<span>parser)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def args_rt(parser: argparse.ArgumentParser):
-    define_args(parser)
-    parser.add_argument(&#34;--overlap&#34;, default=0.6, type=float)
-    parser.add_argument(&#34;--block_max&#34;, default=102400, type=int)</code></pre>
+<pre><code class="python">def args_sink(parser):
+    pass</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -64,189 +62,101 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.model.mode_rt.ModelRT"><code class="flex name class">
-<span>class <span class="ident">ModelRT</span></span>
-<span>(</span><span>**kwargs)</span>
+<dt id="pyspecan.controller.tkGUI.sink.Sink"><code class="flex name class">
+<span>class <span class="ident">Sink</span></span>
+<span>(</span><span>ctrl)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">class ModelRT(Model):
-    __slots__ = (&#34;_overlap&#34;, &#34;_block_max&#34;)
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._overlap = kwargs.get(&#34;overlap&#34;, 0.6)
-        self._block_max = kwargs.get(&#34;block_max&#34;, 102400)
-        self.update_blocksize()
+<pre><code class="python">class Sink:
+    def __init__(self, ctrl):
+        self.ctrl = ctrl
 
-    def update_blocksize(self):
-        self.block_size = int(self.Fs * (self._sweep_time/1000))
-        if self.block_size &gt; self._block_max:
-            self.block_size = self._block_max
-            super().set_sweep_time((self._block_size/self.Fs)*1000)
+    def start(self):
+        pass
+    def stop(self):
+        pass
+    def reset(self):
+        pass
 
-    def get_overlap(self):
-        return self._overlap
-    def set_overlap(self, overlap):
-        if overlap &lt;= 0.0 or overlap &gt; 1.0:
-            raise ValueError
-        self._overlap = float(overlap)
-    overlap = property(get_overlap, set_overlap)
-
-    def get_sweep_time(self):
-        return super().get_sweep_time()
-    def set_sweep_time(self, ts):
-        super().set_sweep_time(ts)
-        self.update_blocksize()
-    sweep_time = property(get_sweep_time, set_sweep_time)
-
-    def get_fs(self):
-        return super().get_fs()
-    def set_fs(self, fs):
-        super().set_fs(fs)
-        self.update_blocksize()
-    Fs = property(get_fs, set_fs)</code></pre>
+    def draw_tb(self):
+        pass
+    def draw_ctrl(self):
+        pass</code></pre>
 </details>
 <div class="desc"></div>
-<h3>Ancestors</h3>
+<h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.model.base.Model" href="base.html#pyspecan.model.base.Model">Model</a></li>
+<li><a title="pyspecan.controller.tkGUI.sink_file.SinkFile" href="sink_file.html#pyspecan.controller.tkGUI.sink_file.SinkFile">SinkFile</a></li>
+<li><a title="pyspecan.controller.tkGUI.sink_live.SinkLive" href="sink_live.html#pyspecan.controller.tkGUI.sink_live.SinkLive">SinkLive</a></li>
 </ul>
-<h3>Instance variables</h3>
-<dl>
-<dt id="pyspecan.model.mode_rt.ModelRT.Fs"><code class="name">prop <span class="ident">Fs</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_fs(self):
-    return super().get_fs()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.overlap"><code class="name">prop <span class="ident">overlap</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_overlap(self):
-    return self._overlap</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.sweep_time"><code class="name">prop <span class="ident">sweep_time</span></code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def get_sweep_time(self):
-    return super().get_sweep_time()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-</dl>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.model.mode_rt.ModelRT.get_fs"><code class="name flex">
-<span>def <span class="ident">get_fs</span></span>(<span>self)</span>
+<dt id="pyspecan.controller.tkGUI.sink.Sink.draw_ctrl"><code class="name flex">
+<span>def <span class="ident">draw_ctrl</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_fs(self):
-    return super().get_fs()</code></pre>
+<pre><code class="python">def draw_ctrl(self):
+    pass</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.get_overlap"><code class="name flex">
-<span>def <span class="ident">get_overlap</span></span>(<span>self)</span>
+<dt id="pyspecan.controller.tkGUI.sink.Sink.draw_tb"><code class="name flex">
+<span>def <span class="ident">draw_tb</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_overlap(self):
-    return self._overlap</code></pre>
+<pre><code class="python">def draw_tb(self):
+    pass</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.get_sweep_time"><code class="name flex">
-<span>def <span class="ident">get_sweep_time</span></span>(<span>self)</span>
+<dt id="pyspecan.controller.tkGUI.sink.Sink.reset"><code class="name flex">
+<span>def <span class="ident">reset</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_sweep_time(self):
-    return super().get_sweep_time()</code></pre>
+<pre><code class="python">def reset(self):
+    pass</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.set_fs"><code class="name flex">
-<span>def <span class="ident">set_fs</span></span>(<span>self, fs)</span>
+<dt id="pyspecan.controller.tkGUI.sink.Sink.start"><code class="name flex">
+<span>def <span class="ident">start</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_fs(self, fs):
-    super().set_fs(fs)
-    self.update_blocksize()</code></pre>
+<pre><code class="python">def start(self):
+    pass</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.set_overlap"><code class="name flex">
-<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
+<dt id="pyspecan.controller.tkGUI.sink.Sink.stop"><code class="name flex">
+<span>def <span class="ident">stop</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_overlap(self, overlap):
-    if overlap &lt;= 0.0 or overlap &gt; 1.0:
-        raise ValueError
-    self._overlap = float(overlap)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.set_sweep_time"><code class="name flex">
-<span>def <span class="ident">set_sweep_time</span></span>(<span>self, ts)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_sweep_time(self, ts):
-    super().set_sweep_time(ts)
-    self.update_blocksize()</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.model.mode_rt.ModelRT.update_blocksize"><code class="name flex">
-<span>def <span class="ident">update_blocksize</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def update_blocksize(self):
-    self.block_size = int(self.Fs * (self._sweep_time/1000))
-    if self.block_size &gt; self._block_max:
-        self.block_size = self._block_max
-        super().set_sweep_time((self._block_size/self.Fs)*1000)</code></pre>
+<pre><code class="python">def stop(self):
+    pass</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -262,29 +172,24 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.model" href="index.html">pyspecan.model</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI" href="index.html">pyspecan.controller.tkGUI</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pyspecan.model.mode_rt.args_rt" href="#pyspecan.model.mode_rt.args_rt">args_rt</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.sink.args_sink" href="#pyspecan.controller.tkGUI.sink.args_sink">args_sink</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.model.mode_rt.ModelRT" href="#pyspecan.model.mode_rt.ModelRT">ModelRT</a></code></h4>
-<ul class="two-column">
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.Fs" href="#pyspecan.model.mode_rt.ModelRT.Fs">Fs</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.get_fs" href="#pyspecan.model.mode_rt.ModelRT.get_fs">get_fs</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.get_overlap" href="#pyspecan.model.mode_rt.ModelRT.get_overlap">get_overlap</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.get_sweep_time" href="#pyspecan.model.mode_rt.ModelRT.get_sweep_time">get_sweep_time</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.overlap" href="#pyspecan.model.mode_rt.ModelRT.overlap">overlap</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_fs" href="#pyspecan.model.mode_rt.ModelRT.set_fs">set_fs</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_overlap" href="#pyspecan.model.mode_rt.ModelRT.set_overlap">set_overlap</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.set_sweep_time" href="#pyspecan.model.mode_rt.ModelRT.set_sweep_time">set_sweep_time</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.sweep_time" href="#pyspecan.model.mode_rt.ModelRT.sweep_time">sweep_time</a></code></li>
-<li><code><a title="pyspecan.model.mode_rt.ModelRT.update_blocksize" href="#pyspecan.model.mode_rt.ModelRT.update_blocksize">update_blocksize</a></code></li>
+<h4><code><a title="pyspecan.controller.tkGUI.sink.Sink" href="#pyspecan.controller.tkGUI.sink.Sink">Sink</a></code></h4>
+<ul class="">
+<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.draw_ctrl" href="#pyspecan.controller.tkGUI.sink.Sink.draw_ctrl">draw_ctrl</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.draw_tb" href="#pyspecan.controller.tkGUI.sink.Sink.draw_tb">draw_tb</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.reset" href="#pyspecan.controller.tkGUI.sink.Sink.reset">reset</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.start" href="#pyspecan.controller.tkGUI.sink.Sink.start">start</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.stop" href="#pyspecan.controller.tkGUI.sink.Sink.stop">stop</a></code></li>
 </ul>
 </li>
 </ul>

@@ -49,7 +49,7 @@ el.replaceWith(d);
 <dl>
 <dt id="pyspecan.specan.SpecAn"><code class="flex name class">
 <span>class <span class="ident">SpecAn</span></span>
-<span>(</span><span>view, mode='psd', **kwargs)</span>
+<span>(</span><span>view, mode='swept', sink='file', **kwargs)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -59,7 +59,7 @@ el.replaceWith(d);
 <pre><code class="python">class SpecAn:
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
+    def __init__(self, view, mode=&#34;swept&#34;, sink=&#34;file&#34;, **kwargs):
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -72,15 +72,19 @@ el.replaceWith(d);
             mode = Mode[mode]
             if mode == Mode.NONE:
                 raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
+        if not isinstance(sink, Sink):
+            sink = Sink[sink]
+            if sink == Sink.NONE:
+                raise err.UnknownOption(f&#34;Unknown sink {sink}&#34;)
         if not isinstance(view, View):
             view = View.get(view)
             if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
 
-        self.model: Model = GetModel(mode)(**kwargs)
+        self.model: Model = GetModel(mode, sink)(**kwargs)
 
-        self.view = GetView(view, mode)(**kwargs)
-        self.controller = GetController(view, mode)(self.model, self.view, **kwargs)
+        self.view = GetView(view, mode, sink)(**kwargs)
+        self.controller = GetController(view, mode, sink)(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()
@@ -109,7 +113,7 @@ el.replaceWith(d);
 <pre><code class="python">class SpecAn:
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
+    def __init__(self, view, mode=&#34;swept&#34;, sink=&#34;file&#34;, **kwargs):
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -122,15 +126,19 @@ el.replaceWith(d);
             mode = Mode[mode]
             if mode == Mode.NONE:
                 raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
+        if not isinstance(sink, Sink):
+            sink = Sink[sink]
+            if sink == Sink.NONE:
+                raise err.UnknownOption(f&#34;Unknown sink {sink}&#34;)
         if not isinstance(view, View):
             view = View.get(view)
             if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
 
-        self.model: Model = GetModel(mode)(**kwargs)
+        self.model: Model = GetModel(mode, sink)(**kwargs)
 
-        self.view = GetView(view, mode)(**kwargs)
-        self.controller = GetController(view, mode)(self.model, self.view, **kwargs)
+        self.view = GetView(view, mode, sink)(**kwargs)
+        self.controller = GetController(view, mode, sink)(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()
@@ -158,7 +166,7 @@ el.replaceWith(d);
 <pre><code class="python">class SpecAn:
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
+    def __init__(self, view, mode=&#34;swept&#34;, sink=&#34;file&#34;, **kwargs):
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -171,15 +179,19 @@ el.replaceWith(d);
             mode = Mode[mode]
             if mode == Mode.NONE:
                 raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
+        if not isinstance(sink, Sink):
+            sink = Sink[sink]
+            if sink == Sink.NONE:
+                raise err.UnknownOption(f&#34;Unknown sink {sink}&#34;)
         if not isinstance(view, View):
             view = View.get(view)
             if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
 
-        self.model: Model = GetModel(mode)(**kwargs)
+        self.model: Model = GetModel(mode, sink)(**kwargs)
 
-        self.view = GetView(view, mode)(**kwargs)
-        self.controller = GetController(view, mode)(self.model, self.view, **kwargs)
+        self.view = GetView(view, mode, sink)(**kwargs)
+        self.controller = GetController(view, mode, sink)(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()
@@ -207,7 +219,7 @@ el.replaceWith(d);
 <pre><code class="python">class SpecAn:
     &#34;&#34;&#34;Class to initialize pyspecan&#34;&#34;&#34;
     __slots__ = (&#34;model&#34;, &#34;view&#34;, &#34;controller&#34;)
-    def __init__(self, view, mode=&#34;psd&#34;, **kwargs):
+    def __init__(self, view, mode=&#34;swept&#34;, sink=&#34;file&#34;, **kwargs):
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -220,15 +232,19 @@ el.replaceWith(d);
             mode = Mode[mode]
             if mode == Mode.NONE:
                 raise err.UnknownOption(f&#34;Unknown mode {mode}&#34;)
+        if not isinstance(sink, Sink):
+            sink = Sink[sink]
+            if sink == Sink.NONE:
+                raise err.UnknownOption(f&#34;Unknown sink {sink}&#34;)
         if not isinstance(view, View):
             view = View.get(view)
             if view == View.NONE:
                 raise err.UnknownOption(f&#34;Unknown view {view}&#34;)
 
-        self.model: Model = GetModel(mode)(**kwargs)
+        self.model: Model = GetModel(mode, sink)(**kwargs)
 
-        self.view = GetView(view, mode)(**kwargs)
-        self.controller = GetController(view, mode)(self.model, self.view, **kwargs)
+        self.view = GetView(view, mode, sink)(**kwargs)
+        self.controller = GetController(view, mode, sink)(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()

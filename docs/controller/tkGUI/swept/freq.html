@@ -76,6 +76,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class Freq(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text=&#34;Freq&#34;)
         self.mag_min = None
         self.mag_max = None
         self.fmin = None
@@ -123,8 +124,6 @@ el.replaceWith(d);
         fft = np.fft.fftshift(fft)
         mag = np.abs(fft)
         pha = np.angle(fft)
-
-        self.plotter.ax(&#34;mag&#34;).ax.set_title(&#34;Freq&#34;)
 
         if self.pane.sets[&#34;show_max&#34;].get() == 1:
             if self.mag_max is None:

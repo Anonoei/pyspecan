@@ -45,28 +45,28 @@ el.replaceWith(d);
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="pyspecan.controller.controller.ControllerArgs"><code class="name flex">
-<span>def <span class="ident">ControllerArgs</span></span>(<span>view, mode)</span>
+<span>def <span class="ident">ControllerArgs</span></span>(<span>view, mode, sink, parser)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def ControllerArgs(view, mode):
-    return importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).ControllerArgs(mode)</code></pre>
+<pre><code class="python">def ControllerArgs(view, mode, sink, parser):
+    return importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).ControllerArgs(mode, sink, parser)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.controller.controller.GetController"><code class="name flex">
-<span>def <span class="ident">GetController</span></span>(<span>view, mode)</span>
+<span>def <span class="ident">GetController</span></span>(<span>view, mode, sink)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def GetController(view, mode):
-    return importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).GetController(mode)</code></pre>
+<pre><code class="python">def GetController(view, mode, sink):
+    return importlib.import_module(f&#34;.controller.{view.path}&#34;, &#34;pyspecan&#34;).GetController(mode, sink)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>

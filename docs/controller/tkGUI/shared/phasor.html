@@ -73,6 +73,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class Phasor(TimePlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
+        pane.master.config(text=&#34;Phasor&#34;)
         super().__init__(parent, pane, **kwargs)
         fig = plt.figure(figsize=(5,5), layout=&#34;constrained&#34;)
 
@@ -95,7 +96,7 @@ el.replaceWith(d);
 
     def _plot(self, samps):
         s_max = np.max((samps.real, samps.imag))
-        self.plotter.ax(&#34;iq&#34;).ax.set_title(f&#34;Phasor (norm {s_max:03.2f})&#34;)
+        self.pane.master.config(text=f&#34;Phasor (norm {s_max:03.2f})&#34;)
         samps = samps / s_max
 
         self.plotter.ax(&#34;iq&#34;).scatter(

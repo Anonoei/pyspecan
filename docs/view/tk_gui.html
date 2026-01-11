@@ -46,14 +46,18 @@ el.replaceWith(d);
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
 <dt id="pyspecan.view.tk_gui.GetView"><code class="name flex">
-<span>def <span class="ident">GetView</span></span>(<span>mode)</span>
+<span>def <span class="ident">GetView</span></span>(<span>mode, sink)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def GetView(mode):
+<pre><code class="python">def GetView(mode, sink):
+    if sink == Sink.FILE:
+        return ViewFile
+    elif sink == Sink.LIVE:
+        return ViewLive
     return View</code></pre>
 </details>
 <div class="desc"></div>
