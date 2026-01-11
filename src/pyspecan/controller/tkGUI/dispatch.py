@@ -72,20 +72,21 @@ class Dispatch:
                 elif cmd is CMD.RESET:
                     if self.state is STATE.RUNNING:
                         self.state = STATE.WAITING
-                    self.ctrl.panel.on_reset()
+                    self.ctrl.mode.panel.on_reset()
                     self.ctrl.model.reset()
                     self.ctrl.draw_tb()
                 elif cmd is CMD.UPDATE_F:
+                    self._last_f = None
                     self._update_f()
                 elif cmd is CMD.UPDATE_NFFT:
-                    self.ctrl.panel.on_update_nfft(self.ctrl.model.nfft)
+                    self.ctrl.mode.panel.on_update_nfft(self.ctrl.model.get_nfft())
                 elif cmd is CMD.UPDATE_FS:
-                    self.ctrl.panel.on_update_fs(self.ctrl.model.Fs)
+                    self.ctrl.mode.panel.on_update_fs(self.ctrl.model.get_fs())
 
     def on_plot(self):
         ptime = time.perf_counter()
         self._update_f()
-        self.ctrl.panel.on_plot(self.ctrl.model)
+        self.ctrl.mode.panel.on_plot(self.ctrl.model)
 
         ptime = (time.perf_counter() - ptime)
         self.ctrl.view.var_draw_time.set(f"{ptime:06.3f}s")
@@ -105,20 +106,20 @@ class Dispatch:
             self.ctrl.view.lbl_msg.configure(text="")
             time.sleep(wait)
         else:
-            if not self.ctrl.model.sweep_time == 0.0:
+            if not self.ctrl.model.mode.get_sweep_time() == 0.0:
                 if config.MODE == Mode.SWEPT:
                     self.ctrl.model.skip_time(-wait)
                 self.ctrl.view.lbl_msg.configure(text="OVERFLOW")
 
-    def _prev(self):
-        valid = self.ctrl.model.prev()
+    def _prev(self): # fails on Sink.LIVE
+        valid = self.ctrl.model.sink.prev(self.ctrl.model.mode.get_block_size())
         tplot = None
         if valid:
             tplot = self.on_plot()
         return (valid, tplot)
 
     def _next(self):
-        valid = self.ctrl.model.next()
+        valid = self.ctrl.model.sink.next(self.ctrl.model.mode.get_block_size())
         tplot = None
         if valid:
             tplot = self.on_plot()
@@ -131,4 +132,4 @@ class Dispatch:
             self._last_f = __check()
         elif not self.ctrl.model.f[0] == self._last_f[0] and not len(self.ctrl.model.f) == self._last_f[2]:
             self._last_f = __check()
-        self.ctrl.panel.on_update_f(self._last_f)
+        self.ctrl.mode.panel.on_update_f(self._last_f)

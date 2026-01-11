@@ -54,32 +54,32 @@ class Controller(_Controller):
         if len(args) == 0 or args[0] in ("h", "help"):
             show_help()
             return
-        if args[0] in ("s", "show"):
-            print(" "*ind + f"  {self.model.cur_time():.2f}s/{self.model.tot_time():.2f}s")
-            print(" "*ind + "  Reader:")
-            self.model.reader.show(ind+2)
+        # if args[0] in ("s", "show"):
+        #     print(" "*ind + f"  {self.model.cur_time():.2f}s/{self.model.tot_time():.2f}s")
+        #     print(" "*ind + "  Reader:")
+        #     self.model.reader.show(ind+2)
 
-            print(f"  Fs: {self.model.Fs} | cf: {self.model.cf}")
-            print(f"  nfft: {self.model.nfft} | Sweep time: {self.model.sweep_time}")
-        elif args[0] in ("f", "path"):
-            if len(args) == 2:
-                self.model.reader.path = args[1]
-                print(" "*ind + str(self.model.reader.path))
-        elif args[0] in ("d", "fmt") and len(args) == 2:
-            self.model.reader.fmt = args[1]
-            print(" "*ind + str(self.model.reader.fmt))
-        elif args[0] in ("fs",) and len(args) == 2:
-            self.model.Fs = args[1]
-            print(" "*ind + str(self.model.Fs))
-        elif args[0] in ("cf",) and len(args) == 2:
-            self.model.cf = args[1]
-            print(" "*ind + str(self.model.cf))
-        elif args[0] in ("n", "nfft") and len(args) == 2:
-            self.model.nfft = args[1]
-            print(" "*ind + str(self.model.nfft))
-        elif args[0] in ("st", "sweep_time") and len(args) == 2:
-            self.model.sweep_time = args[1]
-            print(" "*ind + str(self.model.sweep_time))
+        #     print(f"  Fs: {self.model.Fs} | cf: {self.model.cf}")
+        #     print(f"  nfft: {self.model.nfft} | Sweep time: {self.model.sweep_time}")
+        # elif args[0] in ("f", "path"):
+        #     if len(args) == 2:
+        #         self.model.reader.path = args[1]
+        #         print(" "*ind + str(self.model.reader.path))
+        # elif args[0] in ("d", "fmt") and len(args) == 2:
+        #     self.model.reader.fmt = args[1]
+        #     print(" "*ind + str(self.model.reader.fmt))
+        # elif args[0] in ("fs",) and len(args) == 2:
+        #     self.model.Fs = args[1]
+        #     print(" "*ind + str(self.model.Fs))
+        # elif args[0] in ("cf",) and len(args) == 2:
+        #     self.model.cf = args[1]
+        #     print(" "*ind + str(self.model.cf))
+        # elif args[0] in ("n", "nfft") and len(args) == 2:
+        #     self.model.nfft = args[1]
+        #     print(" "*ind + str(self.model.nfft))
+        # elif args[0] in ("st", "sweep_time") and len(args) == 2:
+        #     self.model.sweep_time = args[1]
+        #     print(" "*ind + str(self.model.sweep_time))
 
     def cmd_state(self, args, ind=4):
         def show_help():
@@ -89,12 +89,12 @@ class Controller(_Controller):
         if len(args) == 0 or args[0] in ("h", "help"):
             show_help()
             return
-        elif args[0] in ("n", "next"):
-            valid = self.model.next()
-            print(" "*ind + f"{valid}")
-        elif args[0] in ("p", "prev"):
-            valid = self.model.prev()
-            print(" "*ind + f"{valid}")
+        # elif args[0] in ("n", "next"):
+        #     valid = self.model.next()
+        #     print(" "*ind + f"{valid}")
+        # elif args[0] in ("p", "prev"):
+        #     valid = self.model.prev()
+        #     print(" "*ind + f"{valid}")
 
     def cmd_view(self, args, ind=4):
         def show_help():

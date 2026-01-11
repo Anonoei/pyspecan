@@ -45,7 +45,7 @@ class SPG3D(FreqPlotController):
         if not "window" in kwargs:
             kwargs["vbw"] = PlotConfig.vbw
         super().__init__(parent, pane, **kwargs)
-        self.f = np.arange(self.parent.model.nfft)
+        self.f = np.arange(self.parent.model.get_nfft())
         self.t = np.arange(self.max_count)
         self.x, self.y = np.meshgrid(self.f, self.t)
         self.reset()
@@ -59,7 +59,7 @@ class SPG3D(FreqPlotController):
         self.plotter.add_ax("spg", fig.add_subplot(projection="3d"))
 
         # self.plotter.ax("spg").ax.set_autoscale_on(False)
-        self.plotter.ax("spg").set_xlim(0, self.parent.model.nfft)
+        self.plotter.ax("spg").set_xlim(0, self.parent.model.get_nfft())
         self.plotter.ax("spg").set_ylim(0, self.max_count)
         self.plotter.ax("spg").ax.locator_params(axis="x", nbins=5)
         self.plotter.ax("spg").ax.locator_params(axis="y", nbins=5)
@@ -68,7 +68,7 @@ class SPG3D(FreqPlotController):
         self.update()
 
     def reset(self):
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.get_nfft()), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _plot(self, samps):
@@ -76,7 +76,7 @@ class SPG3D(FreqPlotController):
         self.psds = np.roll(self.psds, 1, axis=0)
         self.psds[0,:] = psd
         # if self.cur_count < self.max_count:
-        #     self.f = np.arange(0, self.parent.model.nfft)
+        #     self.f = np.arange(0, self.parent.model.get_nfft())
         #     self.t = np.arange(self.cur_count)
         #     self.x, self.y = np.meshgrid(self.f, self.t)
         #     psds = self.psds[:self.cur_count]

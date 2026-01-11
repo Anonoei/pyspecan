@@ -1,4 +1,4 @@
-"""Base Controllers for tkGUI Controller"""
+"""tkGUI base PlotController"""
 import argparse
 import time
 
@@ -14,7 +14,7 @@ from ...utils.stft import psd as psd_rt
 
 from ...backend.mpl.plot import _Plot, Plot, BlitPlot
 
-def define_args(parser: argparse.ArgumentParser, cfg):
+def args_plot(parser, cfg):
     parser.add_argument("-rl", "--ref_level", default=cfg.ref_level, type=float, help="ref Level")
     parser.add_argument("-sd", "--scale_div", default=cfg.scale_div, type=float, help="scale per division")
     parser.add_argument("-vb", "--vbw", default=cfg.vbw, type=float, help="video bandwidth")
@@ -132,7 +132,7 @@ class FreqPlotController(_PlotController):
         vbw = self.vbw
         if vbw <= 0:
             vbw = None
-        return psd(samps, self.parent.model.Fs.raw, vbw, self.window)
+        return psd(samps, self.parent.model.sink.get_fs().raw, vbw, self.window)
 
     @property
     def y_top(self):
@@ -248,14 +248,14 @@ class FreqPlotControllerRT(FreqPlotController):
         vbw = self.vbw
         if vbw <= 0:
             vbw = None
-        return psd_rt(samps, self.parent.model.nfft, self.overlap, self.parent.model.Fs.raw, vbw, self.window)
+        return psd_rt(samps, self.parent.model.get_nfft(), self.overlap, self.parent.model.get_fs().raw, vbw, self.window)
 
     def _plot(self, samps):
         raise NotImplementedError()
 
     def draw_settings(self, row=0):
         row = super().draw_settings(row)
-        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.overlap))
+        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.mode.get_overlap()))
         ent_overlap = ttk.Entry(self.pane.settings, textvariable=var_overlap, width=4)
         ent_overlap.bind("<Return>", self.handle_event)
 
@@ -277,7 +277,7 @@ class FreqPlotControllerRT(FreqPlotController):
     def set_overlap(self, overlap):
         try:
             overlap = float(overlap)
-            self.parent.model.overlap = overlap
+            self.parent.model.mode.set_overlap(overlap)
         except ValueError:
-            overlap = self.parent.model.overlap
-        self.pane.sets["overlap"].set(f"{self.parent.model.overlap:.2f}")
+            overlap = self.parent.model.get_overlap()
+        self.pane.sets["overlap"].set(f"{self.parent.model.get_overlap():.2f}")

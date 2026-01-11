@@ -1,5 +1,28 @@
 from enum import Enum
 
+class Sink(Enum):
+    """Sink modes"""
+    NONE = "none"
+    FILE = "file"
+    LIVE = "live"
+
+    @classmethod
+    def choices(cls):
+        """return mode choices"""
+        arr = []
+        for inst in cls:
+            if inst == cls.NONE:
+                continue
+            arr.append(inst.name)
+        return arr
+
+    @classmethod
+    def get(cls, option: str):
+        for inst in cls:
+            if inst.name == option:
+                return inst
+        return cls.NONE
+
 class Mode(Enum):
     """Specan modes"""
     NONE = "none"
@@ -60,6 +83,7 @@ class config:
     __instance = None
 
     SENTINEL = object()
+    SINK: Sink = Sink.NONE
     MODE: Mode = Mode.NONE
 
     MON_MEM: bool = False

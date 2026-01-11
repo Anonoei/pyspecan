@@ -1,10 +1,9 @@
-"""Controller for SWEPT mode"""
+"""tkGUI SWEPT mode"""
 import argparse
-import numpy as np
 
-from .base import Controller
-from .base import define_args as base_args
-# from .arc.plot_base import define_args as freq_args
+from ...utils import args
+from .mode import Mode, args_mode
+
 from .panels import PanelController, PanelChild, Panel
 from .plot_base import FreqPlotController, BlitPlot
 
@@ -15,18 +14,18 @@ class ModeConfig:
     spg = False
 
 def args_swept(parser: argparse.ArgumentParser):
-    ctrl = base_args(parser)
+    mode = args.get_group(parser, "Mode (SWEPT)")
+    args_mode(mode)
     # freq_args(parser)
     # mode = parser.add_argument_group("SWEPT mode")
     # mode.add_argument("--psd", action="store_false", help="show psd")
     # mode.add_argument("--spg", action="store_true", help="show spectrogram")
 
-class ControllerSwept(Controller):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.panel = PanelController(self, self.view.panel, plots)
+class ModeSwept(Mode):
+    def __init__(self, ctrl, **kwargs):
+        super().__init__(ctrl)
+        self.panel = PanelController(self.ctrl, self.ctrl.view.panel, plots)
         child = self.panel.rows[0]
         pane = self.panel.cols[child][0]
         pane.var_view.set("PSD")
         self.panel.set_view(None, child, pane)
-        self.draw()

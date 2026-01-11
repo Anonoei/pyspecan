@@ -60,7 +60,7 @@ class SPG(FreqPlotControllerRT):
         self.update()
 
     def reset(self):
-        self.psds = np.zeros((self.max_count, self.parent.model.nfft), dtype=np.float32)
+        self.psds = np.zeros((self.max_count, self.parent.model.get_nfft()), dtype=np.float32)
         self.psds[:,:] = -np.inf
 
     def _plot(self, samps):

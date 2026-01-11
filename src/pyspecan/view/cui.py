@@ -2,5 +2,5 @@
 
 from .CUI.base import View
 
-def GetView(mode):
+def GetView(mode, sink):
     return View
