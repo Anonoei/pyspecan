@@ -6,6 +6,7 @@ from .dispatch import Dispatch, CMD
 from ...utils import args
 from ..base import Controller as _Controller
 
+from ... import logger
 from ...model.model import Model
 from ...view.tkGUI.base import View as GUI
 
@@ -32,6 +33,7 @@ def args_ctrl(parser):
 class Controller(_Controller):
     """tkGUI Controller"""
     def __init__(self, model: Model, view: GUI, mode, sink, **kwargs):
+        self.log = logger.new("tkGUI")
         super().__init__(model, view)
         self.view: GUI = self.view # type hints
         self.dispatch: Dispatch = Dispatch(self)
@@ -114,6 +116,7 @@ class Controller(_Controller):
             self.set_nfft(self.view.var_nfft_exp.get())
 
     def set_time_sweep(self, ts):
+        self.log.trace("set_time_sweep(%s)", ts)
         try:
             self.model.set_sweep_time(float(ts))
         except ValueError:
@@ -121,6 +124,7 @@ class Controller(_Controller):
         self.view.var_sweep.set(f"{self.model.get_sweep_time():02.3f}")
         self.draw_ctrl()
     def set_time_show(self, ts):
+        self.log.trace("set_time_show(%s)", ts)
         try:
             ts = float(ts)
             self.time_show = ts
@@ -129,6 +133,7 @@ class Controller(_Controller):
         self.view.var_show.set(f"{self.time_show:02.3f}")
 
     def set_fs(self, fs):
+        self.log.trace("set_fs(%s)", fs)
         self.model.set_fs(fs)
         self.view.var_fs.set(str(self.model.sink.get_fs()))
         self.dispatch.queue.put(CMD.UPDATE_FS)
@@ -136,11 +141,13 @@ class Controller(_Controller):
         self.draw_tb()
         self.draw_ctrl()
     def set_cf(self, cf):
+        self.log.trace("set_cf(%s)", cf)
         self.model.set_cf(cf)
         self.view.var_cf.set(str(self.model.sink.get_cf()))
         self.dispatch.queue.put(CMD.UPDATE_F)
         self.draw_ctrl()
     def set_nfft(self, exp):
+        self.log.trace("set_nfft(%s)", exp)
         exp = int(exp)
         self.nfft_exp = exp
         self.model.set_nfft(2**exp)

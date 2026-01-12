@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+from ... import logger
 from ...view.tkGUI.panels import PanelView, PanelChild, Panel
 
 from .plot_base import TimePlotController, FreqPlotController, BlitPlot
@@ -8,6 +9,7 @@ from .dispatch import CMD
 
 class PanelController:
     def __init__(self, parent, panel: PanelView, plots):
+        self.log = logger.new("tkGUI.Panels")
         self.parent = parent
         self.panel = panel
         self.rows = []
@@ -115,6 +117,10 @@ class PanelController:
     def on_plot(self, model):
         if len(self.active) == 0:
             self.parent.dispatch.queue.put(CMD.STOP)
+        # if not len(model.samples) == model.get_block_size():
+        #     self.log.debug("Skipping on_plot (%s != %s)", len(model.samples), model.get_block_size())
+        #     self.parent.dispatch.queue.put(CMD.STOP)
+        #     return
         for view in self.active:
             if not isinstance(view.plotter, BlitPlot):
                 view.plotter.cla()

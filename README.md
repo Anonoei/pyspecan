@@ -4,6 +4,7 @@
  - [Documentation](https://anonoei.github.io/pyspecan/)
  - [PyPI](https://pypi.org/project/pyspecan/)
 
+
 # Examples
 tkGUI, SWEPT mode
 ![tkGUI_Swept](/media/SWEPT_tkGUI.png)
@@ -14,18 +15,20 @@ tkGUI, RT mode
 ![tkGUI_RT](/media/RT_tkGUI2.png)
 
 # Usage
+- View (-v|--view): specifies which frontend to use (tkGUI)
+- Mode (-m|--mode): specifies which processing mode to use (swept, rt)
+- Sink (-s|--sink): specifies which interface to use (file, live)
+  - Live uses [pysdrlib](https://github.com/anonoei/pysdrlib) for hardware SDR abstractions
+
 ## Module
 - `python3 -m pyspecan --help`
-- GUI, swept: `python3 -m pyspecan`
-- GUI, RT: `python3 -m pyspecan -m RT`
-
-## Script
-- GUI, swept: `pyspecan`
-- GUI, RT: `pyspecan -m RT`
+- tkGUI, swept, file: `python3 -m pyspecan`
+- tkGUI, RT, file: `python3 -m pyspecan -m RT`
+- tkGUI, swept, live (hackrf): `python3 -m pyspecan -s live -d hackrf`
 
 # Install
-1. Run `python3 -m pip install pyspecan`
-2. Run `python3 -m pyspecan`
+1. Run `pip install pyspecan`, to install
+2. Run `python3 -m pyspecan --help` to view available arguments
 
 # Contributing
 1. `git clone https://github.com/Anonoei/pyspecan`

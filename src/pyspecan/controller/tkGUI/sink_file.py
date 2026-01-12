@@ -78,24 +78,29 @@ class SinkFile(Sink):
         if event.widget == self.ctrl.view.cb_file_fmt:
             self.set_dtype(self.ctrl.view.var_file_fmt.get())
     def handle_btn_file(self):
+        self.log.trace("handle_btn_file()")
         self.set_path(dialog.get_file(False))
 
     def handle_sld_samp(self, *args):
+        self.log.trace("handle_sld_samp()")
         self.set_samp(self.ctrl.view.var_samp.get())
 
     def set_samp(self, samp):
+        self.log.trace("set_samp(%s)", samp)
         self.stop()
         self.ctrl.model.sink.cur_samp = samp
         self.draw_tb()
         # print(samp)
 
     def set_path(self, path):
+        self.log.trace("set_path(%s)", path)
         self.ctrl.model.sink.set_path(path)
         print(f"Path set to '{self.ctrl.model.sink.get_path()}'")
         self.ctrl.view.sld_samp.scale.config(from_=0, to=self.ctrl.model.sink.max_samp) # resolution=self.model.block_size
         self.draw_tb()
         self.draw_ctrl()
     def set_dtype(self, dtype):
+        self.log.trace("set_dtype(%s)", dtype)
         self.ctrl.model.sink.set_fmt(dtype)
         self.draw_tb()
         self.draw_ctrl()

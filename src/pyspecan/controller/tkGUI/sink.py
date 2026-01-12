@@ -1,8 +1,11 @@
+from ... import logger
+
 def args_sink(parser):
     pass
 
 class Sink:
     def __init__(self, ctrl):
+        self.log = logger.new(f"tkGUI.{type(self).__name__}")
         self.ctrl = ctrl
 
     def start(self):

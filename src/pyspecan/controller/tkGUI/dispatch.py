@@ -3,6 +3,7 @@ import threading
 import time
 from enum import Enum, auto
 
+from ... import logger
 from ...config import config, Mode
 from ...utils.monitor import Memory
 
@@ -24,9 +25,9 @@ class STATE(Enum):
     WAITING = auto()
     RUNNING = auto()
 
-
 class Dispatch:
     def __init__(self, controller):
+        self.log = logger.new("tkGUI.dispatch")
         self.ctrl = controller
         self.queue = queue.Queue()
 
@@ -56,31 +57,40 @@ class Dispatch:
             if not self.queue.qsize() == 0:
                 cmd = self.queue.get()
                 if cmd is CMD.NEXT:
+                    self.log.trace("executing CMD.NEXT")
                     if self.state is STATE.RUNNING:
                         self.queue.put(CMD.STOP)
                     self._next()
                 elif cmd is CMD.PREV:
+                    self.log.trace("executing CMD.PREV")
                     if self.state is STATE.RUNNING:
                         self.queue.put(CMD.STOP)
                     self._prev()
                 elif cmd is CMD.START:
+                    self.log.trace("executing CMD.START")
                     self.state = STATE.RUNNING
                 elif cmd is CMD.STOP:
+                    self.log.trace("executing CMD.STOP")
                     self.state = STATE.WAITING
                 elif cmd is CMD.PLOT:
+                    self.log.trace("executing CMD.PLOT")
                     pass
                 elif cmd is CMD.RESET:
+                    self.log.trace("executing CMD.RESET")
                     if self.state is STATE.RUNNING:
                         self.state = STATE.WAITING
                     self.ctrl.mode.panel.on_reset()
                     self.ctrl.model.reset()
                     self.ctrl.draw_tb()
                 elif cmd is CMD.UPDATE_F:
+                    self.log.trace("executing CMD.UPDATE_F")
                     self._last_f = None
                     self._update_f()
                 elif cmd is CMD.UPDATE_NFFT:
+                    self.log.trace("executing CMD.UPDATE_NFFT")
                     self.ctrl.mode.panel.on_update_nfft(self.ctrl.model.get_nfft())
                 elif cmd is CMD.UPDATE_FS:
+                    self.log.trace("executing CMD.UPDATE_FS")
                     self.ctrl.mode.panel.on_update_fs(self.ctrl.model.get_fs())
 
     def on_plot(self):
