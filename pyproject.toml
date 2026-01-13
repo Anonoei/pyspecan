@@ -21,7 +21,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 keywords = ["anonoei", "sdr", "speca", "specan"]
-dependencies = ["numpy", "matplotlib"]
+dependencies = ["numpy", "matplotlib", "pysdrlib"]
 
 [project.scripts]
 pyspecan-cui = "pyspecan._internal.main:main_cli_swept"
