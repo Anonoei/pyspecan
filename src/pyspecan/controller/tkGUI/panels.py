@@ -115,32 +115,31 @@ class PanelController:
         self.active.pop(self.active.index(plot))
 
     def on_plot(self, model):
-        if len(self.active) == 0:
-            self.parent.dispatch.queue.put(CMD.STOP)
-        # if not len(model.samples) == model.get_block_size():
-        #     self.log.debug("Skipping on_plot (%s != %s)", len(model.samples), model.get_block_size())
-        #     self.parent.dispatch.queue.put(CMD.STOP)
-        #     return
         for view in self.active:
             if not isinstance(view.plotter, BlitPlot):
                 view.plotter.cla()
-                print("Cleared plot!")
+                self.log.info("Cleared plot on %s", type(view).__name__)
+            # self.log.trace("Calling plot() on %s", type(view).__name__)
             view.plot(model.samples)
 
     def on_update_f(self, f):
         for view in self.active:
             if isinstance(view, FreqPlotController):
+                self.log.trace("Calling update_f() on %s", type(view).__name__)
                 view.update_f(f)
 
     def on_update_nfft(self, nfft):
         for view in self.active:
             if isinstance(view, FreqPlotController):
+                self.log.trace("Calling update_nfft() on %s", type(view).__name__)
                 view.update_nfft(nfft)
 
     def on_update_fs(self, Fs):
         for view in self.active:
+            self.log.trace("Calling update_Fs() on %s", type(view).__name__)
             view.update_fs(Fs)
 
     def on_reset(self):
         for view in self.active:
+            self.log.trace("Calling reset() on %s", type(view).__name__)
             view.reset()

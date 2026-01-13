@@ -239,45 +239,23 @@ class FreqPlotController(_PlotController):
         """Set plot window function"""
         self.window = window
 
+    def _calc_ref_level(self, psd, mul=0.1):
+        pmax = np.max(psd)
+        pmax = int(pmax * (1-mul)) if pmax < 0 else int(pmax * (1+mul))
+        return pmax
+
 class FreqPlotControllerRT(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
-        self.overlap = kwargs.get("overlap", 0.6)
+        self.overlap = kwargs.get("overlap", )
         super().__init__(parent, pane, **kwargs)
 
     def psd(self, samps):
         vbw = self.vbw
         if vbw <= 0:
             vbw = None
-        return psd_rt(samps, self.parent.model.get_nfft(), self.overlap, self.parent.model.get_fs().raw, vbw, self.window)
+        return psd_rt(samps, self.parent.model.get_nfft(), self.parent.model.mode.get_overlap(), self.parent.model.get_fs().raw, vbw, self.window)
 
     def _plot(self, samps):
         raise NotImplementedError()
 
-    def draw_settings(self, row=0):
-        row = super().draw_settings(row)
-        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.mode.get_overlap()))
-        ent_overlap = ttk.Entry(self.pane.settings, textvariable=var_overlap, width=4)
-        ent_overlap.bind("<Return>", self.handle_event)
-
-        self.pane.wgts["overlap"] = ent_overlap
-        self.pane.sets["overlap"] = var_overlap
-
-        ttk.Label(self.pane.settings, text="Overlap").grid(row=row, column=0)
-        ent_overlap.grid(row=row, column=1)
-        row += 1
-        return row
-
     # --- GUI bind events and setters --- #
-    def handle_event(self, event):
-        if event.widget == self.pane.wgts["overlap"]:
-            self.set_overlap(self.pane.sets["overlap"].get())
-        else:
-            super().handle_event(event)
-
-    def set_overlap(self, overlap):
-        try:
-            overlap = float(overlap)
-            self.parent.model.mode.set_overlap(overlap)
-        except ValueError:
-            overlap = self.parent.model.get_overlap()
-        self.pane.sets["overlap"].set(f"{self.parent.model.get_overlap():.2f}")

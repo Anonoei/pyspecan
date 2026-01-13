@@ -8,6 +8,7 @@ from ..base import Controller as _Controller
 
 from ... import logger
 from ...model.model import Model
+from ...obj import Frequency
 from ...view.tkGUI.base import View as GUI
 
 from ...backend.mpl.plot import BlitPlot
@@ -40,9 +41,9 @@ class Controller(_Controller):
         self.mode: Mode = mode(self)
         self.sink: Sink = sink(self)
 
-        self.view.btn_start.config(command=self.sink.start)
-        self.view.btn_stop.config(command=self.sink.stop)
-        self.view.btn_reset.config(command=self.sink.reset)
+        self.view.tb_btn_start.config(command=self.sink.start)
+        self.view.tb_btn_stop.config(command=self.sink.stop)
+        self.view.tb_btn_reset.config(command=self.sink.reset)
 
         self.time_show = kwargs.get("show", ControllerConfig.show)
         self.model.set_sweep_time(kwargs.get("sweep", ControllerConfig.sweep))
@@ -51,24 +52,28 @@ class Controller(_Controller):
         self._last_f = None
         self.panel: PanelController = None # type: ignore
 
-        self.view.var_sweep.set(f"{self.model.get_sweep_time():02.3f}")
-        self.view.ent_sweep.bind("<Return>", self.handle_event)
-        self.view.var_show.set(f"{self.time_show:02.3f}")
-        self.view.ent_show.bind("<Return>", self.handle_event)
+        self.view.tb_var_sweep.set(f"{self.model.get_sweep_time():02.3f}")
+        self.view.tb_ent_sweep.bind("<Return>", self.handle_event)
+        self.view.tb_var_show.set(f"{self.time_show:02.3f}")
+        self.view.tb_ent_show.bind("<Return>", self.handle_event)
 
-        self.view.var_draw_time.set(f"{0.0:06.3f}s")
-        self.view.btn_start.config(command=self.sink.start)
-        self.view.btn_stop.config(command=self.sink.stop)
-        self.view.btn_reset.config(command=self.sink.reset)
+        self.view.tb_var_draw_time.set(f"{0.0:06.3f}s")
+        self.view.tb_btn_start.config(command=self.sink.start)
+        self.view.tb_btn_stop.config(command=self.sink.stop)
+        self.view.tb_btn_reset.config(command=self.sink.reset)
 
-        self.view.ent_fs.bind("<Return>", self.handle_event)
-        self.view.ent_cf.bind("<Return>", self.handle_event)
-        self.view.ent_nfft_exp.bind("<Return>", self.handle_event)
+        self.view.cl_ent_fs.bind("<Return>", self.handle_event)
+        self.view.cl_ent_cf.bind("<Return>", self.handle_event)
+        self.view.cl_ent_nfft_exp.bind("<Return>", self.handle_event)
 
         self.dispatch.start()
 
         style = kwargs.get("theme", ControllerConfig.theme)
         theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]
+
+        self.set_cf(None)
+        self.set_fs(None)
+        self.set_nfft(None)
 
         self.view.root.protocol("WM_DELETE_WINDOW", self.quit)
         self.draw()
@@ -80,40 +85,40 @@ class Controller(_Controller):
 
     def draw(self):
         self.draw_tb()
-        self.draw_ctrl()
+        self.draw_cl()
         self.draw_view()
 
     def draw_tb(self):
-        self.view.var_sweep.set(f"{self.model.get_sweep_time():02.3f}")
-        self.view.var_show.set(f"{self.time_show:02.3f}")
+        # self.view.var_sweep.set(f"{self.model.get_sweep_time():02.3f}")
+        # self.view.var_show.set(f"{self.time_show:02.3f}")
         self.sink.draw_tb()
         self.mode.draw_tb()
 
-    def draw_ctrl(self):
-        self.view.var_fs.set(str(self.model.get_fs()))
-        self.view.var_cf.set(str(self.model.get_cf()))
-        self.view.lbl_nfft.configure(text=str(self.model.get_nfft()))
-        self.view.var_nfft_exp.set(str(self.nfft_exp))
-        self.view.lbl_block_size.configure(text=str(self.model.get_block_size()))
-        self.view.lbl_sweep_samples.configure(text=str(self.model.get_sweep_samples()))
-        self.sink.draw_ctrl()
-        self.mode.draw_ctrl()
+    def draw_cl(self):
+        # self.view.var_fs.set(str(self.model.get_fs()))
+        # self.view.var_cf.set(str(self.model.get_cf()))
+        # self.view.lbl_nfft.configure(text=str(self.model.get_nfft()))
+        # self.view.var_nfft_exp.set(str(self.nfft_exp))
+        self.view.cl_lbl_block_size.configure(text=str(self.model.get_block_size()))
+        self.view.cl_lbl_sweep_samples.configure(text=str(self.model.get_sweep_samples()))
+        self.sink.draw_cl()
+        self.mode.draw_cl()
 
     def draw_view(self):
         pass
 
     # --- GUI bind events and setters --- #
     def handle_event(self, event):
-        if event.widget == self.view.ent_sweep:
-            self.set_time_sweep(self.view.var_sweep.get())
-        elif event.widget == self.view.ent_show:
-            self.set_time_show(self.view.var_show.get())
-        elif event.widget == self.view.ent_fs:
-            self.set_fs(self.view.var_fs.get())
-        elif event.widget == self.view.ent_cf:
-            self.set_cf(self.view.var_cf.get())
-        elif event.widget == self.view.ent_nfft_exp:
-            self.set_nfft(self.view.var_nfft_exp.get())
+        if event.widget == self.view.tb_ent_sweep:
+            self.set_time_sweep(self.view.tb_var_sweep.get())
+        elif event.widget == self.view.tb_ent_show:
+            self.set_time_show(self.view.tb_var_show.get())
+        elif event.widget == self.view.cl_ent_fs:
+            self.set_fs(self.view.cl_var_fs.get())
+        elif event.widget == self.view.cl_ent_cf:
+            self.set_cf(self.view.cl_var_cf.get())
+        elif event.widget == self.view.cl_ent_nfft_exp:
+            self.set_nfft(self.view.cl_var_nfft_exp.get())
 
     def set_time_sweep(self, ts):
         self.log.trace("set_time_sweep(%s)", ts)
@@ -121,8 +126,8 @@ class Controller(_Controller):
             self.model.set_sweep_time(float(ts))
         except ValueError:
             pass
-        self.view.var_sweep.set(f"{self.model.get_sweep_time():02.3f}")
-        self.draw_ctrl()
+        self.view.tb_var_sweep.set(f"{self.model.get_sweep_time():02.3f}")
+        self.draw_cl()
     def set_time_show(self, ts):
         self.log.trace("set_time_show(%s)", ts)
         try:
@@ -130,29 +135,43 @@ class Controller(_Controller):
             self.time_show = ts
         except ValueError:
             pass
-        self.view.var_show.set(f"{self.time_show:02.3f}")
+        self.view.tb_var_show.set(f"{self.time_show:02.3f}")
 
     def set_fs(self, fs):
         self.log.trace("set_fs(%s)", fs)
-        self.model.set_fs(fs)
-        self.view.var_fs.set(str(self.model.sink.get_fs()))
-        self.dispatch.queue.put(CMD.UPDATE_FS)
-        self.dispatch.queue.put(CMD.UPDATE_F)
+        if not fs is None:
+            try:
+                Frequency.get(fs)
+                self.model.set_fs(fs)
+                self.dispatch.send(CMD.UPDATE_FS)
+                self.dispatch.send(CMD.UPDATE_F)
+            except ValueError:
+                pass
+        self.view.cl_var_fs.set(str(self.model.sink.get_fs()))
         self.draw_tb()
-        self.draw_ctrl()
+        self.draw_cl()
     def set_cf(self, cf):
         self.log.trace("set_cf(%s)", cf)
-        self.model.set_cf(cf)
-        self.view.var_cf.set(str(self.model.sink.get_cf()))
-        self.dispatch.queue.put(CMD.UPDATE_F)
-        self.draw_ctrl()
+        if not cf is None:
+            try:
+                Frequency.get(cf)
+                self.model.set_cf(cf)
+                self.dispatch.send(CMD.UPDATE_F)
+            except ValueError:
+                pass
+        self.view.cl_var_cf.set(str(self.model.sink.get_cf()))
+        self.draw_cl()
     def set_nfft(self, exp):
         self.log.trace("set_nfft(%s)", exp)
-        exp = int(exp)
-        self.nfft_exp = exp
-        self.model.set_nfft(2**exp)
-        self.view.var_nfft_exp.set(str(self.nfft_exp))
-        self.view.lbl_nfft.config(text=str(self.model.get_nfft()))
-        self.dispatch.queue.put(CMD.UPDATE_NFFT)
-        self.dispatch.queue.put(CMD.UPDATE_F)
-        self.draw_ctrl()
+        if not exp is None:
+            try:
+                exp = int(exp)
+                self.nfft_exp = exp
+                self.model.set_nfft(2**exp)
+            except ValueError:
+                pass
+        self.view.cl_var_nfft_exp.set(str(self.nfft_exp))
+        self.view.cl_lbl_nfft.config(text=str(self.model.get_nfft()))
+        self.dispatch.send(CMD.UPDATE_NFFT)
+        self.dispatch.send(CMD.UPDATE_F)
+        self.draw_cl()

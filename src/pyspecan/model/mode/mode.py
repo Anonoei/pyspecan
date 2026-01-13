@@ -17,7 +17,7 @@ class Mode:
         self.log = logger.new(f"model.{type(self).__name__}")
         self.model = model
         self._sweep_time: float = kwargs.get("sweep_time", ModeConfig.sweep_time)
-        self._block_size = self.model._nfft
+        self._block_size: int = self.model._nfft
 
     def reset(self):
         pass
@@ -30,7 +30,7 @@ class Mode:
     def set_block_size(self, size):
         self.log.debug("set_block_size(%s)", size)
         self._block_size = size
-        self.model.sink._samples = np.empty(self._block_size, dtype=np.complex64) # TODO, better way?
+        self.model.sink.reset() # reset model.sink._samples size
     def get_sweep_time(self):
         return self._sweep_time
     def set_sweep_time(self, ts):

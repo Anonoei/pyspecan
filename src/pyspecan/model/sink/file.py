@@ -66,8 +66,8 @@ class SinkFile(Sink):
         self.fmt = Format[fmt]
         self.dev.set_fmt(fmt)
 
-    def _set_fs(self, Fs):
-        return Fs
+    def _set_fs(self, fs):
+        return fs
     def _set_cf(self, cf):
         return cf
 
@@ -75,6 +75,7 @@ class SinkFile(Sink):
         self.dev.reset()
 
     def next(self, count: int):
+        # self.log.trace("next(%s)", count)
         try:
             samples = self.dev.next(count)
         except pysdrlib.file.err.Overflow:

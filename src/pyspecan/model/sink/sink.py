@@ -35,23 +35,28 @@ class Sink:
     def show(self, ind=0):
         raise NotImplementedError()
 
-    def set_fs(self, Fs):
-        self.log.debug("set_sample_rate(%s)", Fs)
-        Fs = self._set_fs(Fs)
-        self._Fs = Frequency.get(Fs)
+    def set_fs(self, fs):
+        self.log.debug("set_fs(%s)", fs)
+        if isinstance(fs, str):
+            fs = Frequency.get(fs).raw
+        fs = self._set_fs(fs)
+        self._Fs = Frequency.get(fs)
         self.model.f = self.model.update_f()
     def get_fs(self):
         return self._Fs
     def set_cf(self, cf):
-        self.log.debug("set_freq(%s)", cf)
-        cf = self._set_cf(self)
+        self.log.debug("set_cf(%s)", cf)
+        if isinstance(cf, str):
+            cf = Frequency.get(cf).raw
+        cf = self._set_cf(cf)
         self._cf = Frequency.get(cf)
         self.model.f = self.model.update_f()
+
     def get_cf(self):
         return self._cf
 
     # --- Defined in child classes --- #
-    def _set_fs(self, Fs):
+    def _set_fs(self, fs):
         raise NotImplementedError()
     def _set_cf(self, cf):
         raise NotImplementedError()

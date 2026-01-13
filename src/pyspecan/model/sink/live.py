@@ -57,13 +57,13 @@ class SinkLive(Sink):
             self.set_rx(None)
             self.dev.start_rx()
 
-    def _set_fs(self, Fs):
-        return self.dev.set_sample_rate(Fs)
+    def _set_fs(self, fs):
+        return self.dev.set_sample_rate(fs)
     def _set_cf(self, cf):
         return self.dev.set_freq(cf)
 
     def next(self, count: int):
-        self.log.debug("next(%s)", count)
+        # self.log.debug("next(%s)", count)
         self._samples = self.dev.get_samples()[-count:]
         return True
 

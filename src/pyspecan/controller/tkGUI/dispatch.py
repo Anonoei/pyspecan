@@ -13,13 +13,16 @@ class CMD(Enum):
 
     START = auto()
     STOP = auto()
+    RESET = auto()
 
     PLOT = auto()
-    RESET = auto()
 
     UPDATE_F = auto()
     UPDATE_NFFT = auto()
     UPDATE_FS = auto()
+
+    UPDATE_MODE = auto()
+    UPDATE_SINK = auto()
 
 class STATE(Enum):
     WAITING = auto()
@@ -35,16 +38,19 @@ class Dispatch:
         self.running = True
         self.thread = threading.Thread(target=self._run, name="dispatcher")
 
-        self._last_f = None
+        self._last_f = self._get_f()
 
     def start(self):
         self.running = True
         self.thread.start()
 
     def stop(self):
-        self.queue.put(CMD.STOP)
+        self.send(CMD.STOP)
         self.running = False
         self.thread.join(timeout=1)
+
+    def send(self, cmd: CMD, val=None):
+        self.queue.put((cmd, val))
 
     def _run(self):
         while self.running:
@@ -55,16 +61,16 @@ class Dispatch:
             else:
                 self._loop()
             if not self.queue.qsize() == 0:
-                cmd = self.queue.get()
+                cmd, val = self.queue.get()
                 if cmd is CMD.NEXT:
                     self.log.trace("executing CMD.NEXT")
                     if self.state is STATE.RUNNING:
-                        self.queue.put(CMD.STOP)
+                        self.send(CMD.STOP)
                     self._next()
                 elif cmd is CMD.PREV:
                     self.log.trace("executing CMD.PREV")
                     if self.state is STATE.RUNNING:
-                        self.queue.put(CMD.STOP)
+                        self.send(CMD.STOP)
                     self._prev()
                 elif cmd is CMD.START:
                     self.log.trace("executing CMD.START")
@@ -95,11 +101,11 @@ class Dispatch:
 
     def on_plot(self):
         ptime = time.perf_counter()
-        self._update_f()
+        # self._update_f()
         self.ctrl.mode.panel.on_plot(self.ctrl.model)
 
         ptime = (time.perf_counter() - ptime)
-        self.ctrl.view.var_draw_time.set(f"{ptime:06.3f}s")
+        self.ctrl.view.tb_var_draw_time.set(f"{ptime:06.3f}s")
         self.ctrl.draw_tb()
 
         # print(f"Plotted in {ptime*1000:.1f}ms / {self.time_show}")
@@ -109,17 +115,17 @@ class Dispatch:
         time_show = self.ctrl.time_show/1000 # convert ms to s
         valid, ptime = self._next()
         if not valid or ptime is None:
-            self.queue.put(CMD.STOP)
+            self.send(CMD.STOP)
             return
         wait = time_show-ptime
         if wait > 0:
-            self.ctrl.view.lbl_msg.configure(text="")
+            self.ctrl.view.tb_lbl_msg.configure(text="")
             time.sleep(wait)
         else:
             if not self.ctrl.model.mode.get_sweep_time() == 0.0:
                 if config.MODE == Mode.SWEPT:
                     self.ctrl.model.skip_time(-wait)
-                self.ctrl.view.lbl_msg.configure(text="OVERFLOW")
+                self.ctrl.view.tb_lbl_msg.configure(text="OVERFLOW")
 
     def _prev(self): # fails on Sink.LIVE
         valid = self.ctrl.model.sink.prev(self.ctrl.model.mode.get_block_size())
@@ -135,11 +141,16 @@ class Dispatch:
             tplot = self.on_plot()
         return (valid, tplot)
 
+    def _get_f(self):
+        return (self.ctrl.model.f[0], self.ctrl.model.f[-1]+(self.ctrl.model.f[-1]-self.ctrl.model.f[-2]), len(self.ctrl.model.f))
     def _update_f(self):
-        def __check():
-            return (self.ctrl.model.f[0], self.ctrl.model.f[-1]+(self.ctrl.model.f[-1]-self.ctrl.model.f[-2]), len(self.ctrl.model.f))
         if self._last_f is None:
-            self._last_f = __check()
+            self._last_f = self._get_f()
+            self.ctrl.mode.panel.on_update_f(self._last_f)
         elif not self.ctrl.model.f[0] == self._last_f[0] and not len(self.ctrl.model.f) == self._last_f[2]:
-            self._last_f = __check()
-        self.ctrl.mode.panel.on_update_f(self._last_f)
+            self._last_f = self._get_f()
+            self.ctrl.mode.panel.on_update_f(self._last_f)
+
+    @property
+    def last_f(self):
+        return self._last_f
