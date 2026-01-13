@@ -90,8 +90,6 @@ el.replaceWith(d);
             kwargs[&#34;vbw&#34;] = PlotConfig.vbw
         if not &#34;window&#34; in kwargs:
             kwargs[&#34;vbw&#34;] = PlotConfig.vbw
-        if not &#34;overlap&#34; in kwargs:
-            kwargs[&#34;overlap&#34;] = PlotConfig.overlap
         super().__init__(parent, pane, **kwargs)
         self._cmap_set = False
         self._cb_drawn = False
@@ -109,7 +107,9 @@ el.replaceWith(d);
         self.plotter.ax(&#34;pst&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
         self.plotter.ax(&#34;pst&#34;).ax.grid(True, alpha=0.2)
 
-        self.set_y()
+        self.update_f(self.parent.dispatch.last_f)
+        if not self.ref_level == &#34;auto&#34;:
+            self.set_y()
         self.update()
 
     def reset(self):
@@ -117,6 +117,10 @@ el.replaceWith(d);
 
     def _plot(self, samps):
         psd = self.psd(samps)
+        if self.ref_level == &#34;auto&#34;:
+            self.ref_level = self._calc_ref_level(psd)
+            self.set_ref_level(self.ref_level)
+            self.set_y()
         self.pane.master.config(text=f&#34;Persistent - {psd.shape[1]} FFTs&#34;)
 
         mat = matrix.cvec(self.x, self.y, psd, self.y_top, self.y_btm)
@@ -329,11 +333,10 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class PlotConfig:
-    ref_level = 0
+    ref_level = &#34;auto&#34;
     scale_div = 10.0
     vbw = 0.0
     window = &#34;blackman&#34;
-    overlap = 0.6
     x = 1001
     y = 600
     cmap = &#34;hot&#34;</code></pre>
@@ -342,10 +345,6 @@ el.replaceWith(d);
 <h3>Class variables</h3>
 <dl>
 <dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.cmap"><code class="name">var <span class="ident">cmap</span></code></dt>
-<dd>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.rt.pst.PlotConfig.overlap"><code class="name">var <span class="ident">overlap</span></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -408,7 +407,6 @@ el.replaceWith(d);
 <h4><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig">PlotConfig</a></code></h4>
 <ul class="two-column">
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.cmap" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.cmap">cmap</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.overlap" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.overlap">overlap</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.ref_level" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.ref_level">ref_level</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.scale_div" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.scale_div">scale_div</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.rt.pst.PlotConfig.vbw" href="#pyspecan.controller.tkGUI.rt.pst.PlotConfig.vbw">vbw</a></code></li>

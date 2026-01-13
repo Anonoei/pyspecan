@@ -120,13 +120,13 @@ el.replaceWith(d);
             self.set_rx(None)
             self.dev.start_rx()
 
-    def _set_fs(self, Fs):
-        return self.dev.set_sample_rate(Fs)
+    def _set_fs(self, fs):
+        return self.dev.set_sample_rate(fs)
     def _set_cf(self, cf):
         return self.dev.set_freq(cf)
 
     def next(self, count: int):
-        self.log.debug(&#34;next(%s)&#34;, count)
+        # self.log.debug(&#34;next(%s)&#34;, count)
         self._samples = self.dev.get_samples()[-count:]
         return True
 
@@ -230,13 +230,13 @@ el.replaceWith(d);
             self.set_rx(None)
             self.dev.start_rx()
 
-    def _set_fs(self, Fs):
-        return self.dev.set_sample_rate(Fs)
+    def _set_fs(self, fs):
+        return self.dev.set_sample_rate(fs)
     def _set_cf(self, cf):
         return self.dev.set_freq(cf)
 
     def next(self, count: int):
-        self.log.debug(&#34;next(%s)&#34;, count)
+        # self.log.debug(&#34;next(%s)&#34;, count)
         self._samples = self.dev.get_samples()[-count:]
         return True
 
@@ -335,13 +335,13 @@ el.replaceWith(d);
             self.set_rx(None)
             self.dev.start_rx()
 
-    def _set_fs(self, Fs):
-        return self.dev.set_sample_rate(Fs)
+    def _set_fs(self, fs):
+        return self.dev.set_sample_rate(fs)
     def _set_cf(self, cf):
         return self.dev.set_freq(cf)
 
     def next(self, count: int):
-        self.log.debug(&#34;next(%s)&#34;, count)
+        # self.log.debug(&#34;next(%s)&#34;, count)
         self._samples = self.dev.get_samples()[-count:]
         return True
 
@@ -501,7 +501,7 @@ def name(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def next(self, count: int):
-    self.log.debug(&#34;next(%s)&#34;, count)
+    # self.log.debug(&#34;next(%s)&#34;, count)
     self._samples = self.dev.get_samples()[-count:]
     return True</code></pre>
 </details>

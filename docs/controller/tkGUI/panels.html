@@ -57,6 +57,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">class PanelController:
     def __init__(self, parent, panel: PanelView, plots):
+        self.log = logger.new(&#34;tkGUI.Panels&#34;)
         self.parent = parent
         self.panel = panel
         self.rows = []
@@ -162,30 +163,33 @@ el.replaceWith(d);
         self.active.pop(self.active.index(plot))
 
     def on_plot(self, model):
-        if len(self.active) == 0:
-            self.parent.dispatch.queue.put(CMD.STOP)
         for view in self.active:
             if not isinstance(view.plotter, BlitPlot):
                 view.plotter.cla()
-                print(&#34;Cleared plot!&#34;)
+                self.log.info(&#34;Cleared plot on %s&#34;, type(view).__name__)
+            # self.log.trace(&#34;Calling plot() on %s&#34;, type(view).__name__)
             view.plot(model.samples)
 
     def on_update_f(self, f):
         for view in self.active:
             if isinstance(view, FreqPlotController):
+                self.log.trace(&#34;Calling update_f() on %s&#34;, type(view).__name__)
                 view.update_f(f)
 
     def on_update_nfft(self, nfft):
         for view in self.active:
             if isinstance(view, FreqPlotController):
+                self.log.trace(&#34;Calling update_nfft() on %s&#34;, type(view).__name__)
                 view.update_nfft(nfft)
 
     def on_update_fs(self, Fs):
         for view in self.active:
+            self.log.trace(&#34;Calling update_Fs() on %s&#34;, type(view).__name__)
             view.update_fs(Fs)
 
     def on_reset(self):
         for view in self.active:
+            self.log.trace(&#34;Calling reset() on %s&#34;, type(view).__name__)
             view.reset()</code></pre>
 </details>
 <div class="desc"></div>
@@ -345,12 +349,11 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def on_plot(self, model):
-    if len(self.active) == 0:
-        self.parent.dispatch.queue.put(CMD.STOP)
     for view in self.active:
         if not isinstance(view.plotter, BlitPlot):
             view.plotter.cla()
-            print(&#34;Cleared plot!&#34;)
+            self.log.info(&#34;Cleared plot on %s&#34;, type(view).__name__)
+        # self.log.trace(&#34;Calling plot() on %s&#34;, type(view).__name__)
         view.plot(model.samples)</code></pre>
 </details>
 <div class="desc"></div>
@@ -365,6 +368,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def on_reset(self):
     for view in self.active:
+        self.log.trace(&#34;Calling reset() on %s&#34;, type(view).__name__)
         view.reset()</code></pre>
 </details>
 <div class="desc"></div>
@@ -380,6 +384,7 @@ el.replaceWith(d);
 <pre><code class="python">def on_update_f(self, f):
     for view in self.active:
         if isinstance(view, FreqPlotController):
+            self.log.trace(&#34;Calling update_f() on %s&#34;, type(view).__name__)
             view.update_f(f)</code></pre>
 </details>
 <div class="desc"></div>
@@ -394,6 +399,7 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def on_update_fs(self, Fs):
     for view in self.active:
+        self.log.trace(&#34;Calling update_Fs() on %s&#34;, type(view).__name__)
         view.update_fs(Fs)</code></pre>
 </details>
 <div class="desc"></div>
@@ -409,6 +415,7 @@ el.replaceWith(d);
 <pre><code class="python">def on_update_nfft(self, nfft):
     for view in self.active:
         if isinstance(view, FreqPlotController):
+            self.log.trace(&#34;Calling update_nfft() on %s&#34;, type(view).__name__)
             view.update_nfft(nfft)</code></pre>
 </details>
 <div class="desc"></div>

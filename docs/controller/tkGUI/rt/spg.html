@@ -138,6 +138,7 @@ el.replaceWith(d);
         self.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
         self.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
+        self.update_f(self.parent.dispatch.last_f)
         self.set_y()
         self.update()
 

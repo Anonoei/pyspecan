@@ -218,7 +218,12 @@ el.replaceWith(d);
         self.pane.sets[&#34;vbw&#34;].set(str(self.vbw))
     def set_window(self, window):
         &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
-        self.window = window</code></pre>
+        self.window = window
+
+    def _calc_ref_level(self, psd, mul=0.1):
+        pmax = np.max(psd)
+        pmax = int(pmax * (1-mul)) if pmax &lt; 0 else int(pmax * (1+mul))
+        return pmax</code></pre>
 </details>
 <div class="desc"><p>Controller for view.tkGUI frequency-domain plots</p></div>
 <h3>Ancestors</h3>
@@ -384,7 +389,12 @@ el.replaceWith(d);
         self.pane.sets[&#34;vbw&#34;].set(str(self.vbw))
     def set_window(self, window):
         &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
-        self.window = window</code></pre>
+        self.window = window
+
+    def _calc_ref_level(self, psd, mul=0.1):
+        pmax = np.max(psd)
+        pmax = int(pmax * (1-mul)) if pmax &lt; 0 else int(pmax * (1+mul))
+        return pmax</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -537,7 +547,12 @@ el.replaceWith(d);
         self.pane.sets[&#34;vbw&#34;].set(str(self.vbw))
     def set_window(self, window):
         &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
-        self.window = window</code></pre>
+        self.window = window
+
+    def _calc_ref_level(self, psd, mul=0.1):
+        pmax = np.max(psd)
+        pmax = int(pmax * (1-mul)) if pmax &lt; 0 else int(pmax * (1+mul))
+        return pmax</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -690,7 +705,12 @@ el.replaceWith(d);
         self.pane.sets[&#34;vbw&#34;].set(str(self.vbw))
     def set_window(self, window):
         &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
-        self.window = window</code></pre>
+        self.window = window
+
+    def _calc_ref_level(self, psd, mul=0.1):
+        pmax = np.max(psd)
+        pmax = int(pmax * (1-mul)) if pmax &lt; 0 else int(pmax * (1+mul))
+        return pmax</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -843,7 +863,12 @@ el.replaceWith(d);
         self.pane.sets[&#34;vbw&#34;].set(str(self.vbw))
     def set_window(self, window):
         &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
-        self.window = window</code></pre>
+        self.window = window
+
+    def _calc_ref_level(self, psd, mul=0.1):
+        pmax = np.max(psd)
+        pmax = int(pmax * (1-mul)) if pmax &lt; 0 else int(pmax * (1+mul))
+        return pmax</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -996,7 +1021,12 @@ el.replaceWith(d);
         self.pane.sets[&#34;vbw&#34;].set(str(self.vbw))
     def set_window(self, window):
         &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
-        self.window = window</code></pre>
+        self.window = window
+
+    def _calc_ref_level(self, psd, mul=0.1):
+        pmax = np.max(psd)
+        pmax = int(pmax * (1-mul)) if pmax &lt; 0 else int(pmax * (1+mul))
+        return pmax</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -1149,7 +1179,12 @@ el.replaceWith(d);
         self.pane.sets[&#34;vbw&#34;].set(str(self.vbw))
     def set_window(self, window):
         &#34;&#34;&#34;Set plot window function&#34;&#34;&#34;
-        self.window = window</code></pre>
+        self.window = window
+
+    def _calc_ref_level(self, psd, mul=0.1):
+        pmax = np.max(psd)
+        pmax = int(pmax * (1-mul)) if pmax &lt; 0 else int(pmax * (1+mul))
+        return pmax</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -1394,46 +1429,19 @@ def y_top(self):
 </summary>
 <pre><code class="python">class FreqPlotControllerRT(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
-        self.overlap = kwargs.get(&#34;overlap&#34;, 0.6)
+        self.overlap = kwargs.get(&#34;overlap&#34;, )
         super().__init__(parent, pane, **kwargs)
 
     def psd(self, samps):
         vbw = self.vbw
         if vbw &lt;= 0:
             vbw = None
-        return psd_rt(samps, self.parent.model.get_nfft(), self.overlap, self.parent.model.get_fs().raw, vbw, self.window)
+        return psd_rt(samps, self.parent.model.get_nfft(), self.parent.model.mode.get_overlap(), self.parent.model.get_fs().raw, vbw, self.window)
 
     def _plot(self, samps):
         raise NotImplementedError()
 
-    def draw_settings(self, row=0):
-        row = super().draw_settings(row)
-        var_overlap = tk.StringVar(self.pane.settings, str(self.parent.model.mode.get_overlap()))
-        ent_overlap = ttk.Entry(self.pane.settings, textvariable=var_overlap, width=4)
-        ent_overlap.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
-
-        self.pane.wgts[&#34;overlap&#34;] = ent_overlap
-        self.pane.sets[&#34;overlap&#34;] = var_overlap
-
-        ttk.Label(self.pane.settings, text=&#34;Overlap&#34;).grid(row=row, column=0)
-        ent_overlap.grid(row=row, column=1)
-        row += 1
-        return row
-
-    # --- GUI bind events and setters --- #
-    def handle_event(self, event):
-        if event.widget == self.pane.wgts[&#34;overlap&#34;]:
-            self.set_overlap(self.pane.sets[&#34;overlap&#34;].get())
-        else:
-            super().handle_event(event)
-
-    def set_overlap(self, overlap):
-        try:
-            overlap = float(overlap)
-            self.parent.model.mode.set_overlap(overlap)
-        except ValueError:
-            overlap = self.parent.model.get_overlap()
-        self.pane.sets[&#34;overlap&#34;].set(f&#34;{self.parent.model.get_overlap():.2f}&#34;)</code></pre>
+    # --- GUI bind events and setters --- #</code></pre>
 </details>
 <div class="desc"><p>Controller for view.tkGUI frequency-domain plots</p></div>
 <h3>Ancestors</h3>
@@ -1448,22 +1456,6 @@ def y_top(self):
 </ul>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.handle_event"><code class="name flex">
-<span>def <span class="ident">handle_event</span></span>(<span>self, event)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def handle_event(self, event):
-    if event.widget == self.pane.wgts[&#34;overlap&#34;]:
-        self.set_overlap(self.pane.sets[&#34;overlap&#34;].get())
-    else:
-        super().handle_event(event)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
 <dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.psd"><code class="name flex">
 <span>def <span class="ident">psd</span></span>(<span>self, samps)</span>
 </code></dt>
@@ -1476,25 +1468,7 @@ def y_top(self):
     vbw = self.vbw
     if vbw &lt;= 0:
         vbw = None
-    return psd_rt(samps, self.parent.model.get_nfft(), self.overlap, self.parent.model.get_fs().raw, vbw, self.window)</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_overlap"><code class="name flex">
-<span>def <span class="ident">set_overlap</span></span>(<span>self, overlap)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def set_overlap(self, overlap):
-    try:
-        overlap = float(overlap)
-        self.parent.model.mode.set_overlap(overlap)
-    except ValueError:
-        overlap = self.parent.model.get_overlap()
-    self.pane.sets[&#34;overlap&#34;].set(f&#34;{self.parent.model.get_overlap():.2f}&#34;)</code></pre>
+    return psd_rt(samps, self.parent.model.get_nfft(), self.parent.model.mode.get_overlap(), self.parent.model.get_fs().raw, vbw, self.window)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -1629,9 +1603,7 @@ def y_top(self):
 <li>
 <h4><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT">FreqPlotControllerRT</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.handle_event" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.handle_event">handle_event</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.psd" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.psd">psd</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_overlap" href="#pyspecan.controller.tkGUI.plot_base.FreqPlotControllerRT.set_overlap">set_overlap</a></code></li>
 </ul>
 </li>
 <li>

@@ -103,7 +103,9 @@ el.replaceWith(d);
         self.plotter.ax(&#34;psd&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=10)
         self.plotter.ax(&#34;psd&#34;).ax.grid(True, alpha=0.2)
 
-        self.set_y()
+        self.update_f(self.parent.dispatch.last_f)
+        if not self.ref_level == &#34;auto&#34;:
+            self.set_y()
         self.update()
 
     def reset(self):
@@ -112,6 +114,10 @@ el.replaceWith(d);
 
     def _plot(self, samps):
         psd = self.psd(samps)
+        if self.ref_level == &#34;auto&#34;:
+            self.ref_level = self._calc_ref_level(psd)
+            self.set_ref_level(self.ref_level)
+            self.set_y()
         if self.pane.sets[&#34;show_max&#34;].get() == 1:
             if self.psd_max is None:
                 self.psd_max = np.repeat(-np.inf, len(psd))
@@ -185,6 +191,8 @@ el.replaceWith(d);
             self.set_y()
 
     def set_ref_level(self, ref):
+        if self.ref_level == &#34;auto&#34;:
+            return
         prev = float(self.ref_level)
         super().set_ref_level(ref)
         if not prev == self.ref_level:
@@ -329,7 +337,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class PlotConfig:
-    ref_level = 0
+    ref_level = &#34;auto&#34;
     scale_div = 10.0
     vbw = 10.0
     window = &#34;blackman&#34;</code></pre>

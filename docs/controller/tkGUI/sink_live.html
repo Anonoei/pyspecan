@@ -90,73 +90,70 @@ el.replaceWith(d);
     def __init__(self, ctrl):
         super().__init__(ctrl)
 
-        self.ctrl.view.cb_dev.config(values=list([d for d in pysdrlib.devices.ls()]))
+        self.ctrl.view.sink.cl_cb_dev.config(values=list([d for d in pysdrlib.devices.ls()]))
         self.ctrl.view.cb_dev.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
-        self.ctrl.view.ent_rx_rf.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
-        self.ctrl.view.ent_rx_if.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
-        self.ctrl.view.ent_rx_bb.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
-        self.ctrl.view.var_rx_rf.set(str(self.ctrl.model.sink.get_rx_rf()))
-        self.ctrl.view.var_rx_if.set(str(self.ctrl.model.sink.get_rx_if()))
-        self.ctrl.view.var_rx_bb.set(str(self.ctrl.model.sink.get_rx_bb()))
+        self.ctrl.view.sink.cl_ent_rx_rf.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+        self.ctrl.view.sink.cl_ent_rx_if.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+        self.ctrl.view.sink.cl_ent_rx_bb.bind(&#34;&lt;Return&gt;&#34;, self.handle_event)
+        self.ctrl.view.sink.cl_var_rx_rf.set(str(self.ctrl.model.sink.get_rx_rf()))
+        self.ctrl.view.sink.cl_var_rx_if.set(str(self.ctrl.model.sink.get_rx_if()))
+        self.ctrl.view.sink.cl_var_rx_bb.set(str(self.ctrl.model.sink.get_rx_bb()))
         self.toggle_gains()
 
     def start(self):
         if self.ctrl.model.sink.dev is None:
             print(&#34;sink is not fully initialized, failed to get device&#34;)
             return
-        self.ctrl.view.btn_start.config(state=tk.DISABLED)
-        self.ctrl.view.btn_stop.config(state=tk.ACTIVE)
-        self.ctrl.dispatch.queue.put(CMD.START)
+        self.ctrl.view.tb_btn_start.config(state=tk.DISABLED)
+        self.ctrl.view.tb_btn_stop.config(state=tk.ACTIVE)
+        self.ctrl.dispatch.send(CMD.START)
 
     def stop(self):
-        self.ctrl.view.btn_stop.config(state=tk.DISABLED)
-        self.ctrl.view.btn_start.config(state=tk.ACTIVE)
-        self.ctrl.dispatch.queue.put(CMD.STOP)
+        self.ctrl.view.tb_btn_stop.config(state=tk.DISABLED)
+        self.ctrl.view.tb_btn_start.config(state=tk.ACTIVE)
+        self.ctrl.dispatch.send(CMD.STOP)
 
     def reset(self):
-        self.ctrl.dispatch.queue.put(CMD.RESET)
+        self.ctrl.dispatch.send(CMD.RESET)
         self.stop()
 
-    def draw_tb(self):
-        pass
-
-    def draw_ctrl(self):
-        self.ctrl.view.var_dev.set(str(type(self.ctrl.model.sink.dev).__name__))
-        self.ctrl.view.var_rx_rf.set(str(self.ctrl.model.sink.get_rx_rf()))
-        self.ctrl.view.var_rx_if.set(str(self.ctrl.model.sink.get_rx_if()))
-        self.ctrl.view.var_rx_bb.set(str(self.ctrl.model.sink.get_rx_bb()))
+    def draw_cl(self):
+        self.ctrl.view.sink.cl_var_dev.set(str(type(self.ctrl.model.sink.dev).__name__))
+        self.ctrl.view.sink.cl_var_rx_rf.set(str(self.ctrl.model.sink.get_rx_rf()))
+        self.ctrl.view.sink.cl_var_rx_if.set(str(self.ctrl.model.sink.get_rx_if()))
+        self.ctrl.view.sink.cl_var_rx_bb.set(str(self.ctrl.model.sink.get_rx_bb()))
 
     def toggle_gains(self):
         if not self.ctrl.model.sink.has_rx_rf():
-            self.ctrl.view.fr_rx_rf.grid_forget()
+            self.ctrl.view.sink.cl_fr_rx_rf.grid_forget()
         else:
-            self.ctrl.view.fr_rx_rf.grid()
+            self.ctrl.view.sink.cl_fr_rx_rf.grid()
         if not self.ctrl.model.sink.has_rx_if():
-            self.ctrl.view.fr_rx_if.grid_forget()
+            self.ctrl.view.sink.cl_fr_rx_if.grid_forget()
         else:
-            self.ctrl.view.fr_rx_if.grid()
+            self.ctrl.view.sink.cl_fr_rx_if.grid()
         if not self.ctrl.model.sink.has_rx_bb():
-            self.ctrl.view.fr_rx_bb.grid_forget()
+            self.ctrl.view.sink.cl_fr_rx_bb.grid_forget()
         else:
-            self.ctrl.view.fr_rx_bb.grid()
+            self.ctrl.view.sink.cl_fr_rx_bb.grid()
 
     # --- GUI bind events and setters --- #
     def handle_event(self, event):
-        if event.widget == self.ctrl.view.cb_dev:
-            self.set_device(self.ctrl.view.var_dev.get())
-        elif event.widget == self.ctrl.view.ent_rx_rf:
-            self.set_rx_rf(self.ctrl.view.var_rx_rf.get())
-        elif event.widget == self.ctrl.view.ent_rx_if:
-            self.set_rx_if(self.ctrl.view.var_rx_if.get())
-        elif event.widget == self.ctrl.view.ent_rx_bb:
-            self.set_rx_bb(self.ctrl.view.var_rx_bb.get())
+        if event.widget == self.ctrl.view.sink.cl_cb_dev:
+            self.set_device(self.ctrl.view.sink.cl_var_dev.get())
+        elif event.widget == self.ctrl.view.sink.cl_ent_rx_rf:
+            self.set_rx_rf(self.ctrl.view.sink.cl_var_rx_rf.get())
+        elif event.widget == self.ctrl.view.sink.cl_ent_rx_if:
+            self.set_rx_if(self.ctrl.view.sink.cl_var_rx_if.get())
+        elif event.widget == self.ctrl.view.sink.cl_ent_rx_bb:
+            self.set_rx_bb(self.ctrl.view.sink.cl_var_rx_bb.get())
 
     def set_device(self, device):
         self.ctrl.model.sink.set_device(device)
         print(f&#34;Device set to &#39;{self.ctrl.model.sink.name}&#39;&#34;)
         self.draw_tb()
-        self.draw_ctrl()
+        self.draw_cl()
         self.toggle_gains()
 
     def set_rx_rf(self, gain):
@@ -165,7 +162,7 @@ el.replaceWith(d);
             self.ctrl.model.sink.set_rx_rf(gain)
         except ValueError:
             pass
-        self.draw_ctrl()
+        self.draw_cl()
 
     def set_rx_if(self, gain):
         try:
@@ -173,7 +170,7 @@ el.replaceWith(d);
             self.ctrl.model.sink.set_rx_if(gain)
         except ValueError:
             pass
-        self.draw_ctrl()
+        self.draw_cl()
 
     def set_rx_bb(self, gain):
         try:
@@ -181,7 +178,7 @@ el.replaceWith(d);
             self.ctrl.model.sink.set_rx_bb(gain)
         except ValueError:
             pass
-        self.draw_ctrl()</code></pre>
+        self.draw_cl()</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
@@ -190,32 +187,19 @@ el.replaceWith(d);
 </ul>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.sink_live.SinkLive.draw_ctrl"><code class="name flex">
-<span>def <span class="ident">draw_ctrl</span></span>(<span>self)</span>
+<dt id="pyspecan.controller.tkGUI.sink_live.SinkLive.draw_cl"><code class="name flex">
+<span>def <span class="ident">draw_cl</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def draw_ctrl(self):
-    self.ctrl.view.var_dev.set(str(type(self.ctrl.model.sink.dev).__name__))
-    self.ctrl.view.var_rx_rf.set(str(self.ctrl.model.sink.get_rx_rf()))
-    self.ctrl.view.var_rx_if.set(str(self.ctrl.model.sink.get_rx_if()))
-    self.ctrl.view.var_rx_bb.set(str(self.ctrl.model.sink.get_rx_bb()))</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.sink_live.SinkLive.draw_tb"><code class="name flex">
-<span>def <span class="ident">draw_tb</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def draw_tb(self):
-    pass</code></pre>
+<pre><code class="python">def draw_cl(self):
+    self.ctrl.view.sink.cl_var_dev.set(str(type(self.ctrl.model.sink.dev).__name__))
+    self.ctrl.view.sink.cl_var_rx_rf.set(str(self.ctrl.model.sink.get_rx_rf()))
+    self.ctrl.view.sink.cl_var_rx_if.set(str(self.ctrl.model.sink.get_rx_if()))
+    self.ctrl.view.sink.cl_var_rx_bb.set(str(self.ctrl.model.sink.get_rx_bb()))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -228,14 +212,14 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def handle_event(self, event):
-    if event.widget == self.ctrl.view.cb_dev:
-        self.set_device(self.ctrl.view.var_dev.get())
-    elif event.widget == self.ctrl.view.ent_rx_rf:
-        self.set_rx_rf(self.ctrl.view.var_rx_rf.get())
-    elif event.widget == self.ctrl.view.ent_rx_if:
-        self.set_rx_if(self.ctrl.view.var_rx_if.get())
-    elif event.widget == self.ctrl.view.ent_rx_bb:
-        self.set_rx_bb(self.ctrl.view.var_rx_bb.get())</code></pre>
+    if event.widget == self.ctrl.view.sink.cl_cb_dev:
+        self.set_device(self.ctrl.view.sink.cl_var_dev.get())
+    elif event.widget == self.ctrl.view.sink.cl_ent_rx_rf:
+        self.set_rx_rf(self.ctrl.view.sink.cl_var_rx_rf.get())
+    elif event.widget == self.ctrl.view.sink.cl_ent_rx_if:
+        self.set_rx_if(self.ctrl.view.sink.cl_var_rx_if.get())
+    elif event.widget == self.ctrl.view.sink.cl_ent_rx_bb:
+        self.set_rx_bb(self.ctrl.view.sink.cl_var_rx_bb.get())</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -248,7 +232,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def reset(self):
-    self.ctrl.dispatch.queue.put(CMD.RESET)
+    self.ctrl.dispatch.send(CMD.RESET)
     self.stop()</code></pre>
 </details>
 <div class="desc"></div>
@@ -265,7 +249,7 @@ el.replaceWith(d);
     self.ctrl.model.sink.set_device(device)
     print(f&#34;Device set to &#39;{self.ctrl.model.sink.name}&#39;&#34;)
     self.draw_tb()
-    self.draw_ctrl()
+    self.draw_cl()
     self.toggle_gains()</code></pre>
 </details>
 <div class="desc"></div>
@@ -284,7 +268,7 @@ el.replaceWith(d);
         self.ctrl.model.sink.set_rx_bb(gain)
     except ValueError:
         pass
-    self.draw_ctrl()</code></pre>
+    self.draw_cl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -302,7 +286,7 @@ el.replaceWith(d);
         self.ctrl.model.sink.set_rx_if(gain)
     except ValueError:
         pass
-    self.draw_ctrl()</code></pre>
+    self.draw_cl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -320,7 +304,7 @@ el.replaceWith(d);
         self.ctrl.model.sink.set_rx_rf(gain)
     except ValueError:
         pass
-    self.draw_ctrl()</code></pre>
+    self.draw_cl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -336,9 +320,9 @@ el.replaceWith(d);
     if self.ctrl.model.sink.dev is None:
         print(&#34;sink is not fully initialized, failed to get device&#34;)
         return
-    self.ctrl.view.btn_start.config(state=tk.DISABLED)
-    self.ctrl.view.btn_stop.config(state=tk.ACTIVE)
-    self.ctrl.dispatch.queue.put(CMD.START)</code></pre>
+    self.ctrl.view.tb_btn_start.config(state=tk.DISABLED)
+    self.ctrl.view.tb_btn_stop.config(state=tk.ACTIVE)
+    self.ctrl.dispatch.send(CMD.START)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -351,9 +335,9 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def stop(self):
-    self.ctrl.view.btn_stop.config(state=tk.DISABLED)
-    self.ctrl.view.btn_start.config(state=tk.ACTIVE)
-    self.ctrl.dispatch.queue.put(CMD.STOP)</code></pre>
+    self.ctrl.view.tb_btn_stop.config(state=tk.DISABLED)
+    self.ctrl.view.tb_btn_start.config(state=tk.ACTIVE)
+    self.ctrl.dispatch.send(CMD.STOP)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -367,17 +351,17 @@ el.replaceWith(d);
 </summary>
 <pre><code class="python">def toggle_gains(self):
     if not self.ctrl.model.sink.has_rx_rf():
-        self.ctrl.view.fr_rx_rf.grid_forget()
+        self.ctrl.view.sink.cl_fr_rx_rf.grid_forget()
     else:
-        self.ctrl.view.fr_rx_rf.grid()
+        self.ctrl.view.sink.cl_fr_rx_rf.grid()
     if not self.ctrl.model.sink.has_rx_if():
-        self.ctrl.view.fr_rx_if.grid_forget()
+        self.ctrl.view.sink.cl_fr_rx_if.grid_forget()
     else:
-        self.ctrl.view.fr_rx_if.grid()
+        self.ctrl.view.sink.cl_fr_rx_if.grid()
     if not self.ctrl.model.sink.has_rx_bb():
-        self.ctrl.view.fr_rx_bb.grid_forget()
+        self.ctrl.view.sink.cl_fr_rx_bb.grid_forget()
     else:
-        self.ctrl.view.fr_rx_bb.grid()</code></pre>
+        self.ctrl.view.sink.cl_fr_rx_bb.grid()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -409,8 +393,7 @@ el.replaceWith(d);
 <li>
 <h4><code><a title="pyspecan.controller.tkGUI.sink_live.SinkLive" href="#pyspecan.controller.tkGUI.sink_live.SinkLive">SinkLive</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.controller.tkGUI.sink_live.SinkLive.draw_ctrl" href="#pyspecan.controller.tkGUI.sink_live.SinkLive.draw_ctrl">draw_ctrl</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.sink_live.SinkLive.draw_tb" href="#pyspecan.controller.tkGUI.sink_live.SinkLive.draw_tb">draw_tb</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.sink_live.SinkLive.draw_cl" href="#pyspecan.controller.tkGUI.sink_live.SinkLive.draw_cl">draw_cl</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.sink_live.SinkLive.handle_event" href="#pyspecan.controller.tkGUI.sink_live.SinkLive.handle_event">handle_event</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.sink_live.SinkLive.reset" href="#pyspecan.controller.tkGUI.sink_live.SinkLive.reset">reset</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.sink_live.SinkLive.set_device" href="#pyspecan.controller.tkGUI.sink_live.SinkLive.set_device">set_device</a></code></li>

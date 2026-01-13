@@ -94,23 +94,28 @@ el.replaceWith(d);
     def show(self, ind=0):
         raise NotImplementedError()
 
-    def set_fs(self, Fs):
-        self.log.debug(&#34;set_sample_rate(%s)&#34;, Fs)
-        Fs = self._set_fs(Fs)
-        self._Fs = Frequency.get(Fs)
+    def set_fs(self, fs):
+        self.log.debug(&#34;set_fs(%s)&#34;, fs)
+        if isinstance(fs, str):
+            fs = Frequency.get(fs).raw
+        fs = self._set_fs(fs)
+        self._Fs = Frequency.get(fs)
         self.model.f = self.model.update_f()
     def get_fs(self):
         return self._Fs
     def set_cf(self, cf):
-        self.log.debug(&#34;set_freq(%s)&#34;, cf)
-        cf = self._set_cf(self)
+        self.log.debug(&#34;set_cf(%s)&#34;, cf)
+        if isinstance(cf, str):
+            cf = Frequency.get(cf).raw
+        cf = self._set_cf(cf)
         self._cf = Frequency.get(cf)
         self.model.f = self.model.update_f()
+
     def get_cf(self):
         return self._cf
 
     # --- Defined in child classes --- #
-    def _set_fs(self, Fs):
+    def _set_fs(self, fs):
         raise NotImplementedError()
     def _set_cf(self, cf):
         raise NotImplementedError()</code></pre>
@@ -151,23 +156,28 @@ el.replaceWith(d);
     def show(self, ind=0):
         raise NotImplementedError()
 
-    def set_fs(self, Fs):
-        self.log.debug(&#34;set_sample_rate(%s)&#34;, Fs)
-        Fs = self._set_fs(Fs)
-        self._Fs = Frequency.get(Fs)
+    def set_fs(self, fs):
+        self.log.debug(&#34;set_fs(%s)&#34;, fs)
+        if isinstance(fs, str):
+            fs = Frequency.get(fs).raw
+        fs = self._set_fs(fs)
+        self._Fs = Frequency.get(fs)
         self.model.f = self.model.update_f()
     def get_fs(self):
         return self._Fs
     def set_cf(self, cf):
-        self.log.debug(&#34;set_freq(%s)&#34;, cf)
-        cf = self._set_cf(self)
+        self.log.debug(&#34;set_cf(%s)&#34;, cf)
+        if isinstance(cf, str):
+            cf = Frequency.get(cf).raw
+        cf = self._set_cf(cf)
         self._cf = Frequency.get(cf)
         self.model.f = self.model.update_f()
+
     def get_cf(self):
         return self._cf
 
     # --- Defined in child classes --- #
-    def _set_fs(self, Fs):
+    def _set_fs(self, fs):
         raise NotImplementedError()
     def _set_cf(self, cf):
         raise NotImplementedError()</code></pre>
@@ -202,23 +212,28 @@ el.replaceWith(d);
     def show(self, ind=0):
         raise NotImplementedError()
 
-    def set_fs(self, Fs):
-        self.log.debug(&#34;set_sample_rate(%s)&#34;, Fs)
-        Fs = self._set_fs(Fs)
-        self._Fs = Frequency.get(Fs)
+    def set_fs(self, fs):
+        self.log.debug(&#34;set_fs(%s)&#34;, fs)
+        if isinstance(fs, str):
+            fs = Frequency.get(fs).raw
+        fs = self._set_fs(fs)
+        self._Fs = Frequency.get(fs)
         self.model.f = self.model.update_f()
     def get_fs(self):
         return self._Fs
     def set_cf(self, cf):
-        self.log.debug(&#34;set_freq(%s)&#34;, cf)
-        cf = self._set_cf(self)
+        self.log.debug(&#34;set_cf(%s)&#34;, cf)
+        if isinstance(cf, str):
+            cf = Frequency.get(cf).raw
+        cf = self._set_cf(cf)
         self._cf = Frequency.get(cf)
         self.model.f = self.model.update_f()
+
     def get_cf(self):
         return self._cf
 
     # --- Defined in child classes --- #
-    def _set_fs(self, Fs):
+    def _set_fs(self, fs):
         raise NotImplementedError()
     def _set_cf(self, cf):
         raise NotImplementedError()</code></pre>
@@ -288,25 +303,29 @@ def samples(self):
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_cf(self, cf):
-    self.log.debug(&#34;set_freq(%s)&#34;, cf)
-    cf = self._set_cf(self)
+    self.log.debug(&#34;set_cf(%s)&#34;, cf)
+    if isinstance(cf, str):
+        cf = Frequency.get(cf).raw
+    cf = self._set_cf(cf)
     self._cf = Frequency.get(cf)
     self.model.f = self.model.update_f()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
 <dt id="pyspecan.model.sink.sink.Sink.set_fs"><code class="name flex">
-<span>def <span class="ident">set_fs</span></span>(<span>self, Fs)</span>
+<span>def <span class="ident">set_fs</span></span>(<span>self, fs)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def set_fs(self, Fs):
-    self.log.debug(&#34;set_sample_rate(%s)&#34;, Fs)
-    Fs = self._set_fs(Fs)
-    self._Fs = Frequency.get(Fs)
+<pre><code class="python">def set_fs(self, fs):
+    self.log.debug(&#34;set_fs(%s)&#34;, fs)
+    if isinstance(fs, str):
+        fs = Frequency.get(fs).raw
+    fs = self._set_fs(fs)
+    self._Fs = Frequency.get(fs)
     self.model.f = self.model.update_f()</code></pre>
 </details>
 <div class="desc"></div>

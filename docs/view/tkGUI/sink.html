@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
-<title>pyspecan.controller.tkGUI.sink API documentation</title>
+<title>pyspecan.view.tkGUI.sink API documentation</title>
 <meta name="description" content="">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
@@ -33,7 +33,7 @@ el.replaceWith(d);
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>pyspecan.controller.tkGUI.sink</code></h1>
+<h1 class="title">Module <code>pyspecan.view.tkGUI.sink</code></h1>
 </header>
 <section id="section-intro">
 </section>
@@ -44,7 +44,7 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.sink.args_sink"><code class="name flex">
+<dt id="pyspecan.view.tkGUI.sink.args_sink"><code class="name flex">
 <span>def <span class="ident">args_sink</span></span>(<span>parser)</span>
 </code></dt>
 <dd>
@@ -62,9 +62,9 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="pyspecan.controller.tkGUI.sink.Sink"><code class="flex name class">
+<dt id="pyspecan.view.tkGUI.sink.Sink"><code class="flex name class">
 <span>class <span class="ident">Sink</span></span>
-<span>(</span><span>ctrl)</span>
+<span>(</span><span>view)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -72,91 +72,76 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Sink:
-    def __init__(self, ctrl):
-        self.log = logger.new(f&#34;tkGUI.ctrl.{type(self).__name__}&#34;)
-        self.ctrl = ctrl
+    def __init__(self, view):
+        self.log = logger.new(f&#34;tkGUI.view.{type(self).__name__}&#34;)
+        self.view = view
 
-    def start(self):
-        pass
-    def stop(self):
-        pass
-    def reset(self):
-        pass
+    def draw_tb(self, parent, col=0):
+        return col
+    def draw_cl(self, parent, row=0):
+        return row
 
-    def draw_tb(self):
+    def finish_tb(self):
         pass
-    def draw_cl(self):
+    def finish_cl(self):
         pass</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Subclasses</h3>
 <ul class="hlist">
-<li><a title="pyspecan.controller.tkGUI.sink_file.SinkFile" href="sink_file.html#pyspecan.controller.tkGUI.sink_file.SinkFile">SinkFile</a></li>
-<li><a title="pyspecan.controller.tkGUI.sink_live.SinkLive" href="sink_live.html#pyspecan.controller.tkGUI.sink_live.SinkLive">SinkLive</a></li>
+<li><a title="pyspecan.view.tkGUI.sink_file.SinkFile" href="sink_file.html#pyspecan.view.tkGUI.sink_file.SinkFile">SinkFile</a></li>
+<li><a title="pyspecan.view.tkGUI.sink_live.SinkLive" href="sink_live.html#pyspecan.view.tkGUI.sink_live.SinkLive">SinkLive</a></li>
 </ul>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.sink.Sink.draw_cl"><code class="name flex">
-<span>def <span class="ident">draw_cl</span></span>(<span>self)</span>
+<dt id="pyspecan.view.tkGUI.sink.Sink.draw_cl"><code class="name flex">
+<span>def <span class="ident">draw_cl</span></span>(<span>self, parent, row=0)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def draw_cl(self):
+<pre><code class="python">def draw_cl(self, parent, row=0):
+    return row</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.view.tkGUI.sink.Sink.draw_tb"><code class="name flex">
+<span>def <span class="ident">draw_tb</span></span>(<span>self, parent, col=0)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def draw_tb(self, parent, col=0):
+    return col</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.view.tkGUI.sink.Sink.finish_cl"><code class="name flex">
+<span>def <span class="ident">finish_cl</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def finish_cl(self):
     pass</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
-<dt id="pyspecan.controller.tkGUI.sink.Sink.draw_tb"><code class="name flex">
-<span>def <span class="ident">draw_tb</span></span>(<span>self)</span>
+<dt id="pyspecan.view.tkGUI.sink.Sink.finish_tb"><code class="name flex">
+<span>def <span class="ident">finish_tb</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def draw_tb(self):
-    pass</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.sink.Sink.reset"><code class="name flex">
-<span>def <span class="ident">reset</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def reset(self):
-    pass</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.sink.Sink.start"><code class="name flex">
-<span>def <span class="ident">start</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def start(self):
-    pass</code></pre>
-</details>
-<div class="desc"></div>
-</dd>
-<dt id="pyspecan.controller.tkGUI.sink.Sink.stop"><code class="name flex">
-<span>def <span class="ident">stop</span></span>(<span>self)</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def stop(self):
+<pre><code class="python">def finish_tb(self):
     pass</code></pre>
 </details>
 <div class="desc"></div>
@@ -173,24 +158,23 @@ el.replaceWith(d);
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="pyspecan.controller.tkGUI" href="index.html">pyspecan.controller.tkGUI</a></code></li>
+<li><code><a title="pyspecan.view.tkGUI" href="index.html">pyspecan.view.tkGUI</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.sink.args_sink" href="#pyspecan.controller.tkGUI.sink.args_sink">args_sink</a></code></li>
+<li><code><a title="pyspecan.view.tkGUI.sink.args_sink" href="#pyspecan.view.tkGUI.sink.args_sink">args_sink</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="pyspecan.controller.tkGUI.sink.Sink" href="#pyspecan.controller.tkGUI.sink.Sink">Sink</a></code></h4>
+<h4><code><a title="pyspecan.view.tkGUI.sink.Sink" href="#pyspecan.view.tkGUI.sink.Sink">Sink</a></code></h4>
 <ul class="">
-<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.draw_cl" href="#pyspecan.controller.tkGUI.sink.Sink.draw_cl">draw_cl</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.draw_tb" href="#pyspecan.controller.tkGUI.sink.Sink.draw_tb">draw_tb</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.reset" href="#pyspecan.controller.tkGUI.sink.Sink.reset">reset</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.start" href="#pyspecan.controller.tkGUI.sink.Sink.start">start</a></code></li>
-<li><code><a title="pyspecan.controller.tkGUI.sink.Sink.stop" href="#pyspecan.controller.tkGUI.sink.Sink.stop">stop</a></code></li>
+<li><code><a title="pyspecan.view.tkGUI.sink.Sink.draw_cl" href="#pyspecan.view.tkGUI.sink.Sink.draw_cl">draw_cl</a></code></li>
+<li><code><a title="pyspecan.view.tkGUI.sink.Sink.draw_tb" href="#pyspecan.view.tkGUI.sink.Sink.draw_tb">draw_tb</a></code></li>
+<li><code><a title="pyspecan.view.tkGUI.sink.Sink.finish_cl" href="#pyspecan.view.tkGUI.sink.Sink.finish_cl">finish_cl</a></code></li>
+<li><code><a title="pyspecan.view.tkGUI.sink.Sink.finish_tb" href="#pyspecan.view.tkGUI.sink.Sink.finish_tb">finish_tb</a></code></li>
 </ul>
 </li>
 </ul>

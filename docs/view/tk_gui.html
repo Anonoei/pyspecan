@@ -45,6 +45,40 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
+<dt id="pyspecan.view.tk_gui.GetMode"><code class="name flex">
+<span>def <span class="ident">GetMode</span></span>(<span>mode)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def GetMode(mode):
+    if mode == Mode.SWEPT:
+        return ModeSwept
+    elif mode == Mode.RT:
+        return ModeRT
+    raise err.UnknownOption(f&#34;Unknown mode: {mode}&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.view.tk_gui.GetSink"><code class="name flex">
+<span>def <span class="ident">GetSink</span></span>(<span>sink)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def GetSink(sink):
+    if sink == Sink.FILE:
+        return SinkFile
+    elif sink == Sink.LIVE:
+        return SinkLive
+    raise err.UnknownOption(f&#34;Unknown sink: {sink}&#34;)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
 <dt id="pyspecan.view.tk_gui.GetView"><code class="name flex">
 <span>def <span class="ident">GetView</span></span>(<span>mode, sink)</span>
 </code></dt>
@@ -54,11 +88,31 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def GetView(mode, sink):
+    m: Mode = GetMode(mode) # type: ignore
+    s: Sink = GetSink(sink) # type: ignore
+    return lambda m=m, s=s, **kwargs: View(m, s, **kwargs)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="pyspecan.view.tk_gui.ViewArgs"><code class="name flex">
+<span>def <span class="ident">ViewArgs</span></span>(<span>mode, sink, parser)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ViewArgs(mode, sink, parser):
+    args_view(parser)
+    if mode == Mode.SWEPT:
+        args_swept(parser)
+    elif mode == Mode.RT:
+        args_rt(parser)
+
     if sink == Sink.FILE:
-        return ViewFile
+        args_file(parser)
     elif sink == Sink.LIVE:
-        return ViewLive
-    return View</code></pre>
+        args_live(parser)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -79,7 +133,10 @@ el.replaceWith(d);
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
+<li><code><a title="pyspecan.view.tk_gui.GetMode" href="#pyspecan.view.tk_gui.GetMode">GetMode</a></code></li>
+<li><code><a title="pyspecan.view.tk_gui.GetSink" href="#pyspecan.view.tk_gui.GetSink">GetSink</a></code></li>
 <li><code><a title="pyspecan.view.tk_gui.GetView" href="#pyspecan.view.tk_gui.GetView">GetView</a></code></li>
+<li><code><a title="pyspecan.view.tk_gui.ViewArgs" href="#pyspecan.view.tk_gui.ViewArgs">ViewArgs</a></code></li>
 </ul>
 </li>
 </ul>

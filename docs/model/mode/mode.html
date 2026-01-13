@@ -80,7 +80,7 @@ el.replaceWith(d);
         self.log = logger.new(f&#34;model.{type(self).__name__}&#34;)
         self.model = model
         self._sweep_time: float = kwargs.get(&#34;sweep_time&#34;, ModeConfig.sweep_time)
-        self._block_size = self.model._nfft
+        self._block_size: int = self.model._nfft
 
     def reset(self):
         pass
@@ -93,7 +93,7 @@ el.replaceWith(d);
     def set_block_size(self, size):
         self.log.debug(&#34;set_block_size(%s)&#34;, size)
         self._block_size = size
-        self.model.sink._samples = np.empty(self._block_size, dtype=np.complex64) # TODO, better way?
+        self.model.sink.reset() # reset model.sink._samples size
     def get_sweep_time(self):
         return self._sweep_time
     def set_sweep_time(self, ts):
@@ -123,7 +123,7 @@ el.replaceWith(d);
         self.log = logger.new(f&#34;model.{type(self).__name__}&#34;)
         self.model = model
         self._sweep_time: float = kwargs.get(&#34;sweep_time&#34;, ModeConfig.sweep_time)
-        self._block_size = self.model._nfft
+        self._block_size: int = self.model._nfft
 
     def reset(self):
         pass
@@ -136,7 +136,7 @@ el.replaceWith(d);
     def set_block_size(self, size):
         self.log.debug(&#34;set_block_size(%s)&#34;, size)
         self._block_size = size
-        self.model.sink._samples = np.empty(self._block_size, dtype=np.complex64) # TODO, better way?
+        self.model.sink.reset() # reset model.sink._samples size
     def get_sweep_time(self):
         return self._sweep_time
     def set_sweep_time(self, ts):
@@ -160,7 +160,7 @@ el.replaceWith(d);
         self.log = logger.new(f&#34;model.{type(self).__name__}&#34;)
         self.model = model
         self._sweep_time: float = kwargs.get(&#34;sweep_time&#34;, ModeConfig.sweep_time)
-        self._block_size = self.model._nfft
+        self._block_size: int = self.model._nfft
 
     def reset(self):
         pass
@@ -173,7 +173,7 @@ el.replaceWith(d);
     def set_block_size(self, size):
         self.log.debug(&#34;set_block_size(%s)&#34;, size)
         self._block_size = size
-        self.model.sink._samples = np.empty(self._block_size, dtype=np.complex64) # TODO, better way?
+        self.model.sink.reset() # reset model.sink._samples size
     def get_sweep_time(self):
         return self._sweep_time
     def set_sweep_time(self, ts):
@@ -235,7 +235,7 @@ el.replaceWith(d);
 <pre><code class="python">def set_block_size(self, size):
     self.log.debug(&#34;set_block_size(%s)&#34;, size)
     self._block_size = size
-    self.model.sink._samples = np.empty(self._block_size, dtype=np.complex64) # TODO, better way?</code></pre>
+    self.model.sink.reset() # reset model.sink._samples size</code></pre>
 </details>
 <div class="desc"></div>
 </dd>

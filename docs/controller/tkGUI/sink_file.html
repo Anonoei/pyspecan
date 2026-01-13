@@ -89,76 +89,81 @@ el.replaceWith(d);
 <pre><code class="python">class SinkFile(Sink):
     def __init__(self, ctrl):
         super().__init__(ctrl)
-        self.ctrl.view.sld_samp.scale.config(from_=0, to=self.ctrl.model.sink.max_samp) # resolution=self.model.block_size
-        self.ctrl.view.sld_samp.scale.config(command=self.handle_sld_samp)
+        self.ctrl.view.sink.tb_sld_samp.scale.config(from_=0, to=self.ctrl.model.sink.max_samp) # resolution=self.model.block_size
+        self.ctrl.view.sink.tb_sld_samp.scale.config(command=self.handle_sld_samp)
 
-        self.ctrl.view.btn_prev.config(command=self.prev)
-        self.ctrl.view.btn_next.config(command=self.next)
+        self.ctrl.view.sink.tb_btn_prev.config(command=self.prev)
+        self.ctrl.view.sink.tb_btn_next.config(command=self.next)
 
-        self.ctrl.view.btn_file.config(command=self.handle_btn_file)
-        self.ctrl.view.cb_file_fmt.config(values=list([v.name for v in Format]))
-        self.ctrl.view.cb_file_fmt.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
+        self.ctrl.view.sink.cl_btn_file.config(command=self.handle_btn_file)
+        self.ctrl.view.sink.cl_cb_file_fmt.config(values=list([v.name for v in Format]))
+        self.ctrl.view.sink.cl_cb_file_fmt.bind(&#34;&lt;&lt;ComboboxSelected&gt;&gt;&#34;, self.handle_event)
 
     def start(self):
         if self.ctrl.model.sink.get_path() is None:
             print(&#34;sink is not fully initialized, failed to get filepath&#34;)
             return
-        self.ctrl.view.btn_start.config(state=tk.DISABLED)
-        self.ctrl.view.btn_stop.config(state=tk.ACTIVE)
-        self.ctrl.dispatch.queue.put(CMD.START)
+        self.ctrl.view.tb_btn_start.config(state=tk.DISABLED)
+        self.ctrl.view.tb_btn_stop.config(state=tk.ACTIVE)
+        self.ctrl.dispatch.send(CMD.START)
 
     def stop(self):
-        self.ctrl.view.btn_stop.config(state=tk.DISABLED)
-        self.ctrl.view.btn_start.config(state=tk.ACTIVE)
-        self.ctrl.dispatch.queue.put(CMD.STOP)
+        self.ctrl.view.tb_btn_stop.config(state=tk.DISABLED)
+        self.ctrl.view.tb_btn_start.config(state=tk.ACTIVE)
+        self.ctrl.dispatch.send(CMD.STOP)
 
     def reset(self):
-        self.ctrl.dispatch.queue.put(CMD.RESET)
+        self.ctrl.dispatch.send(CMD.RESET)
         self.stop()
 
     def prev(self):
-        self.ctrl.dispatch.queue.put(CMD.PREV)
+        self.ctrl.dispatch.send(CMD.PREV)
 
     def next(self):
-        self.ctrl.dispatch.queue.put(CMD.NEXT)
+        self.ctrl.dispatch.send(CMD.NEXT)
 
     def draw_tb(self):
-        self.ctrl.view.var_samp.set(self.ctrl.model.sink.cur_samp)
+        self.ctrl.view.sink.tb_var_samp.set(self.ctrl.model.sink.cur_samp)
 
-        self.ctrl.view.var_time_cur.set(strfmt_td(dt.timedelta(seconds=self.ctrl.model.sink.cur_time())))
-        self.ctrl.view.var_time_tot.set(strfmt_td(dt.timedelta(seconds=self.ctrl.model.sink.tot_time())))
+        self.ctrl.view.sink.tb_var_time_cur.set(strfmt_td(dt.timedelta(seconds=self.ctrl.model.sink.cur_time())))
+        self.ctrl.view.sink.tb_var_time_tot.set(strfmt_td(dt.timedelta(seconds=self.ctrl.model.sink.tot_time())))
 
-    def draw_ctrl(self):
-        self.ctrl.view.var_file.set(str(self.ctrl.model.sink.get_path()))
-        self.ctrl.view.var_file_fmt.set(str(self.ctrl.model.sink.get_fmt().name))
+    def draw_cl(self):
+        self.ctrl.view.sink.cl_var_file.set(str(self.ctrl.model.sink.get_path()))
+        self.ctrl.view.sink.cl_var_file_fmt.set(str(self.ctrl.model.sink.get_fmt().name))
 
 
     # --- GUI bind events and setters --- #
     def handle_event(self, event):
-        if event.widget == self.ctrl.view.cb_file_fmt:
-            self.set_dtype(self.ctrl.view.var_file_fmt.get())
+        if event.widget == self.ctrl.view.sink.cl_cb_file_fmt:
+            self.set_dtype(self.ctrl.view.sink.cl_var_file_fmt.get())
     def handle_btn_file(self):
+        self.log.trace(&#34;handle_btn_file()&#34;)
         self.set_path(dialog.get_file(False))
 
     def handle_sld_samp(self, *args):
-        self.set_samp(self.ctrl.view.var_samp.get())
+        self.log.trace(&#34;handle_sld_samp()&#34;)
+        self.set_samp(self.ctrl.view.sink.tb_var_samp.get())
 
     def set_samp(self, samp):
+        self.log.trace(&#34;set_samp(%s)&#34;, samp)
         self.stop()
         self.ctrl.model.sink.cur_samp = samp
         self.draw_tb()
         # print(samp)
 
     def set_path(self, path):
+        self.log.trace(&#34;set_path(%s)&#34;, path)
         self.ctrl.model.sink.set_path(path)
         print(f&#34;Path set to &#39;{self.ctrl.model.sink.get_path()}&#39;&#34;)
-        self.ctrl.view.sld_samp.scale.config(from_=0, to=self.ctrl.model.sink.max_samp) # resolution=self.model.block_size
+        self.ctrl.view.sink.tb_sld_samp.scale.config(from_=0, to=self.ctrl.model.sink.max_samp) # resolution=self.model.block_size
         self.draw_tb()
-        self.draw_ctrl()
+        self.draw_cl()
     def set_dtype(self, dtype):
+        self.log.trace(&#34;set_dtype(%s)&#34;, dtype)
         self.ctrl.model.sink.set_fmt(dtype)
         self.draw_tb()
-        self.draw_ctrl()</code></pre>
+        self.draw_cl()</code></pre>
 </details>
 <div class="desc"></div>
 <h3>Ancestors</h3>
@@ -167,17 +172,17 @@ el.replaceWith(d);
 </ul>
 <h3>Methods</h3>
 <dl>
-<dt id="pyspecan.controller.tkGUI.sink_file.SinkFile.draw_ctrl"><code class="name flex">
-<span>def <span class="ident">draw_ctrl</span></span>(<span>self)</span>
+<dt id="pyspecan.controller.tkGUI.sink_file.SinkFile.draw_cl"><code class="name flex">
+<span>def <span class="ident">draw_cl</span></span>(<span>self)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def draw_ctrl(self):
-    self.ctrl.view.var_file.set(str(self.ctrl.model.sink.get_path()))
-    self.ctrl.view.var_file_fmt.set(str(self.ctrl.model.sink.get_fmt().name))</code></pre>
+<pre><code class="python">def draw_cl(self):
+    self.ctrl.view.sink.cl_var_file.set(str(self.ctrl.model.sink.get_path()))
+    self.ctrl.view.sink.cl_var_file_fmt.set(str(self.ctrl.model.sink.get_fmt().name))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -190,10 +195,10 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def draw_tb(self):
-    self.ctrl.view.var_samp.set(self.ctrl.model.sink.cur_samp)
+    self.ctrl.view.sink.tb_var_samp.set(self.ctrl.model.sink.cur_samp)
 
-    self.ctrl.view.var_time_cur.set(strfmt_td(dt.timedelta(seconds=self.ctrl.model.sink.cur_time())))
-    self.ctrl.view.var_time_tot.set(strfmt_td(dt.timedelta(seconds=self.ctrl.model.sink.tot_time())))</code></pre>
+    self.ctrl.view.sink.tb_var_time_cur.set(strfmt_td(dt.timedelta(seconds=self.ctrl.model.sink.cur_time())))
+    self.ctrl.view.sink.tb_var_time_tot.set(strfmt_td(dt.timedelta(seconds=self.ctrl.model.sink.tot_time())))</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -206,6 +211,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def handle_btn_file(self):
+    self.log.trace(&#34;handle_btn_file()&#34;)
     self.set_path(dialog.get_file(False))</code></pre>
 </details>
 <div class="desc"></div>
@@ -219,8 +225,8 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def handle_event(self, event):
-    if event.widget == self.ctrl.view.cb_file_fmt:
-        self.set_dtype(self.ctrl.view.var_file_fmt.get())</code></pre>
+    if event.widget == self.ctrl.view.sink.cl_cb_file_fmt:
+        self.set_dtype(self.ctrl.view.sink.cl_var_file_fmt.get())</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -233,7 +239,8 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def handle_sld_samp(self, *args):
-    self.set_samp(self.ctrl.view.var_samp.get())</code></pre>
+    self.log.trace(&#34;handle_sld_samp()&#34;)
+    self.set_samp(self.ctrl.view.sink.tb_var_samp.get())</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -246,7 +253,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def next(self):
-    self.ctrl.dispatch.queue.put(CMD.NEXT)</code></pre>
+    self.ctrl.dispatch.send(CMD.NEXT)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -259,7 +266,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def prev(self):
-    self.ctrl.dispatch.queue.put(CMD.PREV)</code></pre>
+    self.ctrl.dispatch.send(CMD.PREV)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -272,7 +279,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def reset(self):
-    self.ctrl.dispatch.queue.put(CMD.RESET)
+    self.ctrl.dispatch.send(CMD.RESET)
     self.stop()</code></pre>
 </details>
 <div class="desc"></div>
@@ -286,9 +293,10 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_dtype(self, dtype):
+    self.log.trace(&#34;set_dtype(%s)&#34;, dtype)
     self.ctrl.model.sink.set_fmt(dtype)
     self.draw_tb()
-    self.draw_ctrl()</code></pre>
+    self.draw_cl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -301,11 +309,12 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_path(self, path):
+    self.log.trace(&#34;set_path(%s)&#34;, path)
     self.ctrl.model.sink.set_path(path)
     print(f&#34;Path set to &#39;{self.ctrl.model.sink.get_path()}&#39;&#34;)
-    self.ctrl.view.sld_samp.scale.config(from_=0, to=self.ctrl.model.sink.max_samp) # resolution=self.model.block_size
+    self.ctrl.view.sink.tb_sld_samp.scale.config(from_=0, to=self.ctrl.model.sink.max_samp) # resolution=self.model.block_size
     self.draw_tb()
-    self.draw_ctrl()</code></pre>
+    self.draw_cl()</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -318,6 +327,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def set_samp(self, samp):
+    self.log.trace(&#34;set_samp(%s)&#34;, samp)
     self.stop()
     self.ctrl.model.sink.cur_samp = samp
     self.draw_tb()
@@ -337,9 +347,9 @@ el.replaceWith(d);
     if self.ctrl.model.sink.get_path() is None:
         print(&#34;sink is not fully initialized, failed to get filepath&#34;)
         return
-    self.ctrl.view.btn_start.config(state=tk.DISABLED)
-    self.ctrl.view.btn_stop.config(state=tk.ACTIVE)
-    self.ctrl.dispatch.queue.put(CMD.START)</code></pre>
+    self.ctrl.view.tb_btn_start.config(state=tk.DISABLED)
+    self.ctrl.view.tb_btn_stop.config(state=tk.ACTIVE)
+    self.ctrl.dispatch.send(CMD.START)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -352,9 +362,9 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">def stop(self):
-    self.ctrl.view.btn_stop.config(state=tk.DISABLED)
-    self.ctrl.view.btn_start.config(state=tk.ACTIVE)
-    self.ctrl.dispatch.queue.put(CMD.STOP)</code></pre>
+    self.ctrl.view.tb_btn_stop.config(state=tk.DISABLED)
+    self.ctrl.view.tb_btn_start.config(state=tk.ACTIVE)
+    self.ctrl.dispatch.send(CMD.STOP)</code></pre>
 </details>
 <div class="desc"></div>
 </dd>
@@ -386,7 +396,7 @@ el.replaceWith(d);
 <li>
 <h4><code><a title="pyspecan.controller.tkGUI.sink_file.SinkFile" href="#pyspecan.controller.tkGUI.sink_file.SinkFile">SinkFile</a></code></h4>
 <ul class="two-column">
-<li><code><a title="pyspecan.controller.tkGUI.sink_file.SinkFile.draw_ctrl" href="#pyspecan.controller.tkGUI.sink_file.SinkFile.draw_ctrl">draw_ctrl</a></code></li>
+<li><code><a title="pyspecan.controller.tkGUI.sink_file.SinkFile.draw_cl" href="#pyspecan.controller.tkGUI.sink_file.SinkFile.draw_cl">draw_cl</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.sink_file.SinkFile.draw_tb" href="#pyspecan.controller.tkGUI.sink_file.SinkFile.draw_tb">draw_tb</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.sink_file.SinkFile.handle_btn_file" href="#pyspecan.controller.tkGUI.sink_file.SinkFile.handle_btn_file">handle_btn_file</a></code></li>
 <li><code><a title="pyspecan.controller.tkGUI.sink_file.SinkFile.handle_event" href="#pyspecan.controller.tkGUI.sink_file.SinkFile.handle_event">handle_event</a></code></li>

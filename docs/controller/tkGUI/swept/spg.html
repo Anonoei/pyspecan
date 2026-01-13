@@ -74,7 +74,7 @@ el.replaceWith(d);
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class PlotConfig:
-    ref_level = 0
+    ref_level = &#34;auto&#34;
     scale_div = 10.0
     vbw = 10.0
     window = &#34;blackman&#34;</code></pre>
@@ -138,6 +138,7 @@ el.replaceWith(d);
         self.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;x&#34;, nbins=5)
         self.plotter.ax(&#34;spg&#34;).ax.locator_params(axis=&#34;y&#34;, nbins=5)
 
+        self.update_f(self.parent.dispatch.last_f)
         self.set_y()
         self.update()
 
@@ -147,6 +148,9 @@ el.replaceWith(d);
 
     def _plot(self, samps):
         psd = self.psd(samps)
+        if self.ref_level == &#34;auto&#34;:
+            self.ref_level = self._calc_ref_level(psd)
+            self.set_ref_level(self.ref_level)
         psd = np.clip(psd, self.y_btm, self.y_top)
         y_rng = abs(self.y_btm - self.y_top)
         psd += (0 - self.y_btm)
@@ -231,6 +235,8 @@ el.replaceWith(d);
             self.set_y()
 
     def set_ref_level(self, ref):
+        if self.ref_level == &#34;auto&#34;:
+            return
         prev = float(self.ref_level)
         super().set_ref_level(ref)
         if not prev == self.ref_level:
