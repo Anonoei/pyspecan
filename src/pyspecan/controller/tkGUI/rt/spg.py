@@ -56,6 +56,7 @@ class SPG(FreqPlotControllerRT):
         self.plotter.ax("spg").ax.locator_params(axis="x", nbins=5)
         self.plotter.ax("spg").ax.locator_params(axis="y", nbins=5)
 
+        self.update_f(self.parent.dispatch.last_f)
         self.set_y()
         self.update()
 

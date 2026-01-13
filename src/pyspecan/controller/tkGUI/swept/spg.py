@@ -16,7 +16,7 @@ from ....utils.window import WindowLUT
 from ....backend.mpl.plot import _Plot, Plot, BlitPlot
 
 class PlotConfig:
-    ref_level = 0
+    ref_level = "auto"
     scale_div = 10.0
     vbw = 10.0
     window = "blackman"
@@ -56,6 +56,7 @@ class SPG(FreqPlotController):
         self.plotter.ax("spg").ax.locator_params(axis="x", nbins=5)
         self.plotter.ax("spg").ax.locator_params(axis="y", nbins=5)
 
+        self.update_f(self.parent.dispatch.last_f)
         self.set_y()
         self.update()
 
@@ -65,6 +66,9 @@ class SPG(FreqPlotController):
 
     def _plot(self, samps):
         psd = self.psd(samps)
+        if self.ref_level == "auto":
+            self.ref_level = self._calc_ref_level(psd)
+            self.set_ref_level(self.ref_level)
         psd = np.clip(psd, self.y_btm, self.y_top)
         y_rng = abs(self.y_btm - self.y_top)
         psd += (0 - self.y_btm)
@@ -149,6 +153,8 @@ class SPG(FreqPlotController):
             self.set_y()
 
     def set_ref_level(self, ref):
+        if self.ref_level == "auto":
+            return
         prev = float(self.ref_level)
         super().set_ref_level(ref)
         if not prev == self.ref_level:

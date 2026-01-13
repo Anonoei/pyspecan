@@ -65,6 +65,7 @@ class Freq(FreqPlotController):
         # self.plotter.fig.set_layout_engine("constrained")
         # self.plotter.fig.get_layout_engine().execute(self.plotter.fig) # type: ignore
 
+        self.update_f(self.parent.dispatch.last_f)
         self.set_y()
         self.update()
 
