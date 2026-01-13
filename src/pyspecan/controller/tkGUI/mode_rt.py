@@ -30,8 +30,24 @@ def args_rt(parser: argparse.ArgumentParser):
 class ModeRT(Mode):
     def __init__(self, ctrl, **kwargs):
         super().__init__(ctrl)
+
+        self.ctrl.view.mode.cl_var_overlap.set(f"{self.ctrl.model.mode.get_overlap():.2f}")
+        self.ctrl.view.mode.cl_ent_overlap.bind("<Return>", self.handle_event)
         self.panel = PanelController(self.ctrl, self.ctrl.view.panel, plots)
         child = self.panel.rows[0]
         pane = self.panel.cols[child][0]
         pane.var_view.set("Persistent Histogram")
         self.panel.set_view(None, child, pane)
+
+    # --- GUI bind events and setters --- #
+    def handle_event(self, event):
+        if event.widget == self.ctrl.view.mode.cl_ent_overlap:
+            self.set_overlap(self.ctrl.view.mode.cl_var_overlap.get())
+
+    def set_overlap(self, overlap):
+        try:
+            overlap = float(overlap)
+            self.ctrl.model.mode.set_overlap(overlap)
+        except ValueError:
+            pass
+        self.ctrl.view.mode.cl_var_overlap.set(f"{self.ctrl.model.mode.get_overlap():.2f}")
