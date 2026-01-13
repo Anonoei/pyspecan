@@ -16,11 +16,10 @@ from ....utils.window import WindowLUT
 from ....backend.mpl.plot import _Plot, Plot, BlitPlot
 
 class PlotConfig:
-    ref_level = 0
+    ref_level = "auto"
     scale_div = 10.0
     vbw = 0.0
     window = "blackman"
-    overlap = 0.6
     x = 1001
     y = 600
     cmap = "hot"
@@ -47,8 +46,6 @@ class PST(FreqPlotControllerRT):
             kwargs["vbw"] = PlotConfig.vbw
         if not "window" in kwargs:
             kwargs["vbw"] = PlotConfig.vbw
-        if not "overlap" in kwargs:
-            kwargs["overlap"] = PlotConfig.overlap
         super().__init__(parent, pane, **kwargs)
         self._cmap_set = False
         self._cb_drawn = False
@@ -66,7 +63,9 @@ class PST(FreqPlotControllerRT):
         self.plotter.ax("pst").ax.locator_params(axis="y", nbins=10)
         self.plotter.ax("pst").ax.grid(True, alpha=0.2)
 
-        self.set_y()
+        self.update_f(self.parent.dispatch.last_f)
+        if not self.ref_level == "auto":
+            self.set_y()
         self.update()
 
     def reset(self):
@@ -74,6 +73,10 @@ class PST(FreqPlotControllerRT):
 
     def _plot(self, samps):
         psd = self.psd(samps)
+        if self.ref_level == "auto":
+            self.ref_level = self._calc_ref_level(psd)
+            self.set_ref_level(self.ref_level)
+            self.set_y()
         self.pane.master.config(text=f"Persistent - {psd.shape[1]} FFTs")
 
         mat = matrix.cvec(self.x, self.y, psd, self.y_top, self.y_btm)
