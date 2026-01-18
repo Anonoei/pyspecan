@@ -7,7 +7,7 @@ name = "pyspecan"
 version = "0.5.2"
 description = "A spectrum analyzer library"
 readme = "README.md"
-license-files = "LICENSE"
+license-files = ["LICENSE"]
 requires-python = ">=3.8"
 authors = [
     {name = "Anonoei", email="to+dev@an0.us"}
