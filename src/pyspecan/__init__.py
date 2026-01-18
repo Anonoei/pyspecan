@@ -10,7 +10,7 @@ PyPI: https://pypi.org/project/pyspecan/
 This is intended to be used as a callable module (or a script), but can be used as a library
 """
 
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 __author__ = "Anonoei <to+dev@an0.cx>"
 
 from . import _internal
