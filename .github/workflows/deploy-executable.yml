@@ -1,8 +1,11 @@
 name: Deploy executables
 
 on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
   release:
-    types: [published]
+    types:
+      - published
 
 permissions:
   contents: read
