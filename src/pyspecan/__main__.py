@@ -11,8 +11,8 @@ import pathlib
 
 if __name__ == "__main__":
     try:
-        from pyspecan._internal.main import main as _main
+        from pyspecan._internal.main import main
     except ImportError: # Makes import work when running src/pyspecan without it installed
         sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
-        from ._internal.main import main as _main
-    sys.exit(_main())
+        from pyspecan._internal.main import main
+    sys.exit(main())

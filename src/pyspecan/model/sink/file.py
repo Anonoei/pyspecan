@@ -14,8 +14,9 @@ from .sink import Sink, args_sink
 from ... import err
 
 class Format(Enum):
-    ci8  = _Formats.ci8
-    ci16 = _Formats.ci16
+    ci8  = _Formats.ci8t
+    ci16 = _Formats.ci16t
+    ci32 = _Formats.ci32t
     cf32 = _Formats.cf32
     cf64 = _Formats.cf64
     cf128 = _Formats.cf128
@@ -28,7 +29,7 @@ def args_file(parser):
     sink = args.get_group(parser, "Sink (FILE)")
     args_sink(sink)
     sink.add_argument("-f", "--path", default=None, help="file path")
-    sink.add_argument("-d", "--fmt", choices=Format.choices(), default=Format.cf32.name, help="data format")
+    sink.add_argument("-d", "--fmt", choices=Format.choices(), default=Format.cf64.name, help="data format")
 
 class SinkFile(Sink):
     __slots__ = (
@@ -36,13 +37,14 @@ class SinkFile(Sink):
     )
     def __init__(self, model, **kwargs):
         path = kwargs.get("path", None)
-        fmt = kwargs.get("fmt", Format.cf32.name)
+        fmt = kwargs.get("fmt", Format.cf64.name)
         super().__init__(model, **kwargs)
         self.dev = _File()
 
         self.set_fmt(fmt)
         self.set_path(path)
-        self.dev.open()
+        if path is not None:
+            self.dev.open()
 
     def show(self, ind=0):
         print(" "*ind + f"{self.percent():06.2f}% [{self.dev.fmt.name}] {self.dev.path}")
@@ -80,6 +82,9 @@ class SinkFile(Sink):
             samples = self.dev.next(count)
         except pysdrlib.file.err.Overflow:
             return False
+        except AttributeError:
+            self.dev.open()
+            samples = self.dev.next(count)
         self._samples = samples
         # self._psd = None
         return True
