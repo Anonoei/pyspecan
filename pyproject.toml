@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,7 @@ version = "0.5.2"
 description = "A spectrum analyzer library"
 readme = "README.md"
 license-files = ["LICENSE"]
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 authors = [
     {name = "Anonoei", email="to+dev@an0.us"}
 ]
@@ -25,10 +25,12 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 keywords = ["anonoei", "sdr", "speca", "specan"]
-dependencies = ["numpy", "matplotlib", "pysdrlib"]
+dependencies = ["numpy", "pysdrlib"]
 
 [project.optional-dependencies]
 dev = ["twine", "build", "bumpver", "pytest", "pdoc3"]
+tk = ["matplotlib"]
+web = ["fastapi", "uvicorn", "jinja2", "websockets"]
 
 [project.scripts]
 pyspecan-cui = "pyspecan._internal.main:main_cli_swept"
@@ -44,6 +46,9 @@ Documentation = "https://anonoei.github.io/pyspecan/"
 Repository = "https://github.com/Anonoei/pyspecan.git"
 Issues = "https://github.com/Anonoei/pyspecan/issues"
 Source = "https://github.com/anonoei/pyspecan"
+
+[tool.setuptools.package-data]
+"pyspecan.view.WEB" = ["static/*", "templates/*"]
 
 [tool.bumpver]
 current_version = "0.5.2"

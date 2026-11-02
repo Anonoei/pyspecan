@@ -1,0 +1,101 @@
+body, html {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+.pyspecan {
+    --bg-dark: hsl(336 0% 1%);
+    --bg: hsl(300 0% 4%);
+    --bg-light: hsl(0 0% 9%);
+
+    --text: hsl(300 0% 95%);
+    --text-muted: hsl(300 0% 69%);
+
+    --highlight: hsl(330 0% 39%);
+    --border: hsl(0 0% 28%);
+    --border-muted: hsl(300 0% 18%);
+
+    --danger: hsl(9 26% 64%);
+    --warning: hsl(52 19% 57%);
+    --success: hsl(146 17% 59%);
+    --info: hsl(217 28% 65%);
+}
+.pyspecan {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    font-size: 1rem;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Arial', sans-serif;
+}
+.pyspecan h3 { margin: 0.5em 0; }
+.pyspecan .muted { color: var(--text-muted); }
+.pyspecan .warning { color: var(--warning); }
+.pyspecan [hidden] { display: none !important; }
+
+.pyspecan input, .pyspecan select, .pyspecan button {
+    background: var(--bg-light);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 3px 6px;
+    font: inherit;
+}
+.pyspecan button { cursor: pointer; }
+.pyspecan button:hover:not(:disabled) { border-color: var(--highlight); }
+.pyspecan button:disabled { opacity: 0.4; cursor: default; }
+
+.pyspecan div.toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-bottom: 2px solid var(--border);
+}
+.pyspecan .toolbar .file-only { display: flex; align-items: center; gap: 8px; }
+.pyspecan .toolbar .right { margin-left: auto; }
+.pyspecan #sld-samp { width: 20em; padding: 0; }
+
+.status {
+    width: 10px;
+    height: 10px;
+    border-radius: 10px;
+}
+.status.connected { background: var(--success); }
+.status.disconnected { background: var(--danger); }
+
+.pyspecan div.body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+}
+.pyspecan div.body div.controls {
+    padding: 0 8px;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    width: 15em;
+    flex-shrink: 0;
+}
+.control-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.control-group input:not([type=checkbox]), .control-group select { width: 7em; }
+.pyspecan div.body div.panels {
+    flex: 1;
+    min-width: 0;
+    padding: 4px;
+}
+.pyspecan canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}

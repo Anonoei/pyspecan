@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>pyspecan</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="pyspecan">
+    <div class="toolbar">
+        <h3>pyspecan</h3>
+        <div id="connection-status" class="status disconnected" title="disconnected"></div>
+        <button id="btn-start">Start</button>
+        <button id="btn-stop">Stop</button>
+        <button id="btn-reset">Reset</button>
+        <span class="file-only">
+            <button id="btn-prev">&lt;</button>
+            <button id="btn-next">&gt;</button>
+            <input type="range" id="sld-samp" min="0" max="1" value="0">
+            <span id="lbl-time" class="muted"></span>
+        </span>
+        <span id="lbl-message" class="warning"></span>
+        <span id="lbl-ptime" class="muted right"></span>
+    </div>
+
+    <div class="body">
+        <div class="controls">
+            <h3>Controls</h3>
+            <div class="control-group"><label for="in-fs">Sample rate</label><input id="in-fs" data-set="fs"></div>
+            <div class="control-group"><label for="in-cf">Center freq</label><input id="in-cf" data-set="cf"></div>
+            <div class="control-group"><label for="in-nfft">FFT size (2^n)</label><input id="in-nfft" type="number" min="2" max="20" step="1" data-set="nfft_exp"></div>
+            <div class="control-group"><span class="muted">Block size</span><span id="lbl-block"></span></div>
+            <div class="control-group"><label for="in-show">Show time (ms)</label><input id="in-show" type="number" min="0" step="10" data-set="show"></div>
+            <div class="control-group file-only"><label for="in-path">File</label><input id="in-path" data-set="path"></div>
+            <div class="control-group file-only"><label for="sel-fmt">Format</label><select id="sel-fmt" data-set="fmt"></select></div>
+
+            <h3>PSD</h3>
+            <div class="control-group"><label for="in-ref">Ref level</label><input id="in-ref" data-set="ref_level" placeholder="auto"></div>
+            <div class="control-group"><label for="in-scale">Scale / div</label><input id="in-scale" type="number" min="0.1" step="1" data-set="scale_div"></div>
+            <div class="control-group"><label for="in-vbw">VBW</label><input id="in-vbw" type="number" min="0" step="1" data-set="vbw"></div>
+            <div class="control-group"><label for="sel-window">Window</label><select id="sel-window" data-set="window"></select></div>
+            <div class="control-group"><label for="chk-max">Max hold</label><input id="chk-max" type="checkbox" data-set="show_max"></div>
+            <div class="control-group"><label for="chk-min">Min hold</label><input id="chk-min" type="checkbox" data-set="show_min"></div>
+            <div class="control-group"><label for="chk-enabled">Enabled</label><input id="chk-enabled" type="checkbox" data-set="enabled"></div>
+        </div>
+        <div class="panels">
+            <canvas id="psd"></canvas>
+        </div>
+    </div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

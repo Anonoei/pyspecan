@@ -246,7 +246,7 @@ class FreqPlotController(_PlotController):
 
 class FreqPlotControllerRT(FreqPlotController):
     def __init__(self, parent, pane: Panel, **kwargs):
-        self.overlap = kwargs.get("overlap", )
+        self.overlap = kwargs.get("overlap", 0.8)
         super().__init__(parent, pane, **kwargs)
 
     def psd(self, samps):

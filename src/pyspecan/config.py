@@ -51,6 +51,7 @@ class View(Enum):
     NONE = (("none",), None)
     CUI = (("c", "cui"), "cui")
     tkGUI = (("tk", "tkgui"), "tk_gui")
+    WEB = (("w", "web"), "web")
 
     @property
     def path(self):
