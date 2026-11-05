@@ -1,5 +1,5 @@
 """HTTP API"""
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 class API:
     def __init__(self, parent):
@@ -13,3 +13,10 @@ class API:
         @self.router.get("/state")
         def get_state():
             return self.parent.get_state()
+
+        @self.router.get("/fs")
+        def list_dir(path: str | None = None):
+            try:
+                return self.parent.list_dir(path)
+            except ValueError as e:
+                raise HTTPException(400, str(e))

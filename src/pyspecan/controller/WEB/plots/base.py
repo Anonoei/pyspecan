@@ -1,79 +1,110 @@
-"""WEB base plots: compute plot data, the browser only draws it"""
+"""WEB base plots: compute plot data, the browser only draws it
+
+A frame is a json-serializable dict: {"axes": [axis, ...]}, where an axis is
+    {"xmin", "xmax", "xfmt": "freq"|"num", "ymin", "ymax",   (None -> browser autoranges)
+     "square": bool,
+     "series": [{"x"?, "y", "color", "kind": "line"|"scatter"}],
+     "image": {"row": base64 uint8, "rows": int, "clear": bool}}   (instead of series)
+"""
 import numpy as np
 
 from ....utils.psd import psd
+from ....utils.window import WindowLUT
+
+def rounded(arr, digits=2):
+    return np.round(arr, digits).tolist()
 
 class _Plot:
     """base plot"""
-    def __init__(self, parent):
+    TITLE = ""
+    FIELDS: list[dict] = [] # settings the browser can edit: key, label, kind (number|text|select|check)
+
+    def __init__(self, parent, **kwargs):
         self.parent = parent
-        self.enabled = True
+        self.enabled = True # False -> paused
 
-    def toggle(self, enabled=None):
-        self.enabled = (not self.enabled) if enabled is None else bool(enabled)
+    @property
+    def model(self):
+        return self.parent.model
 
-    def update(self, samps, **kwargs):
-        """Process samples, returns a json-serializable dict (or None if disabled)"""
+    def update(self, samps):
+        """Process samples, returns a frame (or None if paused)"""
         if not self.enabled:
             return None
-        return self._update(samps, **kwargs)
+        return self._update(samps)
 
     def reset(self):
-        """Reset plot state"""
+        """Reset accumulated plot state"""
 
     def settings(self) -> dict:
-        """Return the current settings"""
-        return {"enabled": self.enabled}
+        return {"enabled": self.enabled, **{f["key"]: getattr(self, f["key"]) for f in self.FIELDS}}
 
-    def _update(self, samps, **kwargs):
+    def fields(self) -> list[dict]:
+        return self.FIELDS
+
+    def set(self, key, value):
+        if key == "enabled":
+            self.enabled = bool(value)
+        elif any(f["key"] == key for f in self.fields()):
+            getattr(self, f"set_{key}")(value)
+        else:
+            raise ValueError(f"unknown plot setting {key!r}")
+
+    def _update(self, samps):
         raise NotImplementedError()
 
+    def _freq_range(self):
+        fs, cf = self.model.get_fs().raw, self.model.get_cf().raw
+        return cf - fs/2, cf + fs/2
+
 class FreqPlot(_Plot):
+    FIELDS = [
+        {"key": "ref_level", "label": "Ref level", "kind": "text", "hint": "auto"},
+        {"key": "scale_div", "label": "Scale / div", "kind": "number", "min": 0.1, "step": 1},
+        {"key": "vbw", "label": "VBW", "kind": "number", "min": 0, "step": 1},
+        {"key": "window", "label": "Window", "kind": "select", "options": list(WindowLUT.keys())},
+    ]
     def __init__(self, parent, **kwargs):
-        super().__init__(parent)
+        super().__init__(parent, **kwargs)
         self.window = kwargs.get("window", "blackman")
         self.vbw = kwargs.get("vbw", 10.0)
-        self.scale = kwargs.get("scale_div", 10.0)
+        self.scale_div = kwargs.get("scale_div", 10.0)
         self.ref_level = kwargs.get("ref_level", "auto")
+        self._auto = None # resolved level while ref_level is "auto"
 
     def calc_psd(self, samps):
         vbw = self.vbw if self.vbw > 0 else None
-        return psd(samps, self.parent.model.get_fs().raw, vbw, self.window)
+        return psd(samps, self.model.get_fs().raw, vbw, self.window)
 
-    @property
-    def y_top(self):
-        """Plot maximum amplitude"""
-        return self.ref_level
-    @property
-    def y_btm(self):
-        """Plot minimum amplitude"""
-        return self.ref_level - (10*self.scale)
+    def resolve_ref(self, _psd):
+        """Return the numeric ref level, resolving "auto" from the first psd"""
+        if self.ref_level != "auto":
+            return self.ref_level
+        if self._auto is None:
+            pmax = np.max(_psd)
+            self._auto = int(pmax * 0.9) if pmax < 0 else int(pmax * 1.1)
+        return self._auto
 
-    def set_scale(self, scale):
+    def y_range(self, _psd):
+        top = self.resolve_ref(_psd)
+        return top - 10*self.scale_div, top
+
+    def set_scale_div(self, scale):
         scale = float(scale)
         if scale <= 0:
             raise ValueError("scale must be positive")
-        self.scale = scale
+        self.scale_div = scale
 
     def set_ref_level(self, ref):
-        self.ref_level = "auto" if ref == "auto" else float(ref)
+        self._auto = None
+        self.ref_level = "auto" if str(ref).strip().lower() in ("", "auto") else float(ref)
 
     def set_vbw(self, vbw):
         self.vbw = max(float(vbw), 0.0)
+        self.reset()
 
     def set_window(self, window):
-        from ....utils.window import WindowLUT
         if window not in WindowLUT:
-            raise ValueError(f"unknown window {window}")
+            raise ValueError(f"unknown window {window!r}")
         self.window = window
-
-    def _calc_ref_level(self, _psd, mul=0.1):
-        pmax = np.max(_psd)
-        return int(pmax * (1-mul)) if pmax < 0 else int(pmax * (1+mul))
-
-    def settings(self):
-        return {
-            **super().settings(),
-            "window": self.window, "vbw": self.vbw, "scale_div": self.scale,
-            "ref_level": self.ref_level,
-        }
+        self.reset()
