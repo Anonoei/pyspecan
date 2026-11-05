@@ -1,7 +1,7 @@
 import numpy as np
 
 def _fill(matrix):
-    matrix = np.ascontiguousarray(matrix, dtype=np.int8)
+    matrix = np.ascontiguousarray(matrix, dtype=np.int32)
     rows, cols = matrix.shape
     mask = matrix != 0
 
@@ -14,7 +14,7 @@ def _fill(matrix):
     s_idx[empty] = 0
     e_idx[empty] = 0
 
-    diff = np.zeros_like(matrix, dtype=np.int8)
+    diff = np.zeros_like(matrix, dtype=np.int32)
     col_idx = np.arange(cols, dtype=np.int32)
 
     # s_rows = s_idx + 1
@@ -47,7 +47,7 @@ def dot(x: int, y: int, psds, yt: float, yb: float):
     """Dot Matrix
     Each PSD's x/y mapped to histogram x/y
     """
-    hist = np.zeros((y, x), dtype=np.int8)
+    hist = np.zeros((y, x), dtype=np.int32)
 
     if np.all(psds < yb):
         return hist

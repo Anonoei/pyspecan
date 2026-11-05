@@ -3,12 +3,10 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from ..base import View as _View
-from ...config import config, Mode
 
 from ...backend.tk import widgets
 from ...backend.mpl import theme as theme_mpl
 
-from .mode import Mode
 from .sink import Sink
 from .panels import PanelView
 
@@ -31,26 +29,8 @@ def args_view(parser):
 class View(_View):
     """Parent tkGUI view class"""
 
-    __slots__ = (
-        "root", "_main",
-        "main", "fr_tb", "fr_view", "fr_ctrl", "frame",
-        # toolbar
-        "tb_fr_sink", "tb_fr_mode", "tb_fr_time", "tb_fr_btn", "tb_fr_msg",
-        "tb_btn_start", "tb_btn_stop", "tb_btn_reset",
-        "tb_var_sweep", "tb_ent_sweep",
-        "tb_var_show", "tb_ent_show",
-        "tb_lbl_msg"
-        "tb_var_draw_time", "tb_lbl_draw_time",
-        # control panel
-        "cl_fr_sink", "cl_fr_mode", "cl_fr_view", "cl_fr_lbls",
-        "cl_var_fs", "cl_ent_fs",
-        "cl_var_cf", "cl_ent_cf",
-        "cl_var_nfft_exp", "cl_ent_nfft_exp",
-        "cl_lbl_nfft",
-        "cl_lbl_block_size", "cl_lbl_sweep_samples",
-    )
-    def __init__(self, mode, sink, root=tk.Tk(), **kwargs):
-        self.root = root
+    def __init__(self, sink, root=None, **kwargs):
+        self.root = root or tk.Tk()
         self.root.title("pyspecan")
 
         theme_mpl.get(kwargs.get("theme", "Dark"))() # Set matplotlib theme
@@ -69,7 +49,6 @@ class View(_View):
 
         # toolbar
         self.tb_fr_sink = ttk.Frame(self.fr_tb)
-        self.tb_fr_mode = ttk.Frame(self.fr_tb)
         self.tb_fr_time = ttk.Frame(self.fr_tb)
         self.tb_var_sweep: tk.StringVar = None # type: ignore
         self.tb_ent_sweep: ttk.Entry = None # type: ignore
@@ -85,7 +64,6 @@ class View(_View):
         self.tb_lbl_draw_time: ttk.Label = None # type: ignore
         # control panel
         self.cl_fr_sink = ttk.Frame(self.fr_cl)
-        self.cl_fr_mode = ttk.Frame(self.fr_cl)
         self.cl_fr_view = ttk.Frame(self.fr_cl)
         self.cl_var_fs: tk.StringVar = None # type: ignore
         self.cl_ent_fs: ttk.Entry = None # type: ignore
@@ -94,16 +72,16 @@ class View(_View):
         self.cl_var_nfft_exp: tk.StringVar = None # type: ignore
         self.cl_ent_nfft_exp: ttk.Entry = None # type: ignore
         self.cl_lbl_nfft: ttk.Label = None # type: ignore
+        self.cl_var_overlap: tk.StringVar = None # type: ignore
+        self.cl_ent_overlap: ttk.Entry = None # type: ignore
         self.cl_fr_lbls = ttk.Frame(self.fr_cl)
         self.cl_lbl_block_size: ttk.Label = None # type: ignore
         self.cl_lbl_sweep_samples: ttk.Label = None # type: ignore
 
-        self.mode: Mode = mode(self)
         self.sink: Sink = sink(self)
 
         self.draw_tb()
         self.sink.finish_tb()
-        self.mode.finish_tb()
         self.fr_tb.pack(side=tk.TOP, fill=tk.X)
 
         ttk.Separator(self._main, orient=tk.HORIZONTAL).pack(fill=tk.X)
@@ -121,8 +99,6 @@ class View(_View):
         """Draw toolbar frame"""
         self.sink.draw_tb(self.tb_fr_sink)
         self.tb_fr_sink.pack(fill=tk.Y, side=tk.LEFT)
-        self.mode.draw_tb(self.tb_fr_mode)
-        self.tb_fr_mode.pack(fill=tk.Y, side=tk.LEFT)
 
         ttk.Separator(self.fr_tb, orient=tk.VERTICAL).pack(fill=tk.Y, side=tk.LEFT)
 
@@ -181,8 +157,6 @@ class View(_View):
         """Draw control frame"""
         self.sink.draw_cl(self.cl_fr_sink)
         self.cl_fr_sink.pack(padx=2,pady=2, fill=tk.X)
-        self.mode.draw_cl(self.cl_fr_mode)
-        self.cl_fr_mode.pack(padx=2,pady=2, fill=tk.X)
 
         ttk.Separator(self.fr_cl, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=5)
 
@@ -212,6 +186,11 @@ class View(_View):
         self.cl_ent_nfft_exp.grid(row=row,column=1, sticky=tk.W)
         self.cl_lbl_nfft = ttk.Label(parent)
         self.cl_lbl_nfft.grid(row=row,column=2, sticky=tk.E)
+        row += 1
+        self.cl_var_overlap = tk.StringVar(parent)
+        ttk.Label(parent, text="RT overlap:").grid(row=row,column=0, sticky=tk.W)
+        self.cl_ent_overlap = ttk.Entry(parent, textvariable=self.cl_var_overlap, width=4)
+        self.cl_ent_overlap.grid(row=row,column=1, sticky=tk.W)
         return row
 
     def draw_cl_lbls(self, parent, row=0):

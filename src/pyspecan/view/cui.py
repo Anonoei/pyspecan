@@ -1,6 +1,5 @@
 """Create a CUI view"""
-
 from .CUI.base import View
 
-def GetView(mode, sink):
+def GetView(sink):
     return View

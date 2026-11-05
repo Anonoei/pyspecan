@@ -1,8 +1,8 @@
 """Initialize CUI Controller"""
-from .CUI.base import Controller, define_args
+from .CUI.base import Controller, args_ctrl
 
-def GetController(mode):
+def GetController(sink):
     return Controller
 
-def ControllerArgs(mode):
-    return define_args
+def ControllerArgs(sink, parser):
+    args_ctrl(parser)

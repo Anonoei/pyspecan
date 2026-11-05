@@ -6,22 +6,28 @@ const SI = [[1e9, "G"], [1e6, "M"], [1e3, "k"]];
 const MARGIN = {l: 62, r: 12, t: 8, b: 24};
 const GRID = "rgba(255,255,255,0.15)", TEXT = "#bbb";
 
-// magma colormap, linearly interpolated between stops into a 256 entry lookup table
-const LUT = (() => {
-    const stops = [[0,0,4],[28,16,68],[79,18,123],[129,37,129],[181,54,122],[229,80,100],[251,135,97],[254,194,135],[252,253,191]];
-    const lut = new Uint8ClampedArray(256 * 4);
+// colormaps arrive in the state as stops [[pos, [r, g, b]], ...] (channels 0..1), expanded to 256 packed ABGR entries
+const LUTS = {};
+function lutFor(name) {
+    if (LUTS[name]) return LUTS[name];
+    const stops = (state && state.colormaps && state.colormaps[name]) || [[0, [0, 0, 0]], [1, [1, 1, 1]]];
+    const lut = new Uint32Array(256);
     for (let i = 0; i < 256; i++) {
-        const t = (i / 255) * (stops.length - 1), k = Math.min(Math.floor(t), stops.length - 2), f = t - k;
-        for (let c = 0; c < 3; c++) lut[i * 4 + c] = stops[k][c] + (stops[k + 1][c] - stops[k][c]) * f;
-        lut[i * 4 + 3] = 255;
+        const t = i / 255;
+        let k = 0;
+        while (k < stops.length - 2 && t > stops[k + 1][0]) k++;
+        const [p0, c0] = stops[k], [p1, c1] = stops[k + 1];
+        const f = Math.min(Math.max((t - p0) / (p1 - p0 || 1), 0), 1);
+        const ch = [0, 1, 2].map((c) => Math.round((c0[c] + (c1[c] - c0[c]) * f) * 255));
+        lut[i] = (255 << 24) | (ch[2] << 16) | (ch[1] << 8) | ch[0];
     }
-    return lut;
-})();
+    return (LUTS[name] = lut);
+}
 
 let ws = null;
 let state = null;
 let layoutSig = "";
-const runtime = {};      // plot id -> {frame, canvas, image: {w, rows, buf}}
+const runtime = {};      // plot id -> {frame, canvas, images: {axis index: {w, h, buf, canvas}}}
 const settingsOpen = new Set();
 
 function fmtHz(v) {
@@ -98,6 +104,7 @@ function applyState(s) {
     setValue($("in-cf"), s.cf);
     setValue($("in-nfft"), s.nfft_exp);
     setValue($("in-sweep"), s.sweep);
+    setValue($("in-overlap"), s.overlap);
     setValue($("in-show"), s.show);
     $("lbl-block").textContent = s.block_size;
 
@@ -137,11 +144,11 @@ function buildPlots(s) {
 }
 
 function buildPlot(id, p, row) {
-    const rt = runtime[id] || (runtime[id] = {frame: null, image: null});
+    const rt = runtime[id] || (runtime[id] = {frame: null, images: {}});
     const typeSel = el("select", {title: "plot type"});
     typeSel.replaceChildren(...state.plot_types.map((t) => new Option(t, t)));
     typeSel.value = p.name;
-    typeSel.onchange = () => { rt.frame = null; rt.image = null; plotOp("type", {id, name: typeSel.value}); };
+    typeSel.onchange = () => { rt.frame = null; rt.images = {}; plotOp("type", {id, name: typeSel.value}); };
 
     const pause = el("button", {id: `pause-${id}`, onclick: () => plotOp("set", {id, key: "enabled", value: !state.plots[id].settings.enabled})});
     const gear = el("button", {textContent: "⚙", title: "settings", onclick: () => {
@@ -166,7 +173,7 @@ function buildField(id, f) {
     const input = f.kind === "select"
         ? el("select", {}, ...f.options.map((o) => new Option(o, o)))
         : el("input", {type: f.kind === "check" ? "checkbox" : f.kind === "number" ? "number" : "text",
-                       placeholder: f.hint || "", min: f.min ?? "", step: f.step ?? "any"});
+                       placeholder: f.hint || "", min: f.min ?? "", max: f.max ?? "", step: f.step ?? "any"});
     input.id = `f-${id}-${f.key}`;
     const send_ = (v) => plotOp("set", {id, key: f.key, value: v});
     if (f.kind === "check") input.onchange = () => send_(input.checked);
@@ -192,33 +199,36 @@ function applyFrame(data) {
         if (!rt) continue;
         rt.frame = frame;
         const pt = $(`ptime-${id}`);
-        if (pt) pt.textContent = `${(frame.ptime * 1000).toFixed(1)} ms`;
-        if (frame.title && state && state.plots[id]) {
-            const sel = document.querySelector(`#plot-${id} .plot-header select`);
-            if (sel) sel.title = frame.title;
-        }
-        const img = frame.axes.find((a) => a.image);
-        if (img) pushImageRow(rt, img.image);
+        if (pt) pt.textContent = `${frame.title ? frame.title + "  " : ""}${(frame.ptime * 1000).toFixed(1)} ms`;
+        frame.axes.forEach((axis, i) => { if (axis.image) applyImage(rt, i, axis.image); });
         drawPlot(id);
     }
 }
 
-function pushImageRow(rt, im) {
-    const row = Uint8Array.from(atob(im.row), (c) => c.charCodeAt(0));
-    const w = row.length;
-    if (im.clear || !rt.image || rt.image.w !== w || rt.image.rows !== im.rows) {
-        rt.image = {w, rows: im.rows, buf: new Uint8Array(w * im.rows), canvas: document.createElement("canvas")};
-        rt.image.canvas.width = w;
-        rt.image.canvas.height = im.rows;
+// images arrive either whole, or as the newest rows of a scrolling history (newest on top)
+function applyImage(rt, i, im) {
+    const bytes = Uint8Array.from(atob(im.data), (c) => c.charCodeAt(0));
+    const w = im.cols, n = im.rows_in, h = im.scroll ? im.rows : n;
+    let st = rt.images[i];
+    if (!st || st.w !== w || st.h !== h || (im.scroll && im.clear)) {
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        st = rt.images[i] = {w, h, buf: new Uint8Array(w * h), canvas};
     }
-    const buf = rt.image.buf;
-    buf.copyWithin(w, 0, (im.rows - 1) * w); // scroll down, newest row at the top
-    buf.set(row, 0);
-    const data = new ImageData(w, im.rows);
-    for (let i = 0; i < buf.length; i++) {
-        data.data.set(LUT.subarray(buf[i] * 4, buf[i] * 4 + 4), i * 4);
+    const buf = st.buf;
+    if (!im.scroll) buf.set(bytes);
+    else if (n >= h) {
+        for (let r = 0; r < h; r++) buf.set(bytes.subarray((n - 1 - r) * w, (n - r) * w), r * w);
+    } else {
+        buf.copyWithin(n * w, 0, (h - n) * w); // scroll down
+        for (let r = 0; r < n; r++) buf.set(bytes.subarray((n - 1 - r) * w, (n - r) * w), r * w);
     }
-    rt.image.canvas.getContext("2d").putImageData(data, 0, 0);
+    const lut = lutFor(im.cmap);
+    const data = new ImageData(w, h);
+    const px = new Uint32Array(data.data.buffer);
+    for (let k = 0; k < buf.length; k++) px[k] = lut[buf[k]];
+    st.canvas.getContext("2d").putImageData(data, 0, 0);
 }
 
 // --- drawing --- //
@@ -226,7 +236,7 @@ function extent(axis, key) {
     const lo = axis[key + "min"], hi = axis[key + "max"];
     if (lo != null && hi != null) return [lo, hi];
     let mn = Infinity, mx = -Infinity;
-    for (const s of axis.series || []) {
+    for (const s of axis.traces || []) {
         const arr = s[key] || (key === "x" ? s.y.map((_, i) => i) : s.y);
         for (const v of arr) { if (v < mn) mn = v; if (v > mx) mx = v; }
     }
@@ -252,10 +262,10 @@ function drawPlot(id) {
     ctx.clearRect(0, 0, cw, ch);
     if (!rt.frame) return;
     const axes = rt.frame.axes, ah = ch / axes.length;
-    axes.forEach((axis, i) => drawAxis(ctx, axis, rt, 0, i * ah, cw, ah));
+    axes.forEach((axis, i) => drawAxis(ctx, axis, rt.images[i], 0, i * ah, cw, ah));
 }
 
-function drawAxis(ctx, axis, rt, ox, oy, W, H) {
+function drawAxis(ctx, axis, image, ox, oy, W, H) {
     let x0 = ox + MARGIN.l, y0 = oy + MARGIN.t, w = W - MARGIN.l - MARGIN.r, h = H - MARGIN.t - MARGIN.b;
     if (w <= 10 || h <= 10) return;
     if (axis.square) {
@@ -263,17 +273,18 @@ function drawAxis(ctx, axis, rt, ox, oy, W, H) {
         x0 += (w - side) / 2; w = side; h = side;
     }
     const isImage = !!axis.image;
-    const [xmin, xmax] = isImage ? [axis.xmin, axis.xmax] : extent(axis, "x");
-    const [ymin, ymax] = isImage ? [0, 1] : extent(axis, "y");
+    const [xmin, xmax] = isImage ? [axis.xmin ?? 0, axis.xmax ?? 1] : extent(axis, "x");
+    const [ymin, ymax] = isImage && axis.ymin == null ? [0, 1] : extent(axis, "y");
     const xOf = (v) => x0 + ((v - xmin) / (xmax - xmin)) * w;
     const yOf = (v) => y0 + (1 - (v - ymin) / (ymax - ymin)) * h;
     const fmtX = axis.xfmt === "freq" ? fmtHz : fmtNum;
+    const labelY = !isImage || axis.ymin != null; // a scrolling image has no y values to label
 
     ctx.font = "12px sans-serif";
     ctx.lineWidth = 1;
     ctx.strokeStyle = GRID;
     ctx.fillStyle = TEXT;
-    const ny = isImage ? 0 : Math.max(2, Math.min(10, Math.floor(h / 28))), nx = 4; // fewer y divisions on short plots
+    const ny = labelY ? Math.max(2, Math.min(10, Math.floor(h / 28))) : 0, nx = 4; // fewer y divisions on short plots
     for (let i = 0; i <= ny; i++) {
         const y = y0 + (i / ny) * h;
         ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke();
@@ -289,18 +300,20 @@ function drawAxis(ctx, axis, rt, ox, oy, W, H) {
     ctx.strokeRect(x0, y0, w, h);
 
     if (isImage) {
-        if (rt.image) {
+        if (image) {
             ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(rt.image.canvas, x0, y0, w, h);
+            ctx.drawImage(image.canvas, x0, y0, w, h);
         }
+        drawOffscale(ctx, axis, x0, y0, w, h);
         return;
     }
     ctx.save();
     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
-    ctx.lineWidth = 1.5;
-    for (const s of axis.series) {
+    for (const s of axis.traces) {
         const n = s.y.length;
         ctx.strokeStyle = ctx.fillStyle = s.color;
+        ctx.globalAlpha = s.alpha ?? 1;
+        ctx.lineWidth = s.width ?? 1.5;
         if (s.kind === "scatter") {
             for (let i = 0; i < n; i++) ctx.fillRect(xOf(s.x[i]) - 1, yOf(s.y[i]) - 1, 2, 2);
             continue;
@@ -313,7 +326,16 @@ function drawAxis(ctx, axis, rt, ox, oy, W, H) {
         }
         ctx.stroke();
     }
-    ctx.restore();
+    ctx.restore(); // also restores globalAlpha
+    drawOffscale(ctx, axis, x0, y0, w, h);
+}
+
+// the data is entirely above / below the y range
+function drawOffscale(ctx, axis, x0, y0, w, h) {
+    if (!axis.offscale) return;
+    ctx.fillStyle = "#e6d84a";
+    ctx.textAlign = "left";
+    ctx.fillText(axis.offscale === "above" ? "▲ above range" : "▼ below range", x0 + 8, axis.offscale === "above" ? y0 + 16 : y0 + h - 8);
 }
 
 // --- inputs --- //

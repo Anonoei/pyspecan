@@ -6,6 +6,7 @@ from ..specan import SpecAn
 
 from ..config import config, View, Mode, Sink
 from ..model.model import ModelArgs
+from ..plots import args_plots
 from ..controller.controller import ControllerArgs
 
 from ..utils import args
@@ -49,8 +50,9 @@ def _process_args(parser):
     if args.profile:
         config.PROFILE = True
 
-    ModelArgs(mode, sink, parser)
-    ControllerArgs(view, mode, sink, parser)
+    ModelArgs(sink, parser)
+    args_plots(parser)
+    ControllerArgs(view, sink, parser)
 
     args = parser.parse_args()
     if run_help:
@@ -61,6 +63,6 @@ def _process_args(parser):
 def main():
     parser = define_args()
     parser.add_argument("-v", "--view", type=str, default=View.tkGUI.name, choices=View.choices())
-    parser.add_argument("-m", "--mode", type=str.upper, default=Mode.SWEPT.name, choices=Mode.choices())
+    parser.add_argument("-m", "--mode", type=str.upper, default=Mode.SWEPT.name, choices=Mode.choices(), help="default mode of new plots")
     parser.add_argument("-s", "--sink", type=str.upper, default=Sink.FILE.name, choices=Sink.choices())
     _main(_process_args(parser))

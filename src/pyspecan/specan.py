@@ -31,10 +31,11 @@ class SpecAn:
             if view == View.NONE:
                 raise err.UnknownOption(f"Unknown view {view}")
 
-        self.model: Model = GetModel(mode, sink)(**kwargs)
+        kwargs["mode"] = mode.value # the plots' default mode
+        self.model: Model = GetModel(sink)(**kwargs)
 
-        self.view = GetView(view, mode, sink)(**kwargs)
-        self.controller = GetController(view, mode, sink)(self.model, self.view, **kwargs)
+        self.view = GetView(view, sink)(**kwargs)
+        self.controller = GetController(view, sink)(self.model, self.view, **kwargs)
 
         self.model.show()
         self.view.mainloop()

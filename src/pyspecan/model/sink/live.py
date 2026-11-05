@@ -28,6 +28,9 @@ class SinkLive(Sink):
     def show(self, ind=2):
         print(" "*ind + f"{type(self.dev).__name__}")
 
+    def ready(self):
+        return self.dev is not None
+
     @property
     def name(self):
         return f"{type(self.dev).__name__}"

@@ -1,45 +1,21 @@
-from typing import Callable
-
-from .. import err
-from ..config import config
-from ..config import Mode as _Mode
 from ..config import Sink as _Sink
+from ..utils.registry import Registry
 
 from .base import Model, args_model
-from .mode import Mode
-from .mode import ModeSwept, args_swept
-from .mode import ModeRT, args_rt
-from .sink import Sink
 from .sink import SinkFile, args_file
 from .sink import SinkLive, args_live
 
-def GetMode(mode):
-    if mode == _Mode.SWEPT:
-        return ModeSwept
-    elif mode == _Mode.RT:
-        return ModeRT
-    raise err.UnknownOption(f"Unknown mode: {mode}")
+SINKS: Registry = Registry("sink")
+SINKS.register(_Sink.FILE.name)((SinkFile, args_file))
+SINKS.register(_Sink.LIVE.name)((SinkLive, args_live))
 
-def GetSink(sink):
-    if sink == _Sink.FILE:
-        return SinkFile
-    elif sink == _Sink.LIVE:
-        return SinkLive
-    raise err.UnknownOption(f"Unknown sink: {sink}")
+def GetSink(sink: _Sink):
+    return SINKS.get(sink.name)[0]
 
-def GetModel(mode, sink):
-    mode = GetMode(mode)
-    sink = GetSink(sink)
-    return lambda m=mode, s=sink, **kwargs: Model(m, s, **kwargs)
+def GetModel(sink: _Sink):
+    sink_cls = GetSink(sink)
+    return lambda **kwargs: Model(sink_cls, **kwargs)
 
-def ModelArgs(mode, sink, parser):
+def ModelArgs(sink: _Sink, parser):
     args_model(parser)
-    if mode == _Mode.SWEPT:
-        args_swept(parser)
-    elif mode == _Mode.RT:
-        args_rt(parser)
-
-    if sink == _Sink.FILE:
-        args_file(parser)
-    elif sink == _Sink.LIVE:
-        args_live(parser)
+    SINKS.get(sink.name)[1](parser)

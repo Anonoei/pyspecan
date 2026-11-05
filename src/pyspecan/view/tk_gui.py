@@ -1,41 +1,18 @@
 """Create a tkGUI view"""
-
-from .. import err
-
-from ..config import Mode, Sink
+from ..config import Sink
+from ..utils.registry import Registry
 from .tkGUI.base import View, args_view
-from .tkGUI.mode_rt import ModeRT, args_rt
-from .tkGUI.mode_swept import ModeSwept, args_swept
 from .tkGUI.sink_file import SinkFile, args_file
 from .tkGUI.sink_live import SinkLive, args_live
 
-def GetMode(mode):
-    if mode == Mode.SWEPT:
-        return ModeSwept
-    elif mode == Mode.RT:
-        return ModeRT
-    raise err.UnknownOption(f"Unknown mode: {mode}")
+SINKS: Registry = Registry("tkGUI sink view")
+SINKS.register(Sink.FILE.name)((SinkFile, args_file))
+SINKS.register(Sink.LIVE.name)((SinkLive, args_live))
 
-def GetSink(sink):
-    if sink == Sink.FILE:
-        return SinkFile
-    elif sink == Sink.LIVE:
-        return SinkLive
-    raise err.UnknownOption(f"Unknown sink: {sink}")
+def GetView(sink):
+    sink_view = SINKS.get(sink.name)[0]
+    return lambda **kwargs: View(sink_view, **kwargs)
 
-def GetView(mode, sink):
-    m: Mode = GetMode(mode) # type: ignore
-    s: Sink = GetSink(sink) # type: ignore
-    return lambda m=m, s=s, **kwargs: View(m, s, **kwargs)
-
-def ViewArgs(mode, sink, parser):
+def ViewArgs(sink, parser):
     args_view(parser)
-    if mode == Mode.SWEPT:
-        args_swept(parser)
-    elif mode == Mode.RT:
-        args_rt(parser)
-
-    if sink == Sink.FILE:
-        args_file(parser)
-    elif sink == Sink.LIVE:
-        args_live(parser)
+    SINKS.get(sink.name)[1](parser)

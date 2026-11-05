@@ -36,8 +36,9 @@
             <div class="control-group"><label for="in-fs">Sample rate</label><input id="in-fs" data-set="fs"></div>
             <div class="control-group"><label for="in-cf">Center freq</label><input id="in-cf" data-set="cf"></div>
             <div class="control-group"><label for="in-nfft">FFT size (2^n)</label><input id="in-nfft" type="number" min="2" max="20" step="1" data-set="nfft_exp"></div>
-            <div class="control-group"><span class="muted">FFT / block size</span><span id="lbl-block"></span></div>
+            <div class="control-group"><span class="muted">Block size (samples)</span><span id="lbl-block"></span></div>
             <div class="control-group"><label for="in-sweep">Sweep time (ms)</label><input id="in-sweep" type="number" min="0" step="10" data-set="sweep"></div>
+            <div class="control-group"><label for="in-overlap">RT overlap</label><input id="in-overlap" type="number" min="0" max="0.99" step="0.05" data-set="overlap"></div>
             <div class="control-group"><label for="in-show">Show time (ms)</label><input id="in-show" type="number" min="0" step="10" data-set="show"></div>
         </div>
         <div class="panels" id="panels"></div>

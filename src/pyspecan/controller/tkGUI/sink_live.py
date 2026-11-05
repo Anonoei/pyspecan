@@ -1,25 +1,8 @@
 """Controller for LIVE sink"""
-import argparse
-import datetime as dt
-import tkinter as tk
-
-import numpy as np
 import pysdrlib
 
 from ...utils import args
 from .sink import Sink, args_sink
-
-from .dispatch import CMD
-# from .arc.plot_base import define_args as freq_args
-from .panels import PanelController, PanelChild, Panel
-from .plot_base import FreqPlotController, BlitPlot
-
-from .swept import plots
-
-from ...utils.time import strfmt_td
-
-class SinkConfig:
-    pass
 
 def args_live(parser):
     sink = args.get_group(parser, "Sink (LIVE)")
@@ -30,7 +13,7 @@ class SinkLive(Sink):
         super().__init__(ctrl)
 
         self.ctrl.view.sink.cl_cb_dev.config(values=list([d for d in pysdrlib.devices.ls()]))
-        self.ctrl.view.cb_dev.bind("<<ComboboxSelected>>", self.handle_event)
+        self.ctrl.view.sink.cl_cb_dev.bind("<<ComboboxSelected>>", self.handle_event)
 
         self.ctrl.view.sink.cl_ent_rx_rf.bind("<Return>", self.handle_event)
         self.ctrl.view.sink.cl_ent_rx_if.bind("<Return>", self.handle_event)
@@ -39,23 +22,6 @@ class SinkLive(Sink):
         self.ctrl.view.sink.cl_var_rx_if.set(str(self.ctrl.model.sink.get_rx_if()))
         self.ctrl.view.sink.cl_var_rx_bb.set(str(self.ctrl.model.sink.get_rx_bb()))
         self.toggle_gains()
-
-    def start(self):
-        if self.ctrl.model.sink.dev is None:
-            print("sink is not fully initialized, failed to get device")
-            return
-        self.ctrl.view.tb_btn_start.config(state=tk.DISABLED)
-        self.ctrl.view.tb_btn_stop.config(state=tk.ACTIVE)
-        self.ctrl.dispatch.send(CMD.START)
-
-    def stop(self):
-        self.ctrl.view.tb_btn_stop.config(state=tk.DISABLED)
-        self.ctrl.view.tb_btn_start.config(state=tk.ACTIVE)
-        self.ctrl.dispatch.send(CMD.STOP)
-
-    def reset(self):
-        self.ctrl.dispatch.send(CMD.RESET)
-        self.stop()
 
     def draw_cl(self):
         self.ctrl.view.sink.cl_var_dev.set(str(type(self.ctrl.model.sink.dev).__name__))
@@ -91,7 +57,6 @@ class SinkLive(Sink):
     def set_device(self, device):
         self.ctrl.model.sink.set_device(device)
         print(f"Device set to '{self.ctrl.model.sink.name}'")
-        self.draw_tb()
         self.draw_cl()
         self.toggle_gains()
 

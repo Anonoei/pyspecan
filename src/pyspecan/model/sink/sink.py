@@ -14,6 +14,7 @@ def args_sink(parser):
     parser.add_argument("-cf", "--cf", default=SinkConfig.cf, type="frequency", help="center frequency")
 
 class Sink:
+    SEEKABLE = False # can jump around in the stream (files)
     __slots__ = (
         "log", "model",
         "_samples", "_cf", "_Fs"
@@ -26,7 +27,7 @@ class Sink:
         self._samples = np.empty((), dtype=np.complex64)
 
     def reset(self):
-        self._samples = np.empty(self.model.mode.get_block_size(), dtype=np.complex64)
+        self._samples = np.empty(self.model.get_block_size(), dtype=np.complex64)
 
     @property
     def samples(self):
@@ -35,13 +36,16 @@ class Sink:
     def show(self, ind=0):
         raise NotImplementedError()
 
+    def ready(self) -> bool:
+        """Can samples be read, e.g. a file is selected or a device is open"""
+        raise NotImplementedError()
+
     def set_fs(self, fs):
         self.log.debug("set_fs(%s)", fs)
         if isinstance(fs, str):
             fs = Frequency.get(fs).raw
         fs = self._set_fs(fs)
         self._Fs = Frequency.get(fs)
-        self.model.f = self.model.update_f()
     def get_fs(self):
         return self._Fs
     def set_cf(self, cf):
@@ -50,7 +54,6 @@ class Sink:
             cf = Frequency.get(cf).raw
         cf = self._set_cf(cf)
         self._cf = Frequency.get(cf)
-        self.model.f = self.model.update_f()
 
     def get_cf(self):
         return self._cf

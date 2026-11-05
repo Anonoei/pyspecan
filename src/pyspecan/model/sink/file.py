@@ -32,6 +32,7 @@ def args_file(parser):
     sink.add_argument("-d", "--fmt", choices=Format.choices(), default=Format.cf64.name, help="data format")
 
 class SinkFile(Sink):
+    SEEKABLE = True
     __slots__ = (
         "dev", "fmt"
     )
@@ -49,6 +50,9 @@ class SinkFile(Sink):
     def show(self, ind=0):
         print(" "*ind + f"{self.percent():06.2f}% [{self.dev.fmt.name}] {self.dev.path}")
         print(" "*ind + f"{self.dev.cur_samp}/{self.dev.max_samp}")
+
+    def ready(self):
+        return self.get_path() is not None
 
     def get_path(self):
         return self.dev.get_path()
@@ -97,6 +101,10 @@ class SinkFile(Sink):
         self._samples = samples
         # self._psd = None
         return True
+
+    def seek(self, samp: int):
+        """Jump to sample `samp`"""
+        self.dev.cur_samp = max(0, min(int(samp), self.max_samp))
 
     def forward(self, count: int):
         return self.dev.forward(count)
