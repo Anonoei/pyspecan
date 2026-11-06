@@ -1,4 +1,9 @@
-"""Rows and columns of plot panes, each pane shows one plot of the controller's PlotSet"""
+"""Rows and columns of plot panes
+
+The controller's PlotSet layout (rows of plot ids) is the source of truth. The widgets are
+rebuilt from it after every change: tk cannot move a widget to another parent, so dragging a plot
+to a new place means re-creating the panes. What a plot must keep across that lives in `keep`.
+"""
 import tkinter as tk
 from tkinter import ttk
 
@@ -7,111 +12,133 @@ from ...view.tkGUI.panels import PanelView, PanelChild, Panel
 
 from .plot import PlotPane
 
+BAR = 10 # [px] thickness of the drop indicator
+
 class PanelController:
     def __init__(self, ctrl, panel: PanelView):
         self.log = logger.new("tkGUI.Panels")
         self.ctrl = ctrl
         self.panel = panel
         self.rows: list[PanelChild] = []
-        self.cols: dict[PanelChild, list[Panel]] = {}
-        self.view: dict[PanelChild, dict[Panel, PlotPane | None]] = {}
+        self.panes: dict[str, PlotPane] = {}
+        self.frames: dict[tk.Misc, str] = {} # pane frame -> plot id, to find what is under the pointer
+        self.keep: dict[str, dict] = {}      # plot id -> what survives a rebuild
+        self.drag: dict | None = None
+        self.overlay = tk.Frame(panel.master, background="#5b9bd5")
 
-        self.panel.btn_row.configure(command=self.add_row)
-        self.add_row()
+    # --- structure --- #
+    def add(self, name: str) -> str:
+        """Add a plot in a new row at the bottom"""
+        pid = self.ctrl.add_plot(name)
+        self.rebuild()
+        return pid
 
-    def panes(self) -> list[PlotPane]:
-        return [p for views in self.view.values() for p in views.values() if p is not None]
+    def remove(self, pid: str):
+        self.ctrl.del_plot(pid)
+        self.keep.pop(pid, None)
+        self.rebuild()
 
-    # --- layout --- #
-    def add_row(self):
-        if len(self.rows) > 5:
-            return
-        frame = ttk.LabelFrame(self.panel.main, text=f"Row {len(self.rows)}")
-        child = PanelChild(self, frame)
-        self.rows.append(child)
-        self.cols[child] = []
-        self.view[child] = {}
+    def move(self, pid: str, target: str, where: str):
+        self.ctrl.move_plot(pid, target, where)
+        self.rebuild()
 
-        self.panel.main.add(frame, weight=1)
-
-        child.btn_close.configure(command=lambda c=child: self.del_row(c))
-        child.btn_col.configure(command=lambda c=child: self.add_col(c))
-
-        self.add_col(child)
+    def rebuild(self):
+        """Create the widgets for the layout"""
+        for pane in self.panes.values():
+            pane.close()
+        for row in self.rows:
+            row.master.destroy()
+        self.rows, self.panes, self.frames = [], {}, {}
+        for r, ids in enumerate(self.ctrl.plots.layout):
+            frame = ttk.LabelFrame(self.panel.main, text=f"Row {r}")
+            row = PanelChild(self, frame)
+            self.rows.append(row)
+            self.panel.main.add(frame, weight=1)
+            for pid in ids:
+                self._add_pane(row, pid)
+            row.update_layout()
         self.panel.update_layout()
+        self.ctrl.view.root.update_idletasks()
 
-    def del_row(self, child: PanelChild):
-        for pane in list(self.cols[child]):
-            self._drop_plot(child, pane)
-        idx = self.rows.index(child)
-        del self.cols[child], self.view[child]
-        self.panel.main.remove(child.master)
-        self.rows.pop(idx).master.destroy()
-
-    def add_col(self, child: PanelChild):
-        if len(self.cols[child]) > 5:
-            return
-        frame = ttk.LabelFrame(child.main, text=f"Col {len(self.cols[child])}")
+    def _add_pane(self, row: PanelChild, pid: str):
+        frame = ttk.LabelFrame(row.main)
         pane = Panel(self, frame)
-        self.cols[child].append(pane)
-        self.view[child][pane] = None
+        row.main.add(frame, weight=1)
+        keep = self.keep.setdefault(pid, {"settings_open": True})
+        if not keep["settings_open"]:
+            pane.fr_sets.forget()
+        pane.btn_close.configure(command=lambda: self.ctrl.when_idle(lambda: self.remove(pid)))
+        pane.btn_toggle.configure(command=lambda: self.toggle_settings(pid))
+        for widget in (pane.lbl_grip, frame):
+            widget.bind("<ButtonPress-1>", lambda e, pid=pid: self._drag_start(pid))
+            widget.bind("<B1-Motion>", self._drag_move)
+            widget.bind("<ButtonRelease-1>", self._drag_end)
+        self.frames[frame] = pid
+        self.panes[pid] = PlotPane(self.ctrl, pane, pid, keep)
 
-        child.main.add(frame, weight=1)
-
-        pane.btn_close.configure(command=lambda c=child, p=pane: self.del_col(c, p))
-        pane.btn_toggle.configure(command=lambda c=child, p=pane: self.toggle_settings(c, p))
-        self.toggle_settings(child, pane)
-
-        pane.cb_view.config(values=self.ctrl.plot_types)
-        pane.cb_view.bind("<<ComboboxSelected>>", lambda e, c=child, p=pane: self.set_view(c, p))
-        child.update_layout()
-
-    def del_col(self, child: PanelChild, pane: Panel):
-        self._drop_plot(child, pane)
-        idx = self.cols[child].index(pane)
-        child.main.remove(pane.master)
-        del self.view[child][pane]
-        self.cols[child].pop(idx).master.destroy()
-        if len(self.cols[child]) == 0:
-            self.del_row(child)
-
-    def toggle_settings(self, child: PanelChild, pane: Panel):
-        """Toggle settings panel visibility"""
+    def toggle_settings(self, pid: str):
+        pane = self.panes[pid].pane
         if pane.fr_sets.winfo_ismapped():
             pane.fr_sets.forget()
         else:
             pane.fr_sets.pack(side=tk.LEFT, fill=tk.Y, before=pane.fr_main)
+        self.keep[pid]["settings_open"] = bool(pane.fr_sets.winfo_manager())
 
-    # --- plots --- #
-    def _drop_plot(self, child: PanelChild, pane: Panel):
-        shown = self.view[child].get(pane)
-        if shown is not None:
-            self.view[child][pane] = None
-            shown.destroy()
-            self.ctrl.del_plot(shown.pid)
+    # --- drag & drop --- #
+    def _drag_start(self, pid: str):
+        self.drag = {"pid": pid, "drop": None}
 
-    def set_view(self, child: PanelChild, pane: Panel, name: str | None = None):
-        """Show plot `name` (default: the pane's combobox) in the pane"""
-        name = name or pane.var_view.get()
-        if name not in self.ctrl.plot_types:
+    def drop_target(self, x: int, y: int):
+        """(plot id, where) for the pointer at root coordinates, None if it isn't over another plot"""
+        widget = self.ctrl.view.root.winfo_containing(x, y)
+        while widget is not None and widget not in self.frames:
+            widget = widget.master
+        if widget is None or self.drag is None or self.frames[widget] == self.drag["pid"]:
+            return None
+        w, h = max(widget.winfo_width(), 1), max(widget.winfo_height(), 1)
+        fx, fy = (x - widget.winfo_rootx()) / w, (y - widget.winfo_rooty()) / h
+        edges = {"left": fx, "right": 1 - fx, "above": fy, "below": 1 - fy}
+        return self.frames[widget], min(edges, key=edges.get), widget # the nearest edge
+
+    def _drag_move(self, event):
+        if self.drag is None:
             return
-        pane.var_view.set(name)
-        self._drop_plot(child, pane)
-        pid = self.ctrl.add_plot(name)
-        self.view[child][pane] = PlotPane(self.ctrl, pane, pid)
+        self.ctrl.view.root.configure(cursor="fleur")
+        target = self.drop_target(event.x_root, event.y_root)
+        self.drag["drop"] = target
+        if target is None:
+            self.overlay.place_forget()
+            return
+        _, where, frame = target # an opaque bar on the edge the plot will go to, tk widgets can't be see-through
+        bar = {
+            "left": dict(relx=0, rely=0, relheight=1, width=BAR, anchor=tk.NW),
+            "right": dict(relx=1, rely=0, relheight=1, width=BAR, anchor=tk.NE),
+            "above": dict(relx=0, rely=0, relwidth=1, height=BAR, anchor=tk.NW),
+            "below": dict(relx=0, rely=1, relwidth=1, height=BAR, anchor=tk.SW),
+        }[where]
+        self.overlay.place(in_=frame, **bar)
+        self.overlay.lift()
+
+    def _drag_end(self, event):
+        drag, self.drag = self.drag, None
+        self.overlay.place_forget()
+        self.ctrl.view.root.configure(cursor="")
+        if drag is not None and drag["drop"] is not None: # the last place the pointer was over
+            pid, (tid, where, _) = drag["pid"], drag["drop"]
+            self.ctrl.when_idle(lambda: self.move(pid, tid, where)) # not from inside the widget's own event
 
     # --- drawing --- #
     def push(self, frames: dict):
-        for pane in self.panes():
-            if pane.pid in frames:
-                pane.push(frames[pane.pid])
+        for pid, pane in self.panes.items():
+            if pid in frames:
+                pane.push(frames[pid])
 
     def render(self):
-        for pane in self.panes():
+        for pane in list(self.panes.values()):
             if not self.ctrl.running: # the window is closing
                 return
             pane.render()
 
     def on_reset(self):
-        for pane in self.panes():
+        for pane in self.panes.values():
             pane.reset()

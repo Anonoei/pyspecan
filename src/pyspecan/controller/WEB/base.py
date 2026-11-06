@@ -56,6 +56,9 @@ class Controller(_Controller):
                 await self.ws.send(client_id, {"type": "state", "data": self.get_state()})
                 while True:
                     msg = json.loads(await websocket.receive_text())
+                    if msg.get("type") == "ack":
+                        self.ws.ack(client_id)
+                        continue
                     error = self.handle_message(msg)
                     if error:
                         await self.ws.send(client_id, {"type": "error", "data": error})
@@ -72,7 +75,7 @@ class Controller(_Controller):
         self.ws.publish({"type": "frame", "data": {
             "plots": {pid: frame.to_dict() for pid, frame in frames.items()},
             "status": status,
-        }})
+        }}, frame=True)
 
     def state_changed(self):
         self.ws.publish({"type": "state", "data": self.get_state()})
@@ -147,6 +150,8 @@ class Controller(_Controller):
                 self.del_plot(msg["id"])
             elif op == "type":
                 self.set_plot_type(msg["id"], msg["name"])
+            elif op == "move":
+                self.move_plot(msg["id"], msg.get("target"), msg["where"])
             elif op == "set":
                 self.set_plot(msg["id"], msg["key"], msg.get("value"))
             else:

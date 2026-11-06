@@ -16,7 +16,6 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 from ..utils.window import WindowLUT
 
-MODES = ("swept", "rt")
 
 class Stream:
     """Cuts blocks into frames and transforms them, carrying leftover samples between blocks"""

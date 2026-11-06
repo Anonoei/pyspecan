@@ -34,11 +34,9 @@ web = ["fastapi", "uvicorn", "jinja2", "websockets"]
 
 [project.scripts]
 pyspecan-cui = "pyspecan._internal.main:main_cli_swept"
-pyspecan-cui-rt = "pyspecan._internal.main:main_cli_rt"
 
 [project.gui-scripts]
 pyspecan = "pyspecan._internal.main:main_gui_swept"
-pyspecan-rt = "pyspecan._internal.main:main_gui_rt"
 
 [project.urls]
 Homepage = "https://github.com/anonoei/pyspecan"

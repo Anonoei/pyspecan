@@ -1,26 +1,23 @@
 from .base import plot
-from .freq import FreqPlot, HoldMixin, SETTING_MODE
+from .freq import FreqPlot, HoldMixin
 from .frame import Axis, Frame, Trace
 
 @plot("PSD")
 class PSD(HoldMixin, FreqPlot):
-    """Power spectral density
-
-    swept: the last frame of the block, rt: the mean of its overlapped frames.
-    The holds see every frame either way.
-    """
+    """Power spectral density: the last frame of the block, the holds see every frame
+    (the persistence plot is its realtime view)"""
     TITLE = "PSD"
-    SETTINGS = (SETTING_MODE,) + FreqPlot.SETTINGS + HoldMixin.SETTINGS
+    SETTINGS = FreqPlot.SETTINGS + HoldMixin.SETTINGS
 
     def reset(self):
         super().reset()
         self.reset_hold()
 
     def render(self):
-        rows = self.psd_rows()
+        rows = self.psd_rows("swept")
         if not len(rows):
             return None
-        trace = rows[-1] if self.mode == "swept" else rows.mean(axis=0)
+        trace = rows[-1]
         btm, top = self.y_range(trace)
         self.hold(rows)
         fmin, fmax = self.source.freq_range()

@@ -1,6 +1,6 @@
 """Initialize pyspecan module/script"""
 from . import err
-from .config import config, Mode, Sink, View
+from .config import config, Sink, View
 
 from .model.model import Model, GetModel
 from .view.view import GetView
@@ -9,7 +9,7 @@ from .controller.controller import GetController
 class SpecAn:
     """Class to initialize pyspecan"""
     __slots__ = ("model", "view", "controller")
-    def __init__(self, view, mode="swept", sink="file", **kwargs):
+    def __init__(self, view, sink="file", **kwargs):
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -18,10 +18,6 @@ class SpecAn:
             from .utils.monitor import Memory
             Memory().start()
 
-        if not isinstance(mode, Mode):
-            mode = Mode[mode]
-            if mode == Mode.NONE:
-                raise err.UnknownOption(f"Unknown mode {mode}")
         if not isinstance(sink, Sink):
             sink = Sink[sink]
             if sink == Sink.NONE:
@@ -31,7 +27,6 @@ class SpecAn:
             if view == View.NONE:
                 raise err.UnknownOption(f"Unknown view {view}")
 
-        kwargs["mode"] = mode.value # the plots' default mode
         self.model: Model = GetModel(sink)(**kwargs)
 
         self.view = GetView(view, sink)(**kwargs)

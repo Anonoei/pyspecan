@@ -57,7 +57,7 @@ function connect() {
     ws.onmessage = (ev) => {
         const msg = JSON.parse(ev.data);
         if (msg.type === "state") applyState(msg.data);
-        else if (msg.type === "frame") applyFrame(msg.data);
+        else if (msg.type === "frame") { applyFrame(msg.data); send({type: "ack"}); } // the server waits for these
         else if (msg.type === "error") showMessage(msg.data, true);
     };
 }
@@ -82,9 +82,9 @@ function setValue(el, value) {
     else el.value = value;
 }
 
-function fillSelect(el, options) {
+function fillSelect(el, options, label = (o) => o) {
     if (el.options.length === options.length && options.every((o, i) => el.options[i].value === o)) return;
-    el.replaceChildren(...options.map((o) => new Option(o, o)));
+    el.replaceChildren(...options.map((o) => new Option(label(o), o)));
 }
 
 function applyStatus(s) {
@@ -99,7 +99,7 @@ function applyStatus(s) {
 
 function applyState(s) {
     state = s;
-    fillSelect($("sel-plot-type"), s.plot_types);
+    fillSelect($("sel-add-plot"), ["", ...s.plot_types], (o) => o || "+ Add plot…");
     setValue($("in-fs"), s.fs);
     setValue($("in-cf"), s.cf);
     setValue($("in-nfft"), s.nfft_exp);
@@ -138,33 +138,80 @@ function el(tag, props = {}, ...children) {
 
 function buildPlots(s) {
     for (const id of Object.keys(runtime)) if (!(id in s.plots)) { delete runtime[id]; settingsOpen.delete(id); }
-    const panels = $("panels");
-    panels.replaceChildren(...s.layout.map((row, r) =>
-        el("div", {className: "plot-row"}, ...row.map((id) => buildPlot(id, s.plots[id], r)))));
+    const tail = el("div", {className: "drop-tail", textContent: "drop here for a new row"});
+    tail.ondragenter = (ev) => { if (dragId) ev.preventDefault(); }; // only a cancelled dragenter makes it the drop target
+    tail.ondragover = (ev) => { if (!dragId) return; ev.preventDefault(); clearDrop(); tail.classList.add("drop-end"); };
+    tail.ondragleave = () => tail.classList.remove("drop-end");
+    tail.ondrop = (ev) => { ev.preventDefault(); const id = dragId; clearDrop(); plotOp("move", {id, where: "end"}); };
+    $("panels").replaceChildren(...s.layout.map((row) =>
+        el("div", {className: "plot-row"}, ...row.map((id) => buildPlot(id, s.plots[id])))), tail);
 }
 
-function buildPlot(id, p, row) {
+// --- drag & drop: a plot is dropped on the half of another plot it should go to --- //
+let dragId = null;
+function zoneAt(box, ev) {
+    const r = box.getBoundingClientRect();
+    const fx = (ev.clientX - r.left) / r.width, fy = (ev.clientY - r.top) / r.height;
+    const d = {left: fx, right: 1 - fx, above: fy, below: 1 - fy};
+    return Object.keys(d).reduce((a, b) => (d[a] <= d[b] ? a : b)); // the nearest edge
+}
+function clearDrop() {
+    document.querySelectorAll("[class*='drop-']").forEach((e) =>
+        e.classList.remove("drop-left", "drop-right", "drop-above", "drop-below", "drop-end"));
+}
+function bindDrag(id, container, header) {
+    header.draggable = true;
+    header.ondragstart = (ev) => {
+        dragId = id;
+        ev.dataTransfer.setData("text/plain", id);
+        ev.dataTransfer.effectAllowed = "move";
+        ev.dataTransfer.setDragImage(container, 20, 10);
+        setTimeout(() => { container.classList.add("dragging"); document.body.classList.add("dragging-any"); });
+    };
+    header.ondragend = () => {
+        dragId = null;
+        container.classList.remove("dragging");
+        document.body.classList.remove("dragging-any");
+        clearDrop();
+    };
+    container.ondragenter = (ev) => { if (dragId && dragId !== id) ev.preventDefault(); };
+    container.ondragover = (ev) => {
+        if (!dragId || dragId === id) return;
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = "move";
+        const zone = zoneAt(container, ev);
+        if (!container.classList.contains(`drop-${zone}`)) { clearDrop(); container.classList.add(`drop-${zone}`); }
+    };
+    container.ondragleave = (ev) => { if (!container.contains(ev.relatedTarget)) clearDrop(); };
+    container.ondrop = (ev) => {
+        if (!dragId || dragId === id) return;
+        ev.preventDefault();
+        const moving = dragId, where = zoneAt(container, ev);
+        clearDrop();
+        plotOp("move", {id: moving, target: id, where});
+    };
+}
+
+function buildPlot(id, p) {
     const rt = runtime[id] || (runtime[id] = {frame: null, images: {}});
-    const typeSel = el("select", {title: "plot type"});
-    typeSel.replaceChildren(...state.plot_types.map((t) => new Option(t, t)));
-    typeSel.value = p.name;
-    typeSel.onchange = () => { rt.frame = null; rt.images = {}; plotOp("type", {id, name: typeSel.value}); };
 
     const pause = el("button", {id: `pause-${id}`, onclick: () => plotOp("set", {id, key: "enabled", value: !state.plots[id].settings.enabled})});
     const gear = el("button", {textContent: "⚙", title: "settings", onclick: () => {
         settingsOpen.has(id) ? settingsOpen.delete(id) : settingsOpen.add(id);
         $(`settings-${id}`).hidden = !settingsOpen.has(id);
     }});
-    const addCol = el("button", {textContent: "+", title: "add a plot to this row", onclick: () => plotOp("add", {name: $("sel-plot-type").value, row})});
     const del = el("button", {textContent: "✕", title: "remove plot", onclick: () => plotOp("del", {id})});
     const ptime = el("span", {id: `ptime-${id}`, className: "muted"});
 
     const settings = el("div", {id: `settings-${id}`, className: "plot-settings", hidden: !settingsOpen.has(id)},
         ...p.fields.map((f) => buildField(id, f)));
     rt.canvas = el("canvas");
-    const container = el("div", {className: "plot", id: `plot-${id}`},
-        el("div", {className: "plot-header"}, typeSel, ptime, el("span", {className: "right"}, pause, gear, addCol, del)),
+    const header = el("div", {className: "plot-header", title: "drag to move"},
+        el("span", {className: "grip", textContent: "⠿"}), el("b", {textContent: p.name}), ptime,
+        el("span", {className: "right"}, pause, gear, del));
+    const container = el("div", {className: "plot", id: `plot-${id}`}, header,
         settings, el("div", {className: "canvas-box"}, rt.canvas));
+    bindDrag(id, container, header);
     new ResizeObserver(() => drawPlot(id)).observe(rt.canvas.parentElement);
     return container;
 }
@@ -199,7 +246,8 @@ function applyFrame(data) {
         if (!rt) continue;
         rt.frame = frame;
         const pt = $(`ptime-${id}`);
-        if (pt) pt.textContent = `${frame.title ? frame.title + "  " : ""}${(frame.ptime * 1000).toFixed(1)} ms`;
+        const name = state && state.plots[id] ? state.plots[id].name : "";
+        if (pt) pt.textContent = `${frame.title && frame.title !== name ? frame.title + "  " : ""}${(frame.ptime * 1000).toFixed(1)} ms`;
         frame.axes.forEach((axis, i) => { if (axis.image) applyImage(rt, i, axis.image); });
         drawPlot(id);
     }
@@ -207,7 +255,8 @@ function applyFrame(data) {
 
 // images arrive either whole, or as the newest rows of a scrolling history (newest on top)
 function applyImage(rt, i, im) {
-    const bytes = Uint8Array.from(atob(im.data), (c) => c.charCodeAt(0));
+    const bin = atob(im.data), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const w = im.cols, n = im.rows_in, h = im.scroll ? im.rows : n;
     let st = rt.images[i];
     if (!st || st.w !== w || st.h !== h || (im.scroll && im.clear)) {
@@ -354,7 +403,8 @@ function bindInputs() {
     $("btn-reset").onclick = () => cmd("reset");
     $("btn-prev").onclick = () => cmd("prev");
     $("btn-next").onclick = () => cmd("next");
-    $("btn-add-plot").onclick = () => plotOp("add", {name: $("sel-plot-type").value});
+    const add = $("sel-add-plot");
+    add.onchange = () => { if (add.value) plotOp("add", {name: add.value}); add.value = ""; };
     const sld = $("sld-samp");
     sld.addEventListener("pointerdown", () => (seeking = true));
     sld.addEventListener("change", () => { seeking = false; set("samp", sld.value); });

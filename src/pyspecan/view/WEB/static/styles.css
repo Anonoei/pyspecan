@@ -99,6 +99,7 @@ body, html {
 }
 .pyspecan .plot-row { flex: 1; min-height: 0; display: flex; gap: 4px; }
 .pyspecan .plot {
+    position: relative;
     flex: 1;
     min-width: 0;
     display: flex;
@@ -106,6 +107,34 @@ body, html {
     border: 1px solid var(--border-muted);
 }
 .pyspecan .plot-header { display: flex; align-items: center; gap: 6px; padding: 3px 4px; background: var(--bg-light); }
+.pyspecan .plot-header { cursor: grab; user-select: none; }
+.pyspecan .plot-header .grip { color: var(--text-muted); }
+.pyspecan .plot-header button { cursor: pointer; }
+.pyspecan .plot.dragging { opacity: 0.4; }
+.pyspecan .plot[class*="drop-"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--info) 28%, transparent);
+    border: 2px solid var(--info);
+    pointer-events: none;
+    z-index: 2;
+}
+.pyspecan .plot.drop-left::after { right: 50%; }
+.pyspecan .plot.drop-right::after { left: 50%; }
+.pyspecan .plot.drop-above::after { bottom: 50%; }
+.pyspecan .plot.drop-below::after { top: 50%; }
+.pyspecan .drop-tail {
+    display: none;
+    flex: none;
+    height: 2rem;
+    line-height: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    border: 2px dashed var(--border);
+}
+.dragging-any .pyspecan .drop-tail { display: block; }
+.pyspecan .drop-tail.drop-end { border-color: var(--info); color: var(--text); background: color-mix(in srgb, var(--info) 28%, transparent); }
 .pyspecan .plot-header .right { margin-left: auto; display: flex; gap: 4px; }
 .pyspecan .plot-settings { padding: 4px 8px; border-bottom: 1px solid var(--border-muted); display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .pyspecan .plot-settings .control-group { margin: 0; }

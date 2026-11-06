@@ -8,30 +8,7 @@ class Sink(Enum):
 
     @classmethod
     def choices(cls):
-        """return mode choices"""
-        arr = []
-        for inst in cls:
-            if inst == cls.NONE:
-                continue
-            arr.append(inst.name)
-        return arr
-
-    @classmethod
-    def get(cls, option: str):
-        for inst in cls:
-            if inst.name == option:
-                return inst
-        return cls.NONE
-
-class Mode(Enum):
-    """Specan modes"""
-    NONE = "none"
-    SWEPT = "swept"
-    RT = "rt"
-
-    @classmethod
-    def choices(cls):
-        """return mode choices"""
+        """return sink choices"""
         arr = []
         for inst in cls:
             if inst == cls.NONE:
@@ -85,7 +62,6 @@ class config:
 
     SENTINEL = object()
     SINK: Sink = Sink.NONE
-    MODE: Mode = Mode.NONE
 
     MON_MEM: bool = False
     PROFILE: bool = False

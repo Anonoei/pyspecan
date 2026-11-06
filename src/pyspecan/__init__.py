@@ -15,7 +15,7 @@ __author__ = "Anonoei <to+dev@an0.cx>"
 
 from . import _internal
 
-from .config import config, Mode, View
+from .config import config, View
 from . import err
 from . import obj
 from . import utils

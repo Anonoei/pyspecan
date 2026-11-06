@@ -2,9 +2,12 @@
 import itertools
 import threading
 import time
+import traceback
 
 from .base import PLOTS, Plot
 from .source import Source
+
+WHERE = ("left", "right", "above", "below", "end")
 
 class PlotSet:
     """Owns plot instances by id. Views mirror it in their own widgets.
@@ -47,7 +50,35 @@ class PlotSet:
         with self.lock:
             self.get(pid)
             del self.plots[pid]
-            self.layout = [row for row in ([i for i in row if i != pid] for row in self.layout) if row]
+            self._detach(pid)
+
+    def _detach(self, pid: str):
+        """Take a plot out of the layout, rows that end up empty go away"""
+        self.layout = [row for row in ([i for i in row if i != pid] for row in self.layout) if row]
+
+    def move(self, pid: str, target: str | None, where: str):
+        """Move a plot next to another one
+
+        where: "left" / "right" put it in the target's row, "above" / "below" in a new row
+        over / under the target's row, "end" (no target needed) in a new row at the bottom.
+        """
+        if where not in WHERE:
+            raise ValueError(f"unknown place {where!r}, use {', '.join(WHERE)}")
+        with self.lock:
+            self.get(pid)
+            if where == "end":
+                self._detach(pid)
+                self.layout.append([pid])
+                return
+            self.get(target) # type: ignore
+            if pid == target:
+                return
+            self._detach(pid)
+            r = next(i for i, row in enumerate(self.layout) if target in row)
+            if where in ("left", "right"):
+                self.layout[r].insert(self.layout[r].index(target) + (where == "right"), pid)
+            else:
+                self.layout.insert(r + (where == "below"), [pid])
 
     def retype(self, pid: str, name: str):
         """Replace a plot by another type, keeping its place and paused state"""
@@ -82,8 +113,9 @@ class PlotSet:
                 try:
                     frame = plot.update()
                 except Exception: # one broken plot shouldn't stop the others
+                    traceback.print_exc() # the logger is off by default
                     if log:
-                        log.exception("plot %s failed", pid)
+                        log.error("plot %s failed", pid)
                     continue
                 if frame is not None:
                     frame.ptime = time.perf_counter() - t0

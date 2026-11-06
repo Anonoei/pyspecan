@@ -13,6 +13,7 @@ driven by the view calling `tick()` (console).
 import datetime as dt
 import math
 import pathlib
+import sys
 import threading
 import time
 
@@ -65,6 +66,9 @@ class Controller:
     def set_plot_type(self, pid: str, name: str):
         self._check_type(name)
         self.plots.retype(pid, name)
+
+    def move_plot(self, pid: str, target: str | None, where: str):
+        self.plots.move(pid, target, where)
 
     def set_plot(self, pid: str, key: str, value):
         with self.lock:
@@ -231,9 +235,8 @@ class Controller:
             try:
                 valid = self.step()
                 self.message = "" if valid else "END"
-            except Exception: # keep playback alive
-                self.log.exception("stream failure")
-                self.message = "ERROR"
+            except Exception as e: # keep playback alive
+                self.report_error("playback failed", e)
                 valid = False
             if not valid:
                 self.playing = False
@@ -244,6 +247,13 @@ class Controller:
         if wait > 0:
             time.sleep(wait)
         return True
+
+    def report_error(self, what: str, error: Exception):
+        """Failures must not be silent: the logger is off by default, so also print to stderr"""
+        import traceback
+        traceback.print_exception(error, file=sys.stderr)
+        self.log.error("%s: %s", what, error)
+        self.message = f"ERROR: {type(error).__name__}: {error}"
 
     def _stream(self):
         while self.running:

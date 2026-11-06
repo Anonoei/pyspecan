@@ -8,6 +8,9 @@ import pysdrlib
 from pysdrlib import Formats as _Formats
 from pysdrlib import File as _File
 
+# reading from a file that was never opened: newer pysdrlib raises NotOpen, older ones fail on a missing handle
+NotOpen = getattr(getattr(pysdrlib, "err", None), "NotOpen", AttributeError)
+
 from ...utils import args
 from .sink import Sink, args_sink
 
@@ -43,9 +46,7 @@ class SinkFile(Sink):
         self.dev = _File()
 
         self.set_fmt(fmt)
-        self.set_path(path)
-        if path is not None:
-            self.dev.open()
+        self.set_path(path) # opens it
 
     def show(self, ind=0):
         print(" "*ind + f"{self.percent():06.2f}% [{self.dev.fmt.name}] {self.dev.path}")
@@ -63,7 +64,10 @@ class SinkFile(Sink):
 
         if not path.exists():
             return
+        if getattr(self.dev, "f", None) is not None: # switching files
+            self.dev.close()
         self.dev.set_path(path)
+        self.dev.open()
         self.reset()
 
     def get_fmt(self):
@@ -86,7 +90,7 @@ class SinkFile(Sink):
             samples = self.dev.next(count)
         except pysdrlib.file.err.Overflow:
             return False
-        except AttributeError:
+        except (AttributeError, NotOpen):
             self.dev.open()
             samples = self.dev.next(count)
         self._samples = samples
@@ -98,6 +102,9 @@ class SinkFile(Sink):
             samples = self.dev.prev(count)
         except pysdrlib.file.err.Overflow:
             return False
+        except (AttributeError, NotOpen):
+            self.dev.open()
+            samples = self.dev.prev(count)
         self._samples = samples
         # self._psd = None
         return True

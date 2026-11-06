@@ -51,7 +51,8 @@ class Controller(_Controller):
             (("add",), "add <type>", "add a plot, e.g. add Spectrogram", self.cmd_add),
             (("del", "rm"), "del <id>", "remove a plot", self.cmd_del),
             (("type",), "type <id> <type>", "change a plot's type", self.cmd_type),
-            (("set",), "set <id> <key> <value>", "change a plot setting, e.g. set p1 mode rt", self.cmd_set),
+            (("move", "mv"), "move <id> <where> [target]", "left|right|above|below <target>, or end for a new row at the bottom", self.cmd_move),
+            (("set",), "set <id> <key> <value>", "change a plot setting, e.g. set p1 vbw 5", self.cmd_set),
         ):
             for name in names:
                 self.commands[name] = (usage, text, fn)
@@ -237,6 +238,14 @@ class Controller(_Controller):
         self.frames.pop(args[0], None)
         for k in [k for k in self.scrollers if k[0] == args[0]]:
             del self.scrollers[k]
+
+    def cmd_move(self, args):
+        self._need(args, 2, "move <id> <left|right|above|below> <target>  |  move <id> end")
+        where = args[1]
+        if where != "end":
+            self._need(args, 3, "move <id> <left|right|above|below> <target>")
+        self.move_plot(args[0], args[2] if len(args) > 2 else None, where)
+        print("  " + "  |  ".join(" ".join(row) for row in self.plots.layout))
 
     def cmd_set(self, args):
         self._need(args, 3, "set <id> <key> <value>")

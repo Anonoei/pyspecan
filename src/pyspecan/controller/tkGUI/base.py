@@ -15,7 +15,7 @@ from ...utils import args
 from ..base import Controller as _Controller, ControllerConfig
 from ...model.model import Model
 from ...plots.frame import Frame, LINE, SCATTER, IMAGE, THREE_D
-from ...view.tkGUI.base import View as GUI
+from ...view.tkGUI.base import View as GUI, ADD_LABEL
 
 from ...backend.tk import theme as theme_tk
 
@@ -46,6 +46,7 @@ class Controller(_Controller):
         self._queue_lock = threading.Lock()
         self._message_until = 0.0
         self._polling = False
+        self._deferred: list = []
 
         v = self.view
         v.tb_btn_start.config(command=self.sink_ui.start)
@@ -61,13 +62,14 @@ class Controller(_Controller):
         theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]
 
         self.panels = PanelController(self, self.view.panel)
-        pane = self.panels.cols[self.panels.rows[0]][0]
-        self.panels.set_view(self.panels.rows[0], pane, "Persistence" if kwargs.get("mode") == "rt" else "PSD")
+        v.tb_cb_add.config(values=self.plot_types)
+        v.tb_cb_add.bind("<<ComboboxSelected>>", self.add_from_dropdown)
+        self.panels.add("PSD")
 
         self.refresh()
         self.view.root.protocol("WM_DELETE_WINDOW", self.quit)
         self.start_stream()
-        self.view.root.after(POLL, self._poll)
+        self._poll_id = self.view.root.after(POLL, self._poll)
 
     # --- core hooks --- #
     def deliver(self, frames: dict[str, Frame], status: dict):
@@ -92,19 +94,22 @@ class Controller(_Controller):
             with self._queue_lock:
                 queued = list(self._queue)
                 self._queue.clear()
+            t0 = time.perf_counter()
+            for frames in queued:
+                self.panels.push(frames)
+            self.panels.render() # also draws panes that were rebuilt and are waiting for their last frame
             if queued:
-                t0 = time.perf_counter()
-                for frames in queued:
-                    self.panels.push(frames)
-                self.panels.render()
                 self.view.tb_var_draw_time.set(f"{time.perf_counter() - t0:06.3f}s")
             self.draw_tb()
-            self.view.root.after(POLL, self._poll)
+            self._poll_id = self.view.root.after(POLL, self._poll)
         except tk.TclError:
             if self.running:
                 raise
         finally:
             self._polling = False
+            deferred, self._deferred = self._deferred, []
+            for fn in deferred:
+                fn()
 
     # --- widgets <- state --- #
     def show_message(self, text: str, seconds=4.0):
@@ -151,6 +156,22 @@ class Controller(_Controller):
             self.show_message(str(e))
         self.draw_tb()
 
+    def when_idle(self, fn):
+        """Run `fn` now, or once the drawing in progress is done: drawing runs the event loop, and
+        rearranging plots in the middle of it would destroy the widgets being drawn"""
+        if self._polling:
+            self._deferred.append(fn)
+        else:
+            fn()
+
+    def add_from_dropdown(self, event=None):
+        v = self.view
+        name = v.tb_var_add.get()
+        v.tb_var_add.set(ADD_LABEL)
+        v.root.focus_set()
+        if name in self.plot_types:
+            self.when_idle(lambda: self.panels.add(name))
+
     def commit(self, key):
         v = self.view
         var = {"sweep": v.tb_var_sweep, "show": v.tb_var_show, "fs": v.cl_var_fs, "cf": v.cl_var_cf,
@@ -161,5 +182,9 @@ class Controller(_Controller):
         super().quit()
         if self.thread is not None:
             self.thread.join(timeout=1)
+        try:
+            self.view.root.after_cancel(self._poll_id)
+        except (tk.TclError, AttributeError):
+            pass
         self.view.root.quit()
         self.view.root.destroy()

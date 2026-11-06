@@ -25,18 +25,23 @@ def _signature(frame: Frame):
     return tuple((ax.projection, ax.image is not None, ax.square, ax.aspect) for ax in frame.axes)
 
 class PlotPane:
-    """One plot in a panel pane"""
-    def __init__(self, ctrl, pane: Panel, pid: str):
+    """One plot in a panel pane
+
+    The widgets are rebuilt whenever plots are rearranged, so what must survive that (the latest
+    frame, scrolling image histories) lives in `keep`, which the panel controller holds per plot.
+    """
+    def __init__(self, ctrl, pane: Panel, pid: str, keep: dict | None = None):
         self.ctrl = ctrl
         self.pane = pane
         self.pid = pid
         self.plot = ctrl.plots.get(pid)
+        self.keep = keep if keep is not None else {}
         self.plotter: BlitPlot | None = None
         self.canvas_widget = None
         self.sig = None
-        self.scrollers: dict[int, Scroller] = {}
-        self.images: dict[int, np.ndarray] = {} # full image per axis, scrolling images keep their history
-        self.frame: Frame | None = None
+        self.scrollers: dict[int, Scroller] = self.keep.setdefault("scrollers", {})
+        self.images: dict[int, np.ndarray] = self.keep.setdefault("images", {}) # full image per axis
+        self.dirty = self.keep.get("frame") is not None # a frame is waiting to be drawn
         self.lim: dict[int, dict] = {}
         self.drawn: dict[int, set] = {}
         self.vars: dict[str, tk.Variable] = {}
@@ -99,20 +104,22 @@ class PlotPane:
     def reset(self):
         self.scrollers.clear()
         self.images.clear()
-        self.frame = None
+        self.keep["frame"] = None
+        self.dirty = False
 
     # --- drawing --- #
     def push(self, frame: Frame):
         """Take in a frame without drawing it, scrolling images must see every frame"""
-        self.frame = frame
+        self.keep["frame"] = frame
+        self.dirty = True
         for i, ax in enumerate(frame.axes):
             if ax.image is not None:
                 self.images[i] = self.scrollers.setdefault(i, Scroller()).apply(ax.image)
 
     def render(self):
         """Draw the latest pushed frame"""
-        frame = self.frame
-        if frame is None:
+        frame = self.keep.get("frame")
+        if frame is None or not self.dirty:
             return
         sig = _signature(frame)
         if sig != self.sig:
@@ -129,7 +136,7 @@ class PlotPane:
         for i, ax in enumerate(frame.axes):
             self._draw_axis(i, ax)
         self.plotter.update() # type: ignore
-        self.frame = None
+        self.dirty = False
 
     def _build(self, frame: Frame, sig):
         if self.canvas_widget is not None:
@@ -254,12 +261,8 @@ class PlotPane:
         self.lim.setdefault(i, {})["extent"] = extent
         self._set_lim(i, "y", btm, top, mpl.set_ylim)
 
-    def destroy(self):
+    def close(self):
+        """Release the figure, the widgets go with their frame"""
         if self.plotter is not None:
             plt.close(self.plotter.fig)
-        self.btn_enable.destroy()
-        self.lbl_time.destroy()
-        for child in self.pane.fr_main.winfo_children():
-            child.destroy()
-        for child in self.pane.settings.winfo_children():
-            child.destroy()
+            self.plotter = None

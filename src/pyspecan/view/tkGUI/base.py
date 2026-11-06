@@ -10,6 +10,8 @@ from ...backend.mpl import theme as theme_mpl
 from .sink import Sink
 from .panels import PanelView
 
+ADD_LABEL = "+ Add plot…"
+
 LUT = {
     "fr": ttk.Frame,
     "ent": ttk.Entry,
@@ -55,6 +57,10 @@ class View(_View):
         self.tb_var_show: tk.StringVar = None # type: ignore
         self.tb_ent_show: ttk.Entry = None # type: ignore
         self.tb_fr_btn = ttk.Frame(self.fr_tb)
+        self.tb_fr_add = ttk.Frame(self.fr_tb)
+        self.tb_var_add = tk.StringVar(self.tb_fr_add, ADD_LABEL)
+        self.tb_cb_add = ttk.Combobox(self.tb_fr_add, textvariable=self.tb_var_add, state="readonly", width=16)
+        self.tb_cb_add.pack(padx=4, pady=8)
         self.tb_btn_start: ttk.Button = None # type: ignore
         self.tb_btn_stop: ttk.Button = None # type: ignore
         self.tb_btn_reset: ttk.Button = None # type: ignore
@@ -109,6 +115,10 @@ class View(_View):
 
         self.draw_tb_btn(self.tb_fr_btn)
         self.tb_fr_btn.pack(fill=tk.Y, side=tk.LEFT, pady=2)
+
+        ttk.Separator(self.fr_tb, orient=tk.VERTICAL).pack(fill=tk.Y, side=tk.LEFT)
+
+        self.tb_fr_add.pack(fill=tk.Y, side=tk.LEFT)
 
         ttk.Separator(self.fr_tb, orient=tk.VERTICAL).pack(fill=tk.Y, side=tk.LEFT)
 

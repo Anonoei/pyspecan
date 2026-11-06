@@ -7,15 +7,12 @@ from . import colormap
 from .base import Plot
 from .frame import RED, BLUE, Trace
 from .settings import Setting
-from .source import MODES
 
 def _ref_level(value):
     if str(value).strip().lower() in ("", "auto"):
         return "auto"
     return float(value)
 
-SETTING_MODE = Setting("mode", "Mode", "select", default="swept", options=MODES, reset=True,
-                       help="swept: back to back FFTs, rt: overlapped FFTs")
 SETTING_CMAP = Setting("cmap", "Colors", "select", default="magma", options=tuple(colormap.names()), flags=("--cmap",), help="image color map")
 
 def to_psd(spectra: np.ndarray, fs: float) -> np.ndarray:
@@ -39,16 +36,13 @@ class FreqPlot(Plot):
         if key == "ref_level":
             self._auto = None
 
-    def psd_rows(self, mode: str | None = None) -> np.ndarray:
-        """(k, nfft) psd of the frames in this tick's block, smoothed by the vbw"""
-        spectra = self.source.spectra(mode or self.cfg_mode(), self.window)
+    def psd_rows(self, mode: str = "swept") -> np.ndarray:
+        """(k, nfft) psd of the frames in this tick's block (swept: back to back, rt: overlapped), smoothed by the vbw"""
+        spectra = self.source.spectra(mode, self.window)
         psd = to_psd(spectra, self.source.fs)
         if self.vbw > 0 and len(psd):
             psd = vbw_rows(psd, self.vbw)
         return psd
-
-    def cfg_mode(self) -> str:
-        return self._cfg.get("mode", "swept")
 
     def resolve_ref(self, values) -> float:
         """The numeric ref level, "auto" is resolved from the first data seen"""

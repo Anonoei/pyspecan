@@ -4,7 +4,7 @@ import sys
 from .. import err
 from ..specan import SpecAn
 
-from ..config import config, View, Mode, Sink
+from ..config import config, View, Sink
 from ..model.model import ModelArgs
 from ..plots import args_plots
 from ..controller.controller import ControllerArgs
@@ -37,10 +37,6 @@ def _process_args(parser):
     if view == View.NONE:
         raise err.UnknownOption(f"Unknown view {args.view}")
 
-    mode = Mode.get(args.mode)
-    if mode == Mode.NONE:
-        raise err.UnknownOption(f"Unknown mode {args.mode}")
-
     sink = Sink.get(args.sink)
     if sink == Sink.NONE:
         raise err.UnknownOption(f"Unknown sink: {args.sink}")
@@ -63,6 +59,5 @@ def _process_args(parser):
 def main():
     parser = define_args()
     parser.add_argument("-v", "--view", type=str, default=View.tkGUI.name, choices=View.choices())
-    parser.add_argument("-m", "--mode", type=str.upper, default=Mode.SWEPT.name, choices=Mode.choices(), help="default mode of new plots")
     parser.add_argument("-s", "--sink", type=str.upper, default=Sink.FILE.name, choices=Sink.choices())
     _main(_process_args(parser))
