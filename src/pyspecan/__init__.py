@@ -11,7 +11,7 @@ This is intended to be used as a callable module (or a script), but can be used 
 """
 
 __version__ = "0.6.0"
-__author__ = "Anonoei <to+dev@an0.cx>"
+__author__ = "Anonoei <to+dev@an0.us>"
 
 from . import _internal
 
