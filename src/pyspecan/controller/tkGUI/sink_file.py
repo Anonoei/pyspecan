@@ -6,7 +6,7 @@ from .sink import Sink, args_sink
 
 from ...utils import dialog
 from ...utils.time import strfmt_td
-from ...model.sink.file import Format
+from ...model.sink.file import FORMATS
 
 import datetime as dt
 
@@ -25,7 +25,7 @@ class SinkFile(Sink):
         v.tb_btn_next.config(command=lambda: self.ctrl.run_command("next"))
 
         v.cl_btn_file.config(command=self.handle_btn_file)
-        v.cl_cb_file_fmt.config(values=Format.choices())
+        v.cl_cb_file_fmt.config(values=FORMATS)
         v.cl_cb_file_fmt.bind("<<ComboboxSelected>>", self.handle_event)
 
     def draw_tb(self, status):

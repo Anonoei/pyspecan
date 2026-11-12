@@ -40,11 +40,11 @@ class _Spectrogram(FreqPlot):
 
 @plot("Spectrogram")
 class SPG(_Spectrogram):
-    """One row per swept frame of the block"""
+    """One row per refresh: the last swept frame of the block, the trace the PSD plot draws"""
     TITLE = "Spectrogram"
 
     def rows(self):
-        return self.psd_rows("swept")
+        return self.psd_rows("swept")[-1:]
 
 @plot("RT Spectrogram")
 class RTSPG(_Spectrogram):

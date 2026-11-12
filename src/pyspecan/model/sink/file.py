@@ -1,6 +1,5 @@
 """File reader"""
 import pathlib
-from enum import Enum
 
 import numpy as np
 from numpy._typing._array_like import NDArray
@@ -16,32 +15,24 @@ from .sink import Sink, args_sink
 
 from ... import err
 
-class Format(Enum):
-    ci8  = _Formats.ci8t
-    ci16 = _Formats.ci16t
-    ci32 = _Formats.ci32t
-    cf32 = _Formats.cf32
-    cf64 = _Formats.cf64
-    cf128 = _Formats.cf128
-
-    @classmethod
-    def choices(cls):
-        return [inst.name for inst in cls]
+# IQ formats only: real formats would yield real samples
+FORMATS = [f.name for f in _Formats if f.is_complex]
+DEFAULT_FORMAT = "cf64"
 
 def args_file(parser):
     sink = args.get_group(parser, "Sink (FILE)")
     args_sink(sink)
     sink.add_argument("-f", "--path", default=None, help="file path")
-    sink.add_argument("-d", "--fmt", choices=Format.choices(), default=Format.cf64.name, help="data format")
+    sink.add_argument("-d", "--fmt", choices=FORMATS, default=DEFAULT_FORMAT, help="data format")
 
 class SinkFile(Sink):
     SEEKABLE = True
     __slots__ = (
-        "dev", "fmt"
+        "dev",
     )
     def __init__(self, model, **kwargs):
         path = kwargs.get("path", None)
-        fmt = kwargs.get("fmt", Format.cf64.name)
+        fmt = kwargs.get("fmt", DEFAULT_FORMAT)
         super().__init__(model, **kwargs)
         self.dev = _File()
 
@@ -71,9 +62,10 @@ class SinkFile(Sink):
         self.reset()
 
     def get_fmt(self):
-        return self.fmt # TODO: is this needed?
+        return self.dev.get_fmt()
     def set_fmt(self, fmt):
-        self.fmt = Format[fmt]
+        if fmt not in FORMATS:
+            raise ValueError(f"unknown format {fmt!r}")
         self.dev.set_fmt(fmt)
 
     def _set_fs(self, fs):

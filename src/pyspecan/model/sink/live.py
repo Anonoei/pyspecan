@@ -1,4 +1,5 @@
 import pysdrlib
+from pysdrlib import err as _err
 
 from ...utils import args
 from .sink import Sink, args_sink, SinkConfig
@@ -12,17 +13,13 @@ def args_live(parser):
 
 class SinkLive(Sink):
     __slots__ = (
-        "dev", "gain"
+        "dev", "gain_frac"
     )
     def __init__(self, model, **kwargs):
         self.dev: pysdrlib.Device = None # type: ignore
         device = kwargs.get("device", None)
         super().__init__(model, **kwargs)
-        self.gain = {
-            "rf": None,
-            "if": None,
-            "bb": None
-        }
+        self.gain_frac = None # overall receive gain, a fraction 0-1 of the device range
         self.set_device(device) # type: ignore
 
     def show(self, ind=2):
@@ -53,55 +50,44 @@ class SinkLive(Sink):
             cf = None if int(self._cf.raw) == int(SinkConfig.cf) else self._cf.raw
             Fs = None if int(self._Fs.raw) == int(SinkConfig.Fs) else self._Fs.raw
             # self.dev.initialize(cf=cf, Fs=Fs)
-            self.dev.set_freq(cf)
-            self.dev.set_sample_rate(Fs)
-            self._Fs = Frequency.get(self.dev.get_sample_rate())
-            self._cf = Frequency.get(self.dev.get_freq())
+            self.dev.set_rx_freq(cf)
+            self.dev.set_rx_sample_rate(Fs)
+            self._Fs = Frequency.get(self.dev.get_rx_sample_rate())
+            self._cf = Frequency.get(self.dev.get_rx_freq())
             self.set_rx(None)
             self.dev.start_rx()
 
     def _set_fs(self, fs):
-        return self.dev.set_sample_rate(fs)
+        return self.dev.set_rx_sample_rate(fs, flush=True)
     def _set_cf(self, cf):
-        return self.dev.set_freq(cf)
+        return self.dev.set_rx_freq(cf, flush=True)
 
     def next(self, count: int):
-        # self.log.debug("next(%s)", count)
-        self._samples = self.dev.get_samples()[-count:]
+        try:
+            self._samples = self.dev.read(count, timeout=max(2.0, 4*count/float(self._Fs.raw)))
+        except _err.Timeout:
+            self.log.warning("no samples from the device")
+            return False
         return True
 
     def set_rx(self, gain):
+        """Set the overall receive gain, a fraction of the device's range 0-1 (None: the defaults)"""
         self.log.debug("set_rx_gain(%s)", gain)
-        gain = self.dev.set_rx_gain(gain)
-        if gain.get("rf", None) is not None:
-            self.gain["rf"] = gain["rf"]
-        if gain.get("if", None) is not None:
-            self.gain["if"] = gain["if"]
-        if gain.get("bb", None) is not None:
-            self.gain["bb"] = gain["bb"]
-    def set_rx_rf(self, gain):
-        self.log.debug("set_rx_rf(%s)", gain)
-        self.gain["rf"] = self.dev.set_rx_rf_gain(gain)
-    def set_rx_if(self, gain):
-        self.log.debug("set_rx_if(%s)", gain)
-        self.gain["if"] = self.dev.set_rx_if_gain(gain)
-    def set_rx_bb(self, gain):
-        self.log.debug("set_rx_bb(%s)", gain)
-        self.gain["bb"] = self.dev.set_rx_bb_gain(gain)
+        self.gain_frac = self.dev.set_rx_gain(gain)
+    def get_rx(self):
+        return self.gain_frac
 
-    def get_rx_rf(self):
-        return self.gain["rf"]
-    def get_rx_if(self):
-        return self.gain["if"]
-    def get_rx_bb(self):
-        return self.gain["bb"]
-
-    def has_rx_rf(self):
-        return self.dev.CONFIG.GAIN_RX_RF
-    def has_rx_if(self):
-        return self.dev.CONFIG.GAIN_RX_IF
-    def has_rx_bb(self):
-        return self.dev.CONFIG.GAIN_RX_BB
+    # --- device-specific gain stages, decibels, named as the device declares them --- #
+    def rx_stages(self):
+        """{stage name: GainStage(min, max, step, default)}"""
+        return self.dev.rx_gain_stages()
+    def set_rx_stage(self, name, gain):
+        self.log.debug("set_rx_stage(%s, %s)", name, gain)
+        gain = self.dev.set_rx_gain_db(gain, stage=name)
+        self.gain_frac = self.dev.get_rx_gain()
+        return gain
+    def get_rx_stage(self, name):
+        return self.dev.get_rx_gain_db(name)
 
     def start_rx(self):
         self.log.debug("start_rx()")

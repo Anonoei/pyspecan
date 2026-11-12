@@ -15,71 +15,56 @@ class SinkLive(Sink):
         self.ctrl.view.sink.cl_cb_dev.config(values=list([d for d in pysdrlib.devices.ls()]))
         self.ctrl.view.sink.cl_cb_dev.bind("<<ComboboxSelected>>", self.handle_event)
 
-        self.ctrl.view.sink.cl_ent_rx_rf.bind("<Return>", self.handle_event)
-        self.ctrl.view.sink.cl_ent_rx_if.bind("<Return>", self.handle_event)
-        self.ctrl.view.sink.cl_ent_rx_bb.bind("<Return>", self.handle_event)
-        self.ctrl.view.sink.cl_var_rx_rf.set(str(self.ctrl.model.sink.get_rx_rf()))
-        self.ctrl.view.sink.cl_var_rx_if.set(str(self.ctrl.model.sink.get_rx_if()))
-        self.ctrl.view.sink.cl_var_rx_bb.set(str(self.ctrl.model.sink.get_rx_bb()))
-        self.toggle_gains()
+        self.ctrl.view.sink.cl_ent_rx.bind("<Return>", self.handle_event)
+        self.build_stages()
 
     def draw_cl(self):
         self.ctrl.view.sink.cl_var_dev.set(str(type(self.ctrl.model.sink.dev).__name__))
-        self.ctrl.view.sink.cl_var_rx_rf.set(str(self.ctrl.model.sink.get_rx_rf()))
-        self.ctrl.view.sink.cl_var_rx_if.set(str(self.ctrl.model.sink.get_rx_if()))
-        self.ctrl.view.sink.cl_var_rx_bb.set(str(self.ctrl.model.sink.get_rx_bb()))
+        self.draw_gains()
 
-    def toggle_gains(self):
-        if not self.ctrl.model.sink.has_rx_rf():
-            self.ctrl.view.sink.cl_fr_rx_rf.grid_forget()
-        else:
-            self.ctrl.view.sink.cl_fr_rx_rf.grid()
-        if not self.ctrl.model.sink.has_rx_if():
-            self.ctrl.view.sink.cl_fr_rx_if.grid_forget()
-        else:
-            self.ctrl.view.sink.cl_fr_rx_if.grid()
-        if not self.ctrl.model.sink.has_rx_bb():
-            self.ctrl.view.sink.cl_fr_rx_bb.grid_forget()
-        else:
-            self.ctrl.view.sink.cl_fr_rx_bb.grid()
+    def build_stages(self):
+        """(Re)build one gain entry per stage the device declares"""
+        v = self.ctrl.view.sink
+        for ent in v.set_stages(self.ctrl.model.sink.rx_stages()).values():
+            ent.bind("<Return>", self.handle_event)
+        self.draw_gains()
+
+    def draw_gains(self):
+        m = self.ctrl.model.sink
+        v = self.ctrl.view.sink
+        g = m.get_rx()
+        v.cl_var_rx.set("" if g is None else f"{g:.2f}")
+        for name, var in v.cl_stage_vars.items():
+            var.set(str(m.get_rx_stage(name)))
 
     # --- GUI bind events and setters --- #
     def handle_event(self, event):
         if event.widget == self.ctrl.view.sink.cl_cb_dev:
             self.set_device(self.ctrl.view.sink.cl_var_dev.get())
-        elif event.widget == self.ctrl.view.sink.cl_ent_rx_rf:
-            self.set_rx_rf(self.ctrl.view.sink.cl_var_rx_rf.get())
-        elif event.widget == self.ctrl.view.sink.cl_ent_rx_if:
-            self.set_rx_if(self.ctrl.view.sink.cl_var_rx_if.get())
-        elif event.widget == self.ctrl.view.sink.cl_ent_rx_bb:
-            self.set_rx_bb(self.ctrl.view.sink.cl_var_rx_bb.get())
+        elif event.widget == self.ctrl.view.sink.cl_ent_rx:
+            self.set_rx(self.ctrl.view.sink.cl_var_rx.get())
+        else:
+            for name, ent in self.ctrl.view.sink.cl_stage_ents.items():
+                if event.widget == ent:
+                    self.set_rx_stage(name, self.ctrl.view.sink.cl_stage_vars[name].get())
+                    break
 
     def set_device(self, device):
         self.ctrl.model.sink.set_device(device)
         print(f"Device set to '{self.ctrl.model.sink.name}'")
         self.draw_cl()
-        self.toggle_gains()
+        self.build_stages()
 
-    def set_rx_rf(self, gain):
+    def set_rx(self, gain):
         try:
-            gain = int(gain)
-            self.ctrl.model.sink.set_rx_rf(gain)
-        except ValueError:
+            self.ctrl.model.sink.set_rx(float(gain))
+        except (ValueError, pysdrlib.err.InvalidValue):
             pass
         self.draw_cl()
 
-    def set_rx_if(self, gain):
+    def set_rx_stage(self, name, gain):
         try:
-            gain = int(gain)
-            self.ctrl.model.sink.set_rx_if(gain)
-        except ValueError:
-            pass
-        self.draw_cl()
-
-    def set_rx_bb(self, gain):
-        try:
-            gain = int(gain)
-            self.ctrl.model.sink.set_rx_bb(gain)
-        except ValueError:
+            self.ctrl.model.sink.set_rx_stage(name, float(gain))
+        except (ValueError, pysdrlib.err.InvalidValue):
             pass
         self.draw_cl()

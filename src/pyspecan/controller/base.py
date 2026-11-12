@@ -19,7 +19,7 @@ import time
 
 from .. import logger
 from ..model.model import Model
-from ..model.sink.file import Format
+from ..model.sink.file import FORMATS
 from ..obj import Frequency
 from ..plots import PlotSet, Source, available, plot_kwargs
 from ..plots.frame import Frame, LINE, SCATTER, IMAGE
@@ -124,7 +124,7 @@ class Controller:
                 state.update({
                     "path": str(sink.get_path() or ""),
                     "fmt": sink.get_fmt().name,
-                    "formats": Format.choices(),
+                    "formats": FORMATS,
                     "max_samp": sink.max_samp,
                     "time_tot": strfmt_td(dt.timedelta(seconds=sink.tot_time())),
                 })
@@ -188,7 +188,7 @@ class Controller:
                 self.set_path(value)
             elif key == "fmt":
                 self._need_file()
-                if value not in Format.choices():
+                if value not in FORMATS:
                     raise ValueError(f"unknown format {value!r}")
                 self.playing = False
                 self.sink.set_fmt(value)

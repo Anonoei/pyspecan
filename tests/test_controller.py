@@ -60,18 +60,19 @@ def test_model_validation(capture):
         m.set_nfft(2)
 
 # --- playback --- #
-def test_every_sample_is_framed_exactly_once(capture):
-    """Reading the whole file block by block gives the same frames as framing it in one go"""
+def test_spectrogram_adds_one_row_per_refresh(capture):
+    """Each refresh adds exactly one spectrogram row, however many frames the block holds"""
     c = make(capture)
     c.setting("nfft_exp", 8)
     swept = c.add_plot("Spectrogram")
     c.set_plot(swept, "max_count", 4096)
     c.add_plot("Persistence")                      # realtime psd, runs on the same block
     c.plots.get(swept).set("vbw", 0)
-    rows = 0
+    ticks = 0
     while c.step():
-        rows += c.ticks[-1][0][swept].axes[0].image.data.shape[0]
-    assert rows == FS // 256                       # back to back frames over every sample
+        assert c.ticks[-1][0][swept].axes[0].image.data.shape[0] == 1
+        ticks += 1
+    assert ticks > 0
     assert c.message == "" and c.step() is False   # then the end of the file
 
 def test_commands_and_errors(capture):

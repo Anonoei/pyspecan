@@ -148,13 +148,13 @@ def test_swept_and_rt_plots_run_together():
     assert set(frames) == {a, b}
     assert len(frames[a].axes[0].traces[0].y) == 64
 
-def test_spectrogram_swept_adds_a_row_per_frame_rt_one():
+def test_spectrogram_adds_one_row_per_refresh():
     model = FakeModel(nfft=64)
     src = Source(model)
     swept = PLOTS.get("Spectrogram")(src)
     rt = PLOTS.get("RT Spectrogram")(src)
     feed(src, model, tone(64*5))
-    assert swept.update().axes[0].image.data.shape == (5, 64)
+    assert swept.update().axes[0].image.data.shape == (1, 64) # the last frame, as the PSD shows
     assert rt.update().axes[0].image.data.shape == (1, 64)
 
 def test_hold_sees_every_frame():
