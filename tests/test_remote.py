@@ -113,7 +113,7 @@ def test_bad_remote_names_fail_clearly(server):
 def test_watching_an_idle_radio_says_how_to_start_it(server):
     sink = make(server).sink
     try:
-        with pytest.raises(RuntimeError, match="relaunch with --claim"):
+        with pytest.raises(RuntimeError, match="claim it"):
             sink.next(1024)
     finally:
         sink.close()
@@ -163,7 +163,7 @@ def test_a_server_address_alone_picks_a_radio(server, empty_server):
     from pyspecan.model.sink.live import pick_remote
     assert pick_remote(server) == "sim-0"             # the one it hosts, to watch
     assert pick_remote(server, claim=True) == "sim-0" # free, so claimable
-    assert pick_remote(empty_server) == "sim"         # hosts none: a new one of the first type it can open
+    assert pick_remote(empty_server) is None          # hosts none: the server chooses a new radio to open
     c = make(server, claim=True).sink                 # now it has a controller
     try:
         assert pick_remote(server) == "sim-0"         # still the one to watch
@@ -212,3 +212,141 @@ def test_a_driver_name_and_serial_still_pick_the_radio(monkeypatch):
     sink = GetModel(Sink.LIVE)(device="sim", serial="ABC123", nfft=256).sink
     sink.close()
     assert seen == [("sim", {"serial": "ABC123"})]
+
+
+# --- controlling a hosted radio from the program --- #
+def test_claim_and_release_switch_between_watching_and_controlling(server):
+    ctrl = Recorder(make(server))
+    try:
+        assert ctrl.get_state()["radio"]["control"] == "watching"
+        assert ctrl.get_state()["radio"]["can_claim"]
+        ctrl.command("claim")
+        assert ctrl.get_state()["radio"]["control"] == "controlling"
+        ctrl.setting("cf", "100M")
+        assert ctrl.sink.get_cf().raw == 100e6
+        ctrl.command("release")
+        assert ctrl.get_state()["radio"]["control"] == "watching"
+        with pytest.raises(ValueError, match="claim"):
+            ctrl.setting("cf", "90M")
+    finally:
+        ctrl.quit()
+
+def test_a_retune_starts_the_plots_over_and_blocks_come_from_the_new_tuning(server):
+    ctrl = Recorder(make(server, claim=True))
+    try:
+        ctrl.command("start")
+        assert ctrl.tick()
+        ctrl.setting("cf", "123M")
+        assert ctrl.source.seq == 0 or ctrl.source._streams == {}
+        assert ctrl.tick()
+        assert ctrl.sink.get_cf().raw == 123e6
+    finally:
+        ctrl.quit()
+
+def test_a_radio_retuned_by_its_controller_is_followed_by_a_viewer(server):
+    ctrl = Recorder(make(server))
+    try:
+        owner = pysdrlib.connect(server, "sim-0", claim=True) # the controller, somewhere else
+        try:
+            if not owner.state["rx"]:
+                owner.start_rx()
+            owner.set_rx_freq(77e6, flush=True)
+            ctrl.command("start")
+            assert ctrl.tick()
+            assert ctrl.sink.get_cf().raw == 77e6
+        finally:
+            owner.detach()
+    finally:
+        ctrl.quit()
+
+
+# --- the tkGUI of a live sink --- #
+def test_tk_shows_who_controls_the_radio_and_disables_tuning_while_watching(server):
+    tk = pytest.importorskip("tkinter")
+    pytest.importorskip("matplotlib")
+    from pyspecan.config import View
+    from pyspecan.controller.controller import GetController
+    from pyspecan.view.view import GetView
+    kw = dict(device=f"{server}/sim-0", nfft=256)
+    model = GetModel(Sink.LIVE)(**kw)
+    try:
+        view = GetView(View.tkGUI, Sink.LIVE)(**kw)
+    except tk.TclError:
+        pytest.skip("no display")
+    ctrl = GetController(View.tkGUI, Sink.LIVE)(model, view, **kw)
+    errors = []
+    view.root.report_callback_exception = lambda *a: errors.append(a)
+    try:
+        v = view.sink
+        view.root.update()
+        assert "Watching" in v.cl_lbl_status.cget("text")
+        assert str(view.cl_ent_cf.cget("state")) == "disabled" and str(v.cl_btn_claim.cget("text")) == "Claim"
+        ctrl.sink_ui.toggle_control() # Claim
+        assert "Controlling" in v.cl_lbl_status.cget("text"), view.tb_lbl_msg.cget("text")
+        assert str(view.cl_ent_cf.cget("state")) == "normal" and str(v.cl_btn_claim.cget("text")) == "Release"
+        view.cl_var_cf.set("88M")
+        ctrl.commit("cf")
+        assert ctrl.sink.get_cf().raw == 88e6
+        ctrl.sink_ui.toggle_control() # Release
+        assert str(view.cl_ent_cf.cget("state")) == "disabled"
+    finally:
+        ctrl.quit()
+    assert not errors, errors
+
+
+# --- frontends: a converter above the signal mirrors the spectrum, antennas are listed --- #
+import json
+
+@pytest.fixture
+def frontend_server(tmp_path):
+    f = tmp_path / "frontends.json"
+    f.write_text(json.dumps({"radio": [{"driver": "sim", "chain": [
+        {"direction": "rx", "port": "RX2", "antenna": "ANT500", "lo": 9.75e9, "invert": True, "name": "LNB"}]}]}))
+    address, proc = start_server("--frontends", str(f))
+    yield address
+    proc.terminate()
+    proc.communicate(timeout=10)
+
+def test_a_radio_behind_an_inverting_converter_is_flipped_back(frontend_server, monkeypatch):
+    sink = GetModel(Sink.LIVE)(device=frontend_server, nfft=256).sink
+    try:
+        assert sink.inverted and sink.status()["inverted"]
+        raw = []
+        read = sink.dev.read
+        def spy(*a, **k):
+            out = read(*a, **k)
+            raw.append(out[0].copy())
+            return out
+        monkeypatch.setattr(sink.dev, "read", spy)
+        assert sink.next(2048)
+        assert np.array_equal(sink.samples, np.conj(raw[-1])) # mirrored back
+        sink.inverted = False
+        assert sink.next(2048)
+        assert np.array_equal(sink.samples, raw[-1])
+    finally:
+        sink.close()
+
+def test_a_server_with_no_frontends_is_not_flipped(server):
+    sink = make(server).sink
+    try:
+        assert not sink.inverted and not sink.status()["inverted"]
+    finally:
+        sink.close()
+
+def test_antennas_are_listed_with_what_is_fitted(frontend_server):
+    sink = GetModel(Sink.LIVE)(device=frontend_server, nfft=256).sink
+    try:
+        ants = sink.antennas()
+        assert ants and all({"port", "antenna", "label", "selected", "inverted"} <= a.keys() for a in ants)
+        assert any("ANT500" in a["antenna"] and a["inverted"] for a in ants)
+        assert sink.status()["antennas"] == ants
+    finally:
+        sink.close()
+
+def test_antennas_of_a_local_radio():
+    sink = GetModel(Sink.LIVE)(device="sim", nfft=256).sink
+    try:
+        assert isinstance(sink.antennas(), list) # sim has no ports to choose: nothing listed, no error
+        assert not sink.inverted
+    finally:
+        sink.close()

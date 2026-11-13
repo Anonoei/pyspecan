@@ -29,6 +29,12 @@
     <div class="body">
         <div class="controls">
             <h3>Controls</h3>
+            <div class="radio-only">
+                <div class="control-group"><label for="sel-radio">Radio</label><select id="sel-radio" title="the radios this machine and the server have"></select></div>
+                <div class="path muted" id="lbl-radio"></div>
+                <div class="control-group" id="grp-antenna" hidden><label for="sel-antenna">Antenna</label><select id="sel-antenna" title="the radio's receive antenna ports, and what is fitted on each"></select></div>
+                <div class="control-group"><button id="btn-claim">Claim</button><button id="btn-reconnect" title="connect to the radio again">Reconnect</button></div>
+            </div>
             <div class="control-group file-only"><label>File</label><button id="btn-open">Open…</button></div>
             <div class="path muted file-only" id="lbl-path"></div>
             <div class="control-group file-only"><label for="sel-fmt">Format</label><select id="sel-fmt" data-set="fmt"></select></div>

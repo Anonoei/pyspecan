@@ -157,6 +157,9 @@ class Controller:
                 "plot_types": self.plot_types,
                 **self.plots.describe(),
             }
+            radio = sink.status()
+            if radio is not None:
+                state["radio"] = radio
             if sink.SEEKABLE:
                 state.update({
                     "path": str(sink.get_path() or ""),
@@ -175,6 +178,7 @@ class Controller:
                 if not self.sink.ready():
                     raise ValueError("no file selected" if self.sink.SEEKABLE else "no device")
                 self.playing = True
+                self.message = ""
             elif cmd == "stop":
                 self.playing = False
             elif cmd == "reset":
@@ -182,6 +186,19 @@ class Controller:
                 self.model.reset()
                 self.reset_plots()
                 self.message = ""
+            elif cmd in ("claim", "release", "reconnect"):
+                self._need_radio()
+                self.playing = False
+                if cmd == "reconnect":
+                    self.sink.reconnect()
+                    self.reset_plots()
+                elif cmd == "claim":
+                    self.sink.claim_control()
+                    self.reset_plots()
+                else:
+                    self.sink.release_control()
+                self.message = f"{self.sink.status()['control']}: {self.sink.name}"
+                self.state_changed()
             elif cmd in ("next", "prev"):
                 if not self.sink.ready():
                     raise ValueError("no file selected" if self.sink.SEEKABLE else "no device")
@@ -195,13 +212,26 @@ class Controller:
     def setting(self, key: str, value):
         self.log.trace("setting(%s, %s)", key, value)
         with self.lock:
-            if key == "fs":
-                Frequency.get(value)
-                self.model.set_fs(value)
+            if key in ("fs", "cf"):
+                asked = Frequency.get(value)
+                (self.model.set_fs if key == "fs" else self.model.set_cf)(value)
+                self.reset_plots() # the carried samples and what was averaged are from the old tuning
+                got = (self.model.get_fs() if key == "fs" else self.model.get_cf())
+                # the radio decides what it can do (pysdrlib clamps and snaps), say so instead of looking like it took it
+                self.message = "" if got.raw == asked.raw else f"{key} is {got} ({asked} is not available)"
+            elif key == "device":
+                self._need_radio()
+                self.playing = False
+                self.sink.set_device(value)
                 self.reset_plots()
-            elif key == "cf":
-                Frequency.get(value)
-                self.model.set_cf(value)
+                self.message = f"{self.sink.status()['control']}: {self.sink.name}"
+                self.state_changed()
+            elif key == "antenna":
+                self._need_radio()
+                self.sink.set_antenna(value)
+                self.reset_plots() # a chain with another converter retunes it
+                self.message = f"antenna {value}"
+                self.state_changed()
             elif key == "nfft_exp":
                 exp = int(value)
                 if not 2 <= exp <= 20:
@@ -234,6 +264,14 @@ class Controller:
             else:
                 raise ValueError(f"unknown setting {key!r}")
 
+    def _need_radio(self):
+        if self.sink.status() is None:
+            raise ValueError("the sink is a file, there is no radio")
+
+    def radios(self) -> list[dict]:
+        """Radios that can be picked, a server that is down does not get in the way"""
+        return self.sink.radios() if self.sink.status() is not None else []
+
     def _need_file(self):
         if not self.sink.SEEKABLE:
             raise ValueError("sink does not support seeking")
@@ -259,6 +297,10 @@ class Controller:
         valid = sink.next(count) if forward else sink.prev(count)
         if not valid:
             return False
+        if sink.take_retuned(): # a radio controlled elsewhere was retuned: what was carried is from the old tuning
+            self.source.reset()
+            self.plots.reset()
+            self.state_changed()
         self.source.tick()
         self.deliver(self.plots.update(self.log), self.get_status())
         return True
@@ -271,7 +313,10 @@ class Controller:
                 return False
             try:
                 valid = self.step()
-                self.message = "" if valid else "END"
+                if not valid:
+                    self.message = "END"
+                elif self.message == "END":
+                    self.message = ""
             except Exception as e: # keep playback alive
                 self.report_error("playback failed", e)
                 valid = False

@@ -124,8 +124,40 @@ function applyState(s) {
         $("lbl-path").textContent = s.path || "no file selected";
         $("sld-samp").max = s.max_samp;
     }
+    applyRadio(s.radio);
     applyStatus(s);
     syncPlots(s);
+}
+
+// --- the radio of a live sink --- //
+let radioList = [];
+function applyRadio(r) {
+    document.querySelectorAll(".radio-only").forEach((el) => (el.hidden = !r));
+    if (!r) return;
+    const what = {local: "Radio on this machine", controlling: "Controlling", watching: "Watching, it is controlled elsewhere"}[r.control];
+    $("lbl-radio").textContent = `${what}: ${r.device}` + (r.lag > 0.1 ? ` (${Math.round(r.lag * 1000)} ms behind)` : "");
+    $("btn-claim").textContent = r.control === "controlling" ? "Release" : "Claim";
+    $("btn-claim").disabled = r.control === "local";
+    for (const id of ["in-fs", "in-cf"]) $(id).disabled = r.control === "watching"; // it can be looked at, not told what to do
+    if (r.inverted) $("lbl-radio").textContent += " - spectrum mirrored, corrected";
+    const ants = r.antennas || [];
+    $("grp-antenna").hidden = !ants.length;
+    const asel = $("sel-antenna");
+    asel.replaceChildren(...ants.map((a) => new Option(a.label, a.port)));
+    const cur = ants.find((a) => a.selected);
+    asel.value = cur ? cur.port : "";
+    asel.disabled = r.control === "watching";
+    const sel = $("sel-radio");
+    if (!radioList.length) sel.replaceChildren(new Option(r.device, ""));
+}
+async function loadRadios() {
+    try {
+        const res = await fetch("/api/radios");
+        if (!res.ok) return;
+        radioList = (await res.json()).filter((o) => o.target);
+        const sel = $("sel-radio");
+        sel.replaceChildren(new Option(state && state.radio ? state.radio.device : "", ""), ...radioList.map((o) => new Option(o.label, o.target)));
+    } catch (e) { /* the list is a convenience, typing nothing works too */ }
 }
 
 // --- plots --- //
@@ -719,6 +751,11 @@ function bindInputs() {
     const sld = $("sld-samp");
     sld.addEventListener("pointerdown", () => (seeking = true));
     sld.addEventListener("change", () => { seeking = false; set("samp", sld.value); });
+    $("btn-claim").onclick = () => cmd(state.radio.control === "controlling" ? "release" : "claim");
+    $("btn-reconnect").onclick = () => cmd("reconnect");
+    $("sel-antenna").addEventListener("change", (e) => set("antenna", e.target.value));
+    $("sel-radio").addEventListener("focus", loadRadios); // fresh when it is about to be used
+    $("sel-radio").addEventListener("change", (e) => { if (e.target.value) set("device", e.target.value); });
     $("btn-open").onclick = () => openDialog(null);
     $("btn-dir-go").onclick = () => browse($("in-dir").value);
     $("in-dir").onkeydown = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); browse($("in-dir").value); } };

@@ -12,15 +12,53 @@ class SinkLive(Sink):
     def __init__(self, ctrl):
         super().__init__(ctrl)
 
-        self.ctrl.view.sink.cl_cb_dev.config(values=list([d for d in pysdrlib.devices.ls()]))
-        self.ctrl.view.sink.cl_cb_dev.bind("<<ComboboxSelected>>", self.handle_event)
+        v = self.ctrl.view.sink
+        self.choices: dict[str, str | None] = {} # label -> what set_device takes
+        self.antennas: dict[str, str] = {} # label -> antenna port
+        self.list_radios()
+        v.cl_cb_dev.bind("<<ComboboxSelected>>", self.handle_event)
+        v.cl_cb_dev.bind("<Return>", self.handle_event) # a typed address, tcp://host:5555/id
+        v.cl_cb_ant.bind("<<ComboboxSelected>>", self.handle_event)
+        v.cl_btn_claim.config(command=self.toggle_control)
+        v.cl_btn_reconnect.config(command=lambda: self.ctrl.run_command("reconnect"))
 
         self.ctrl.view.sink.cl_ent_rx.bind("<Return>", self.handle_event)
         self.build_stages()
 
+    def list_radios(self):
+        try:
+            radios = self.ctrl.radios()
+        except Exception as e: # a server that is down must not stop the window opening
+            self.log.warning("listing radios: %s", e)
+            radios = []
+        self.choices = {r["label"]: r["target"] for r in radios if r["target"]}
+        self.ctrl.view.sink.cl_cb_dev.config(values=list(self.choices))
+
     def draw_cl(self):
-        self.ctrl.view.sink.cl_var_dev.set(str(type(self.ctrl.model.sink.dev).__name__))
+        v = self.ctrl.view
+        radio = self.ctrl.sink.status() or {}
+        control = radio.get("control", "local")
+        label = {"local": "Radio on this machine", "controlling": "Controlling", "watching": "Watching (controlled elsewhere)"}[control]
+        extra = f" - {radio['lag']*1000:.0f} ms behind" if radio.get("lag", 0) > 0.1 else ""
+        v.sink.cl_lbl_status.config(text=f"{label}: {radio.get('device', '')}{extra}")
+        if radio.get("inverted"):
+            v.sink.cl_lbl_status.config(text=v.sink.cl_lbl_status.cget("text") + " (spectrum mirrored, corrected)")
+        v.sink.cl_var_dev.set(radio.get("device", ""))
+        ants = radio.get("antennas", [])
+        self.antennas = {a["label"]: a["port"] for a in ants}
+        v.sink.set_antennas(list(self.antennas), next((a["label"] for a in ants if a["selected"]), None))
+        v.sink.cl_cb_ant.config(state="disabled" if control == "watching" else "readonly")
+        v.sink.cl_btn_claim.config(text="Release" if control == "controlling" else "Claim",
+                                   state="normal" if control != "local" else "disabled")
+        tunable = "disabled" if control == "watching" else "normal" # it can only be looked at, not told what to do
+        for w in (v.cl_ent_fs, v.cl_ent_cf, v.sink.cl_ent_rx, *v.sink.cl_stage_ents.values()):
+            w.config(state=tunable)
         self.draw_gains()
+
+    def toggle_control(self):
+        control = (self.ctrl.sink.status() or {}).get("control")
+        self.ctrl.run_command("release" if control == "controlling" else "claim")
+        self.build_stages()
 
     def build_stages(self):
         """(Re)build one gain entry per stage the device declares"""
@@ -41,6 +79,8 @@ class SinkLive(Sink):
     def handle_event(self, event):
         if event.widget == self.ctrl.view.sink.cl_cb_dev:
             self.set_device(self.ctrl.view.sink.cl_var_dev.get())
+        elif event.widget == self.ctrl.view.sink.cl_cb_ant:
+            self.set_antenna(self.ctrl.view.sink.cl_var_ant.get())
         elif event.widget == self.ctrl.view.sink.cl_ent_rx:
             self.set_rx(self.ctrl.view.sink.cl_var_rx.get())
         else:
@@ -50,10 +90,14 @@ class SinkLive(Sink):
                     break
 
     def set_device(self, device):
-        self.ctrl.model.sink.set_device(device)
-        print(f"Device set to '{self.ctrl.model.sink.name}'")
-        self.draw_cl()
+        target = self.choices.get(device, device) # a listed label, or a typed target
+        self.ctrl.apply_setting("device", target)
+        self.list_radios()
         self.build_stages()
+
+    def set_antenna(self, label):
+        self.ctrl.apply_setting("antenna", self.antennas.get(label, label)) # shows what the radio refuses
+        self.draw_cl()
 
     def set_rx(self, gain):
         try:

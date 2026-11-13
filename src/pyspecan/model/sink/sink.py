@@ -41,6 +41,14 @@ class Sink:
     def close(self):
         """Let go of the source (a device); nothing to do by default"""
 
+    def status(self) -> dict | None:
+        """What the views show about the source of live samples (None: a file)"""
+        return None
+
+    def take_retuned(self) -> bool:
+        """Did the source change its tuning by itself"""
+        return False
+
     def ready(self) -> bool:
         """Can samples be read, e.g. a file is selected or a device is open"""
         raise NotImplementedError()

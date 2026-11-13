@@ -134,7 +134,7 @@ class Controller(_Controller):
                 self.plot_command(msg["op"], msg)
             else:
                 return f"unknown message type {kind!r}"
-        except (ValueError, KeyError, TypeError, OSError) as e:
+        except Exception as e: # also what the radio library raises (Busy, NotController...)
             self.log.debug("bad message %s: %s", msg, e)
             self.state_changed() # resync the client's inputs
             return f"{type(e).__name__}: {e}"

@@ -13,9 +13,10 @@ def args_live(parser):
 class SinkLive(Sink):
     __slots__ = (
         # control panel
-        "cl_var_dev", "cl_cb_dev",
+        "cl_var_dev", "cl_cb_dev", "cl_lbl_status", "cl_btn_claim", "cl_btn_reconnect",
         "cl_var_rx", "cl_ent_rx",
-        "cl_fr_stages", "cl_stage_vars", "cl_stage_ents"
+        "cl_fr_stages", "cl_stage_vars", "cl_stage_ents",
+        "cl_lbl_ant", "cl_var_ant", "cl_cb_ant"
     )
     def __init__(self, view, **kwargs):
         super().__init__(view, **kwargs)
@@ -24,6 +25,9 @@ class SinkLive(Sink):
         self.cl_var_rx: tk.StringVar = None # type: ignore
         self.cl_ent_rx: ttk.Entry = None # type: ignore
         self.cl_fr_stages: ttk.Frame = None # type: ignore
+        self.cl_lbl_ant: ttk.Label = None # type: ignore
+        self.cl_var_ant: tk.StringVar = None # type: ignore
+        self.cl_cb_ant: ttk.Combobox = None # type: ignore
         self.cl_stage_vars: dict[str, tk.StringVar] = {}
         self.cl_stage_ents: dict[str, ttk.Entry] = {}
 
@@ -35,7 +39,23 @@ class SinkLive(Sink):
         # self.ent_dev = ttk.Entry(root, textvariable=self.var_dev, state=tk.DISABLED, width=10)
         self.cl_cb_dev.grid(row=row,column=1, sticky=tk.NSEW)
         row += 1
+        self.cl_lbl_status = ttk.Label(parent, text="", wraplength=220, justify=tk.LEFT)
+        self.cl_lbl_status.grid(row=row,column=0,columnspan=2, sticky=tk.W)
+        row += 1
+        buttons = ttk.Frame(parent)
+        buttons.grid(row=row,column=0,columnspan=2, sticky=tk.EW)
+        self.cl_btn_claim = ttk.Button(buttons, text="Claim")
+        self.cl_btn_claim.pack(side=tk.LEFT)
+        self.cl_btn_reconnect = ttk.Button(buttons, text="Reconnect")
+        self.cl_btn_reconnect.pack(side=tk.LEFT, padx=4)
+        row += 1
         ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row, column=0, columnspan=2, pady=5, sticky=tk.EW)
+        row += 1
+        self.cl_lbl_ant = ttk.Label(parent, text="Antenna:")
+        self.cl_var_ant = tk.StringVar(parent)
+        self.cl_cb_ant = ttk.Combobox(parent, textvariable=self.cl_var_ant, width=20, state="readonly")
+        self.cl_lbl_ant.grid(row=row,column=0, sticky=tk.W)
+        self.cl_cb_ant.grid(row=row,column=1, sticky=tk.NSEW)
         row += 1
         self.cl_var_rx = tk.StringVar(parent)
         ttk.Label(parent, text="Rx Gain (0-1):").grid(row=row,column=0, sticky=tk.W)
@@ -46,6 +66,17 @@ class SinkLive(Sink):
         self.cl_fr_stages.columnconfigure(1, weight=1)
         self.cl_fr_stages.grid(row=row,column=0,columnspan=2, sticky=tk.NSEW)
         return row
+
+    def set_antennas(self, labels, selected):
+        """The antenna choices (hidden when the radio has none to choose from), `selected`: the label in use"""
+        if not labels:
+            self.cl_lbl_ant.grid_remove()
+            self.cl_cb_ant.grid_remove()
+            return
+        self.cl_lbl_ant.grid()
+        self.cl_cb_ant.grid()
+        self.cl_cb_ant.config(values=labels)
+        self.cl_var_ant.set(selected or "")
 
     def set_stages(self, stages):
         """Rebuild the gain stage entries from {name: GainStage}, as declared by the device"""

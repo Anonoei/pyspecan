@@ -14,6 +14,13 @@ class API:
         def get_state():
             return self.parent.get_state()
 
+        @self.router.get("/radios")
+        def radios():
+            try:
+                return self.parent.radios()
+            except Exception as e:
+                raise HTTPException(400, str(e))
+
         @self.router.get("/fs")
         def list_dir(path: str | None = None):
             try:
