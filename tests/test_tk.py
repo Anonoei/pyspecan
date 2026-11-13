@@ -123,3 +123,26 @@ def test_settings_state_and_closing(app):
     app.panels.panes[i["IQ"]].pane.btn_close.invoke()
     settle(app)
     assert layout(app) == [["PSD"]] and i["IQ"] not in app.panels.keep
+
+def test_markers_draw_on_psd_and_spectrogram_with_a_table(app):
+    add(app, "Spectrogram")
+    i = ids(app)
+    app.set_plot(i["PSD"], "unit", "dBFS")
+    app.add_marker(i["PSD"], "peak")
+    app.add_marker(i["PSD"], "channel", freq="1k", bw="500")
+    app.add_marker(i["Spectrogram"], "point", freq="1k")
+    app.command("next"); app.command("next")
+    psd, spg = (app.panels.panes[i[n]] for n in ("PSD", "Spectrogram"))
+    for pane in (psd, spg):
+        wait_for(app, lambda: pane.keep.get("frame") is not None and not pane.dirty)
+    assert "RBW" in psd.lbl_readout.cget("text")
+    assert psd.tree is not None and psd.tree.winfo_ismapped() and len(psd.tree.get_children()) == 3 # M1, M2 and its PSD row
+    assert psd.tree_rows == ["M1", "M2", "M2"]
+    assert psd.plotter.ax(0).art("mk0").get_visible() and psd.plotter.ax(0).art("band0").get_visible()
+    assert spg.plotter.ax(0).art("vl0").get_visible() and len(spg.tree.get_children()) == 1
+    # removing markers hides their artists and the table
+    app.del_marker(i["PSD"], "M1"); app.del_marker(i["PSD"], "M2")
+    app.command("next")
+    wait_for(app, lambda: not psd.dirty and not psd.plotter.ax(0).art("mk0").get_visible() and not psd.tree.winfo_ismapped())
+    with pytest.raises(ValueError):
+        app.add_marker(i["PSD"], "nope")

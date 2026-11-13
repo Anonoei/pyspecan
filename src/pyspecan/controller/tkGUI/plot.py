@@ -5,11 +5,12 @@ return Frames. This is the only place the tk view draws them, so a new plot
 in `pyspecan.plots` shows up here without any tk code.
 """
 import tkinter as tk
-from tkinter import ttk
+from tkinter import simpledialog, ttk
 
 import numpy as np
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from matplotlib.ticker import FuncFormatter
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -23,6 +24,11 @@ from ...view.tkGUI.panels import Panel
 def _signature(frame: Frame):
     """What decides the figure's layout, the figure is rebuilt when it changes"""
     return tuple((ax.projection, ax.image is not None, ax.square, ax.aspect) for ax in frame.axes)
+
+def _log10_label(v: float) -> str:
+    """y values holding log10 of the quantity: -3 -> 1e-3"""
+    m, e = f"{10.0 ** v:.0e}".split("e")
+    return f"{m}e{int(e)}"
 
 class PlotPane:
     """One plot in a panel pane
@@ -52,6 +58,12 @@ class PlotPane:
         self.lbl_time = ttk.Label(pane.master, text="00.000s", style="Time.TLabel")
         self.lbl_time.place(relx=1, rely=0, x=-180, y=5, anchor=tk.N, bordermode=tk.OUTSIDE, height=20, width=60)
 
+        # packed first so the canvas can not take its space
+        self.lbl_readout = ttk.Label(pane.fr_main, text="", justify=tk.LEFT, anchor=tk.W)
+        self.lbl_readout.bind("<Configure>", lambda e: self.lbl_readout.config(wraplength=max(e.width, 50)))
+        self.tree: ttk.Treeview | None = None # the marker table, built with the first rows
+        self.tree_rows: list[str] = [] # marker id of every tree row
+        self.table_sig = None
         self.fr_canv = ttk.Frame(pane.fr_main)
         self.fr_canv.pack(fill=tk.BOTH, expand=True)
         self.lbl_lo = ttk.Label(pane.fr_main, text="V")
@@ -83,6 +95,76 @@ class PlotPane:
                 w.bind("<FocusOut>", lambda e, k=key: self.refresh())
             self.vars[key] = var
             w.grid(row=row, column=1)
+        if self.plot.MARKERS:
+            self._marker_controls(parent, len(self.plot.fields()))
+
+    # --- markers --- #
+    def _marker_controls(self, parent, row):
+        ttk.Label(parent, text="Add marker").grid(row=row, column=0, sticky=tk.W)
+        var = tk.StringVar(parent, "")
+        box = ttk.Combobox(parent, textvariable=var, values=list(self.plot.markers.kinds()), state="readonly", width=9)
+        box.grid(row=row, column=1)
+        def add(_e):
+            self._marker_op(lambda: self.ctrl.add_marker(self.pid, var.get()))
+            var.set("")
+        box.bind("<<ComboboxSelected>>", add)
+        ttk.Button(parent, text="Edit selected", command=self._edit_marker).grid(row=row + 1, column=0)
+        ttk.Button(parent, text="Delete selected", command=lambda: self._marker_op(lambda: self.ctrl.del_marker(self.pid, self._selected()))).grid(row=row + 1, column=1)
+
+    def _marker_op(self, fn):
+        try:
+            fn()
+        except (ValueError, TypeError) as e:
+            self.ctrl.show_message(str(e))
+        self.table_sig = None # redraw the table with the next frame
+
+    def _selected(self) -> str:
+        if self.tree is None or not self.tree.selection():
+            raise ValueError("select a marker in the table first")
+        return self.tree_rows[int(self.tree.selection()[0])]
+
+    def _edit_marker(self):
+        """key=value for the selected marker's settings (see its kind in the marker command)"""
+        try:
+            mid = self._selected()
+        except ValueError as e:
+            self.ctrl.show_message(str(e))
+            return
+        item = self.plot.markers.items[mid]
+        keys = ", ".join(f"{k}={v!r}" for k, v in item["params"].items())
+        text = simpledialog.askstring(f"{mid} ({item['kind']})", f"key=value\n{keys}", parent=self.pane.master)
+        if text and "=" in text:
+            key, value = text.split("=", 1)
+            self._marker_op(lambda: self.ctrl.set_marker(self.pid, mid, key.strip(), value.strip()))
+
+    def _table(self, frame: Frame):
+        t = frame.table
+        sig = None if t is None else (tuple(t.columns), tuple((r.id, tuple(r.cells)) for r in t.rows))
+        if sig == self.table_sig:
+            return
+        self.table_sig = sig
+        if t is None or not t.rows:
+            if self.tree is not None and self.tree.winfo_ismapped():
+                self.tree.pack_forget()
+            return
+        if self.tree is None:
+            self.tree = ttk.Treeview(self.pane.fr_main, show="headings", selectmode="browse")
+            self.tree.bind("<<TreeviewSelect>>", lambda e: None)
+        self.tree.config(columns=[str(i) for i in range(len(t.columns))], height=min(len(t.rows), 8))
+        for i, name in enumerate(t.columns):
+            self.tree.heading(str(i), text=name)
+            self.tree.column(str(i), width=40 if i == 0 else 100, stretch=i == len(t.columns) - 1)
+        keep = self.tree.selection()
+        self.tree.delete(*self.tree.get_children())
+        self.tree_rows, owner = [], ""
+        for k, r in enumerate(t.rows):
+            owner = r.id or owner
+            self.tree_rows.append(owner)
+            self.tree.insert("", tk.END, iid=str(k), values=r.cells)
+        if keep and self.tree.exists(keep[0]):
+            self.tree.selection_set(keep[0])
+        if not self.tree.winfo_ismapped():
+            self.tree.pack(side=tk.BOTTOM, fill=tk.X, before=self.fr_canv)
 
     def commit(self, key):
         """Apply a widget's value to the plot, the widgets show what the plot really holds afterwards"""
@@ -126,6 +208,8 @@ class PlotPane:
             self._build(frame, sig)
         self.pane.master.config(text=frame.title or self.plot.TITLE)
         self.lbl_time.config(text=f"{frame.ptime:06.3f}s")
+        self._readout(frame)
+        self._table(frame)
         offscale = {a.offscale for a in frame.axes}
         for lbl, which, rely in ((self.lbl_lo, "below", 0.9), (self.lbl_hi, "above", 0.1)):
             if which in offscale:
@@ -137,6 +221,16 @@ class PlotPane:
             self._draw_axis(i, ax)
         self.plotter.update() # type: ignore
         self.dirty = False
+
+    def _readout(self, frame: Frame):
+        text = "   ".join(f"{k}: {v}" for k, v in frame.readout)
+        if text == self.lbl_readout.cget("text"):
+            return
+        self.lbl_readout.config(text=text)
+        if text and not self.lbl_readout.winfo_ismapped():
+            self.lbl_readout.pack(side=tk.BOTTOM, fill=tk.X, before=self.fr_canv)
+        elif not text and self.lbl_readout.winfo_ismapped():
+            self.lbl_readout.pack_forget()
 
     def _build(self, frame: Frame, sig):
         if self.canvas_widget is not None:
@@ -206,6 +300,12 @@ class PlotPane:
             self._set_lim(i, "z", ax.zmin, ax.zmax, mpl.ax.set_zlim) # type: ignore
         if ax.ylabel:
             mpl.ax.set_ylabel(ax.ylabel)
+        if self.lim.setdefault(i, {}).get("yfmt") != ax.yfmt:
+            self.lim[i]["yfmt"] = ax.yfmt
+            if ax.yfmt == "log10":
+                mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: _log10_label(v)))
+            else:
+                mpl.ax.yaxis.set_major_formatter(plt.ScalarFormatter())
 
         # artists
         names = set()
@@ -222,6 +322,7 @@ class PlotPane:
         if ax.image is not None:
             names.add("img")
             self._draw_image(i, ax, mpl, xmin, xmax)
+        names |= self._draw_marks(ax, mpl)
         for name in self.drawn.get(i, set()) - names: # e.g. a hold trace that was switched off
             art = mpl.art(name)
             if art is not None:
@@ -229,6 +330,48 @@ class PlotPane:
         for name in names:
             mpl.art(name).set_visible(True)
         self.drawn[i] = names
+
+    def _draw_marks(self, ax: Axis, mpl) -> set:
+        """Bands and markers as named artists, reused between frames (blitting only draws registered artists)"""
+        names = set()
+        for n, b in enumerate(ax.bands):
+            name = f"band{n}"
+            art = mpl.art(name)
+            if art is None:
+                art = Rectangle((b.lo, 0), b.hi - b.lo, 1, transform=mpl.ax.get_xaxis_transform(), zorder=1)
+                mpl.ax.add_patch(art)
+                mpl.add_artist(name, art)
+            art.set_xy((b.lo, 0))
+            art.set_width(b.hi - b.lo)
+            art.set_facecolor(b.color)
+            art.set_alpha(b.alpha)
+            art.set_edgecolor("none")
+            names.add(name)
+        for n, m in enumerate(ax.markers):
+            if m.kind == "vline":
+                name = f"vl{n}"
+                art = mpl.art(name)
+                if art is None:
+                    art = mpl.plot([m.x, m.x], [0, 1], name=name, color=m.color, linewidth=1, transform=mpl.ax.get_xaxis_transform())
+                art.set_data([m.x, m.x], [0, 1])
+                art.set_color(m.color)
+                names.add(name)
+                continue
+            name = f"mk{n}"
+            art = mpl.art(name)
+            if art is None:
+                mpl.plot([m.x], [m.y], name=name, color=m.color, marker="v", linestyle="none", markersize=7, clip_on=True)
+                txt = mpl.ax.text(m.x, m.y, m.label, color=m.color, fontsize=8, ha="left", va="bottom", clip_on=True)
+                mpl.add_artist(f"mkt{n}", txt)
+            art = mpl.art(name)
+            art.set_data([m.x], [m.y])
+            art.set_color(m.color)
+            txt = mpl.art(f"mkt{n}")
+            txt.set_position((m.x, m.y))
+            txt.set_text(m.label)
+            txt.set_color(m.color)
+            names.update((name, f"mkt{n}"))
+        return names
 
     def _freq_ticks(self, mpl, lo, hi):
         ticks = np.linspace(lo, hi, 5)

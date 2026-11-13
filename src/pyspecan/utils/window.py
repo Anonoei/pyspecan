@@ -1,8 +1,2 @@
-import numpy as np
-
-WindowLUT = {
-    "rect": np.ones,
-    "blackman": np.blackman,
-    "hanning": np.hanning,
-    "hamming": np.hamming,
-}
+"""Kept for compatibility, windows live in pyspecan.measure.windows"""
+from ..measure.windows import WindowLUT # noqa: F401

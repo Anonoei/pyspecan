@@ -101,6 +101,7 @@ class PlotSet:
                 "plots": {pid: {
                     "name": plot.NAME, "title": plot.TITLE,
                     "fields": plot.fields(), "settings": plot.settings(),
+                    **({"markers": plot.markers.describe(), "marker_kinds": plot.markers.kinds()} if plot.MARKERS else {}),
                 } for pid, plot in self.plots.items()},
             }
 

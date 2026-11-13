@@ -73,6 +73,43 @@ class Controller:
     def set_plot(self, pid: str, key: str, value):
         with self.lock:
             self.plots.get(pid).set(key, value)
+            if key != "enabled": # pausing a plot must not draw it
+                self.redraw()
+
+    def _markers(self, pid: str):
+        plot = self.plots.get(pid)
+        if not plot.MARKERS:
+            raise ValueError(f"{plot.NAME} has no markers")
+        return plot.markers
+
+    def add_marker(self, pid: str, kind: str, **params) -> str:
+        with self.lock:
+            mid = self._markers(pid).add(kind, **params)
+            self.redraw()
+            return mid
+
+    def del_marker(self, pid: str, mid: str):
+        with self.lock:
+            self._markers(pid).remove(mid)
+            self.redraw()
+
+    def set_marker(self, pid: str, mid: str, key: str, value):
+        with self.lock:
+            self._markers(pid).set(mid, key, value)
+            self.redraw()
+
+    def set_marker_params(self, pid: str, mid: str, values: dict):
+        """Several settings of one marker at once, one redraw (a mouse drag edits center and width together)"""
+        with self.lock:
+            self._markers(pid).set_many(mid, values)
+            self.redraw()
+
+    def redraw(self):
+        """Draw the current block again, markers edited while stopped would show nothing until the next block"""
+        with self.lock:
+            if self.playing or self.source.seq == 0: # playing: the next block shows it, nothing read yet: nothing to draw
+                return
+            self.deliver(self.plots.update(self.log), self.get_status())
 
     def reset_plots(self):
         with self.lock:
@@ -273,3 +310,7 @@ class Controller:
     def quit(self):
         self.running = False
         self.playing = False
+        try:
+            self.sink.close() # a radio on a server is detached from, not left streaming
+        except Exception as e:
+            self.log.warning("closing the sink: %s", e)

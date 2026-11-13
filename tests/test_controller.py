@@ -116,7 +116,7 @@ def test_tick_paces_and_stops_at_the_end(capture):
 def test_plot_types_follow_the_views_features(capture):
     c = make(capture)
     c.FEATURES = {"line"}
-    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF"]
+    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "CCDF", "Power vs Time"]
     with pytest.raises(ValueError):
         c.add_plot("Spectrogram")
 
@@ -173,3 +173,92 @@ def test_playback_failures_say_why(capture, capsys):
     c.command("start")
     assert c.tick() is False
     assert "disk on fire" in c.message and "disk on fire" in capsys.readouterr().err
+
+def test_draw_frame_shows_markers_bands_and_readout():
+    import re
+    from pyspecan.plots.frame import Band, Marker
+    x = np.linspace(-1, 1, 400)
+    ax = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", ymin=-100, ymax=0, traces=[Trace(np.sin(x*9)*50-50)],
+              markers=[Marker(1e3, -20.0, "M1"), Marker(-2e3, kind="vline")], bands=[Band(2e3, 3e3, label="ch")])
+    from pyspecan.plots.frame import Table, TableRow
+    table = Table(["", "Type", "Freq", "Result"], [TableRow("M1", ["M1", "peak", "1 kHz", "-20 dBFS"]), TableRow("", ["", "", "x", "-30 dBFS/Hz"])])
+    frame = Frame([ax], "t", readout=[("RBW", "1.7 kHz")], table=table)
+    lines = ["".join(re.sub(r"\x1b\[[0-9;]*m", "", l)) for l in draw_frame(frame, [None], 80, 24, True)]
+    text = "\n".join(lines)
+    assert "▼M1" in text and "ch" in text and "RBW: 1.7 kHz" in text and "M1  peak  1 kHz  -20 dBFS" in text and "-30 dBFS/Hz" in text
+    assert len(lines) <= 24 + 1 and all(len(l) <= 80 for l in lines)
+    ccdf = Frame([Axis(ymin=-6, ymax=0, yfmt="log10", traces=[Trace(np.linspace(-6, 0, 20))])])
+    assert "1e-3" in "\n".join(draw_frame(ccdf, [None], 60, 20, False))
+
+# --- markers edited by the mouse --- #
+def test_marker_edits_redraw_the_current_block_while_stopped(capture):
+    c = make(capture)
+    pid = c.add_plot("PSD")
+    c.command("next")
+    n = len(c.ticks)
+    mid = c.add_marker(pid, "channel", freq="1000", bw="500")
+    assert len(c.ticks) == n + 1 and c.ticks[-1][0][pid].axes[0].bands[0].edit == ("freq", "bw")
+    c.set_marker_params(pid, mid, {"freq": "2500.0", "bw": "800.0"})
+    band = c.ticks[-1][0][pid].axes[0].bands[0]
+    assert (band.lo, band.hi, band.owner) == (2100.0, 2900.0, mid)
+    c.del_marker(pid, mid)
+    assert len(c.ticks) == n + 3 and c.ticks[-1][0][pid].table is None
+    c.playing = True # while playing the next block shows it
+    pt = c.add_marker(pid, "point")
+    c.set_marker(pid, pt, "freq", "1000")
+    assert len(c.ticks) == n + 3
+    with pytest.raises(ValueError):
+        c.set_marker_params(pid, "M1", {"freq": "1k", "nope": 1}) # nothing applied
+
+def test_marker_set_many_is_all_or_nothing():
+    from pyspecan.plots import PLOTS, Source
+    from tests.test_plots import FakeModel
+    psd = PLOTS.get("PSD")(Source(FakeModel()))
+    mid = psd.markers.add("channel", freq="100", bw="50")
+    psd.markers.set_many(mid, {"freq": "200.5", "bw": "10"})
+    assert psd.markers.items[mid]["params"] == {"freq": "200.5", "bw": "10"}
+    for bad in ({"freq": "300", "bw": "abc"}, {"freq": "300", "nope": "1"}):
+        with pytest.raises(ValueError):
+            psd.markers.set_many(mid, bad)
+        assert psd.markers.items[mid]["params"] == {"freq": "200.5", "bw": "10"}
+
+def test_frames_say_which_markers_the_mouse_can_edit():
+    import json
+    from pyspecan.plots import PLOTS, Source
+    from tests.test_plots import FakeModel, feed, _two_tones
+    model = FakeModel(nfft=256)
+    src = Source(model)
+    for name in ("PSD", "Spectrogram"):
+        plot = PLOTS.get(name)(src, vbw=0)
+        for kind, params in (("point", {"freq": "100"}), ("peak", {}), ("channel", {"freq": "100", "bw": "50"}), ("obw", {"freq": "100", "span": "200"})):
+            plot.markers.add(kind, **params)
+        feed(src, model, _two_tones(2048))
+        d = json.loads(json.dumps(plot.update().to_dict()))["axes"][0]
+        by_owner = {m["owner"]: m for m in d["markers"] if m["owner"]}
+        assert set(by_owner) == {"M1"} and by_owner["M1"]["edit"] == "freq", name # only the point: the peak tracks, the others are bands
+        edits = {b["owner"]: b["edit"] for b in d["bands"] if b["edit"]}
+        assert edits == {"M3": ["freq", "bw"], "M4": ["freq", "span"]}, name
+
+def test_sample_rate_must_be_positive(capture):
+    c = make(capture)
+    for bad in ("0", "-1k", "0.0", "nan", "inf"):
+        with pytest.raises(ValueError):
+            c.setting("fs", bad)
+        assert c.sink.get_fs().raw == FS and c.get_state()["fs"] # the rate and the state sent to a connecting client are untouched
+    c.setting("fs", "20k")
+    assert c.sink.get_fs().raw == 20_000
+    with pytest.raises(ValueError):
+        GetModel(Sink.FILE)(path=str(capture), fmt="cf64", Fs="0") # and a bad launch value fails up front instead of at the first client
+
+def test_plot_settings_redraw_the_current_block_while_stopped(capture):
+    c = make(capture)
+    pid = c.add_plot("PSD")
+    c.command("next")
+    n = len(c.ticks)
+    c.set_plot(pid, "unit", "dBFS")
+    assert len(c.ticks) == n + 1 # the plot shows the new unit without waiting for another block
+    c.set_plot(pid, "enabled", False)
+    assert len(c.ticks) == n + 1
+    c.playing = True
+    c.set_plot(pid, "ref_level", "-10")
+    assert len(c.ticks) == n + 1 # playing: the next block shows it

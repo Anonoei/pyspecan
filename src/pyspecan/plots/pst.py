@@ -18,15 +18,19 @@ class PST(FreqPlot):
     )
 
     def render(self):
-        rows = self.psd_rows("rt")
-        if not len(rows):
+        raw = self.psd_rows("rt", smooth=False)
+        if not len(raw):
             return None
+        self.last = raw.mean(axis=0) # what markers measure
+        rows = self.smooth(raw)
         btm, top = self.y_range(rows)
         mat = matrix.cvec(self.x, self.y, rows.T, top, btm)
         peak = np.max(mat)
         data = (np.clip(mat, 0, None) / peak * 255).astype(np.uint8) if peak > 0 else np.zeros(mat.shape, np.uint8)
         fmin, fmax = self.source.freq_range()
-        return Frame([Axis(
+        frame = Frame([Axis(
             xmin=fmin, xmax=fmax, xfmt="freq", ymin=btm, ymax=top, offscale=self.offscale(rows, btm, top),
             image=Image(data[::-1], cmap=self.cmap), # matrix row 0 is the lowest level
-        )], title=f"{self.TITLE} - {len(rows)} FFTs")
+        )], title=f"{self.TITLE} - {len(rows)} FFTs", readout=self.rbw_readout(rows.shape[-1]))
+        self.apply_markers(frame, image=True)
+        return frame

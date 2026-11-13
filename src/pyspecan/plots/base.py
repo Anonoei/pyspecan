@@ -25,6 +25,7 @@ class Plot:
     TITLE = ""
     SETTINGS: tuple[Setting, ...] = ()
     FEATURES: frozenset = frozenset({LINE}) # drawing features the frames need, see plots.frame
+    MARKERS = False                         # carries a `markers` set the user can add markers and measurements to
 
     def __init__(self, source, **kwargs):
         """`kwargs` may carry initial values for any of this plot's settings, others are ignored"""

@@ -52,6 +52,7 @@ class Controller(_Controller):
             (("del", "rm"), "del <id>", "remove a plot", self.cmd_del),
             (("type",), "type <id> <type>", "change a plot's type", self.cmd_type),
             (("move", "mv"), "move <id> <where> [target]", "left|right|above|below <target>, or end for a new row at the bottom", self.cmd_move),
+            (("marker", "mk"), "marker <id> add|set|del|kinds ...", "markers and measurements: add <kind> [key=value ...], set <marker> <key> <value>, del <marker>", self.cmd_marker),
             (("set",), "set <id> <key> <value>", "change a plot setting, e.g. set p1 vbw 5", self.cmd_set),
         ):
             for name in names:
@@ -246,6 +247,25 @@ class Controller(_Controller):
             self._need(args, 3, "move <id> <left|right|above|below> <target>")
         self.move_plot(args[0], args[2] if len(args) > 2 else None, where)
         print("  " + "  |  ".join(" ".join(row) for row in self.plots.layout))
+
+    def cmd_marker(self, args):
+        self._need(args, 2, "marker <id> add <kind> [key=value ...] | set <marker> <key> <value> | del <marker> | kinds")
+        pid, op, rest = args[0], args[1].lower(), args[2:]
+        if op == "kinds":
+            for kind, fields in self.plots.get(pid).markers.kinds().items():
+                print(f"  {kind:<8} " + "  ".join(f["key"] for f in fields))
+        elif op == "add":
+            self._need(rest, 1, "marker <id> add <kind> [key=value ...]")
+            params = dict(kv.split("=", 1) for kv in rest[1:] if "=" in kv)
+            print(f"  added {self.add_marker(pid, rest[0], **params)}")
+        elif op == "set":
+            self._need(rest, 3, "marker <id> set <marker> <key> <value>")
+            self.set_marker(pid, rest[0], rest[1], " ".join(rest[2:]))
+        elif op in ("del", "rm"):
+            self._need(rest, 1, "marker <id> del <marker>")
+            self.del_marker(pid, rest[0])
+        else:
+            raise ValueError("usage: marker <id> add|set|del|kinds ...")
 
     def cmd_set(self, args):
         self._need(args, 3, "set <id> <key> <value>")

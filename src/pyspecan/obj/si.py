@@ -73,7 +73,7 @@ class SI:
     def _calc(self):
         mul = 0
         v = abs(self._val)
-        if v > 0:
+        if 0 < v < float("inf"): # inf would never get below 1000
             while v > 1000:
                 v = v/1000
                 mul += 3

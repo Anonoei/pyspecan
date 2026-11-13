@@ -1,5 +1,7 @@
 import argparse
 
+import math
+
 import numpy as np
 
 from .. import logger
@@ -23,7 +25,7 @@ class Sink:
         self.log = logger.new(f"model.{type(self).__name__}")
         self.model = model
         self._cf: Frequency = Frequency.get(kwargs.get("cf", SinkConfig.cf))
-        self._Fs: Frequency = Frequency.get(kwargs.get("Fs", SinkConfig.Fs))
+        self._Fs: Frequency = self._valid_fs(Frequency.get(kwargs.get("Fs", SinkConfig.Fs)))
         self._samples = np.empty((), dtype=np.complex64)
 
     def reset(self):
@@ -36,14 +38,25 @@ class Sink:
     def show(self, ind=0):
         raise NotImplementedError()
 
+    def close(self):
+        """Let go of the source (a device); nothing to do by default"""
+
     def ready(self) -> bool:
         """Can samples be read, e.g. a file is selected or a device is open"""
         raise NotImplementedError()
+
+    @staticmethod
+    def _valid_fs(fs: Frequency) -> Frequency:
+        """A sample rate has to be a positive number, everything (times, RBW, block sizes) divides by it"""
+        if not math.isfinite(fs.raw) or fs.raw <= 0:
+            raise ValueError(f"sample rate must be greater than 0, got {fs}")
+        return fs
 
     def set_fs(self, fs):
         self.log.debug("set_fs(%s)", fs)
         if isinstance(fs, str):
             fs = Frequency.get(fs).raw
+        self._valid_fs(Frequency.get(fs))
         fs = self._set_fs(fs)
         self._Fs = Frequency.get(fs)
     def get_fs(self):
