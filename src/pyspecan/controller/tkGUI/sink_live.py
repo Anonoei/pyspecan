@@ -23,6 +23,7 @@ class SinkLive(Sink):
         v.cl_btn_reconnect.config(command=lambda: self.ctrl.run_command("reconnect"))
 
         self.ctrl.view.sink.cl_ent_rx.bind("<Return>", self.handle_event)
+        self.ctrl.view.sink.cl_ent_rx.bind("<FocusOut>", self.handle_event)
         self.build_stages()
 
     def list_radios(self):
@@ -65,6 +66,7 @@ class SinkLive(Sink):
         v = self.ctrl.view.sink
         for ent in v.set_stages(self.ctrl.model.sink.rx_stages()).values():
             ent.bind("<Return>", self.handle_event)
+            ent.bind("<FocusOut>", self.handle_event)
         self.draw_gains()
 
     def draw_gains(self):
@@ -99,16 +101,23 @@ class SinkLive(Sink):
         self.ctrl.apply_setting("antenna", self.antennas.get(label, label)) # shows what the radio refuses
         self.draw_cl()
 
+    def _failed(self, e):
+        """Say why a gain was not applied (it is easy to type dB in the 0-1 entry), the next draw replaces it"""
+        self.log.warning("gain: %s", e)
+        self.ctrl.view.sink.cl_lbl_status.config(text=f"Gain not set: {e}")
+
     def set_rx(self, gain):
         try:
             self.ctrl.model.sink.set_rx(float(gain))
-        except (ValueError, pysdrlib.err.InvalidValue):
-            pass
+        except Exception as e:
+            self.draw_cl()
+            return self._failed(e)
         self.draw_cl()
 
     def set_rx_stage(self, name, gain):
         try:
             self.ctrl.model.sink.set_rx_stage(name, float(gain))
-        except (ValueError, pysdrlib.err.InvalidValue):
-            pass
+        except Exception as e:
+            self.draw_cl()
+            return self._failed(e)
         self.draw_cl()
