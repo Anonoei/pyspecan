@@ -28,9 +28,11 @@ keywords = ["anonoei", "sdr", "speca", "specan"]
 dependencies = ["numpy>=2.0", "pysdrlib>=0.4.3"]
 
 [project.optional-dependencies]
-dev = ["twine", "build", "bumpver", "pytest", "pdoc3"]
 tk = ["matplotlib"]
 web = ["fastapi", "uvicorn", "jinja2", "websockets"]
+test = ["pytest", "httpx", "pysdrlib[remote]"]
+docs = ["pdoc3"]
+dev = ["pyspecan[tk,web,test,docs]", "twine", "build", "bumpver"]
 
 [project.scripts]
 pyspecan-cui = "pyspecan._internal.main:main_cli_swept"
@@ -47,6 +49,11 @@ Source = "https://github.com/anonoei/pyspecan"
 
 [tool.setuptools.package-data]
 "pyspecan.view.WEB" = ["static/*", "templates/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["tests/dev"]
+pythonpath = ["src"]
 
 [tool.bumpver]
 current_version = "0.6.0"
