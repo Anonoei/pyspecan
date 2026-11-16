@@ -29,12 +29,17 @@ def scale(spectra: np.ndarray, fs: float, w: np.ndarray, unit: str = "dB/Hz",
     if unit not in UNITS:
         raise ValueError(f"unknown unit {unit!r}")
     w = np.asarray(w, dtype=float)
-    p = np.abs(spectra)**2
-    if is_density(unit):
-        p = p / (fs * np.sum(w**2))
-    else:
-        p = p / np.sum(w)**2
-    db = lin_to_db(p)
+    spectra = np.asarray(spectra)
+    # the window's power folds into one dB offset, and the math stays in the spectra's precision
+    den = fs * np.sum(w**2) if is_density(unit) else np.sum(w)**2
+    p = np.abs(spectra)
+    np.multiply(p, p, out=p)
+    np.maximum(p, FLOOR * den, out=p)
+    np.log10(p, out=p)
+    p *= 10.0
+    db = p
+    offset = -10.0 * np.log10(den)
     if unit.startswith("dBm"):
-        db = db + (cal_db - ext_gain_db)
+        offset += cal_db - ext_gain_db
+    db += p.dtype.type(offset)
     return db

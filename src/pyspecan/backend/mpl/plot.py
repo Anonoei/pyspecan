@@ -87,6 +87,6 @@ class BlitPlot(_Plot):
 
     def _draw_animated(self):
         for xname, ax in self._axs.items():
-            for aname, art in ax.artists.items():
-                # print(f"Drawing {xname}[{aname}]")
+            # in zorder like a normal draw (image under lines), a stable sort keeps the creation order within one
+            for art in sorted(ax.artists.values(), key=lambda a: a.get_zorder()):
                 self._fig.draw_artist(art)

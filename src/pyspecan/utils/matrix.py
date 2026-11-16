@@ -1,93 +1,88 @@
+"""Persistence histograms: count where a stack of PSDs spends its time, per (level, frequency) pixel"""
+from functools import lru_cache
+
 import numpy as np
 
-def _fill(matrix):
-    matrix = np.ascontiguousarray(matrix, dtype=np.int32)
-    rows, cols = matrix.shape
-    mask = matrix != 0
+@lru_cache(maxsize=16)
+def _col_map(n: int, x: int):
+    """How n PSD bins become x columns, cached because it only depends on the sizes"""
+    if x < n: # several bins share a column: its peak
+        return "max", (np.arange(x, dtype=np.int64) * n // x)
+    pos = np.arange(x, dtype=np.float64) * ((n - 1) / max(x - 1, 1))
+    i0 = np.minimum(pos.astype(np.int64), max(n - 2, 0))
+    return "lerp", (i0, (pos - i0).astype(np.float32))
 
-    s_idx = np.argmax(mask, axis=0)
-    # e_idx = rows - 1 - np.argmax(mask[::-1], axis=0)
-    e_idx = rows - 1 - np.argmax(np.flip(mask, axis=0), axis=0)
+def columns(psds: np.ndarray, x: int) -> np.ndarray:
+    """(n bins, k frames) -> (x columns, k) with exactly one value per column per frame.
 
-    # empty = mask.sum(axis=0) == 0
-    empty = ~mask.any(axis=0)
-    s_idx[empty] = 0
-    e_idx[empty] = 0
-
-    diff = np.zeros_like(matrix, dtype=np.int32)
-    col_idx = np.arange(cols, dtype=np.int32)
-
-    # s_rows = s_idx + 1
-    # s_valid = s_rows < e_idx
-
-    # e_rows = e_idx
-    # e_valid = e_idx > s_idx
-    # diff[s_rows[s_valid], col_idx[s_valid]] += 1
-    # diff[e_rows[e_valid], col_idx[e_valid]] -= 1
-
-    valid = s_idx < e_idx
-    s_rows = s_idx[valid] + 1
-    e_rows = e_idx[valid]
-
-    np.add.at(diff, (s_rows, col_idx[valid]), 1)
-    np.add.at(diff, (e_rows, col_idx[valid]), -1)
-
-    np.cumsum(diff, axis=0, out=diff)
-    matrix += diff
-
-    # print(out)
-    # exit()
-    # for i in range(matrix.shape[1]):
-    #     wh = np.where(matrix[:,i]>0)[0]
-    #     matrix[np.min(wh):np.max(wh),i] += 1
-    # matrix[np.min(matrix[:,None]):np.max(matrix[:,None]),None] += 1
-    return matrix
-
-def dot(x: int, y: int, psds, yt: float, yb: float):
-    """Dot Matrix
-    Each PSD's x/y mapped to histogram x/y
+    Mapping bins to columns by position alone makes some columns collect two bins and the
+    rest one, which shows up as stripes. So: columns that cover several bins keep their peak,
+    and when there are more columns than bins the trace is interpolated between bins.
     """
+    n = psds.shape[0]
+    if x == n:
+        return psds
+    kind, arg = _col_map(n, x)
+    if kind == "max":
+        return np.maximum.reduceat(psds, arg, axis=0)
+    i0, w = arg
+    w = w[:, None]
+    return psds[i0] * (1 - w) + psds[np.minimum(i0 + 1, n - 1)] * w
+
+def _levels(psds: np.ndarray, y: int, yt: float, yb: float) -> np.ndarray:
+    """(n, k) histogram row of every PSD point, unclipped, int32"""
+    scale = np.float32(y / (yt - yb))
+    lvl = np.subtract(psds, np.float32(yb), dtype=np.float32)
+    lvl *= scale
+    np.floor(lvl, out=lvl)
+    np.clip(lvl, -2, y + 1, out=lvl) # keep off scale points off scale, and the cast safe
+    return lvl.astype(np.int32)
+
+def dot(x: int, y: int, psds: np.ndarray, yt: float, yb: float) -> np.ndarray:
+    """Dot matrix: each frame puts one hit per column, at its level, (y, x) int32.
+    psds is (n bins, k frames); level 0 is the bottom row"""
     hist = np.zeros((y, x), dtype=np.int32)
-
-    if np.all(psds < yb):
+    if not psds.size or yt <= yb:
         return hist
-    elif np.all(psds > yt):
-        return hist
-
-    y_rng = abs(abs(yt) - abs(yb))
-    y_off = yb if yb > 0 else -yb
-
-    x_ratio = x/psds.shape[0]
-    y_ratio = y/y_rng
-
-    x_idx = np.floor(np.arange(0, psds.shape[0])*x_ratio).astype(int)
-    y_idx = np.floor((psds+y_off)*y_ratio).astype(int)
-
-    y_idx = np.clip(y_idx, 0, y-1)
-
-    y_val = np.ones_like(y_idx)
-    y_val[y_idx == 0] = 0
-    y_val[y_idx >= y-1] = 0
-
-    for i in range(psds.shape[1]):
-        hist[y_idx[:,i], x_idx] += y_val[:,i]
+    rows = _levels(columns(psds, x), y, yt, yb)
+    cols = np.broadcast_to(np.arange(x, dtype=np.int64)[:, None], rows.shape)
+    ok = (rows >= 0) & (rows < y)
+    flat = rows[ok].astype(np.int64) * x + cols[ok]
+    hist.ravel()[:] = np.bincount(flat, minlength=y * x)
     return hist
 
-def cdot(x, y, psds, yt=0.05, yb=0.05):
-    hist = dot(x, y, psds, yt, yb)
-    return _fill(hist)
+def vec(x: int, y: int, psds: np.ndarray, yt: float, yb: float) -> np.ndarray:
+    """Vector matrix: each frame is a connected line, so a pixel's count is how many frames drew
+    through it, (y, x) int32.
 
-def vec(x, y, psds, yt=0.05, yb=0.05, interp=32):
-    """Vector Matrix
-    Interpolate between PSD x/y to mimic vector matrix
+    Consecutive columns are always joined. The join between two columns changes level halfway,
+    so each column draws the one contiguous span from the halfway point to its left neighbour,
+    through its own level, to the halfway point to its right neighbour, and a frame counts at
+    most once per pixel. The spans are added with a difference array (+1 at the top, -1 below
+    the bottom) and one cumulative sum, nothing loops over frames.
     """
-    y_int = np.zeros((psds.shape[0]*interp, psds.shape[1]))
-    t = np.arange(psds.shape[0])*interp
-    t_int = np.arange(psds.shape[0]*interp)-1
-    for i in range(psds.shape[1]):
-        y_int[:,i] = np.interp(t_int, t, psds[:,i])
-    return dot(x, y, y_int, yt, yb)
+    if not psds.size or yt <= yb:
+        return np.zeros((y, x), dtype=np.int32)
+    rows = _levels(columns(psds, x), y, yt, yb)
+    mid = (rows[:-1] + rows[1:]) >> 1
+    left, right = rows.copy(), rows.copy()
+    left[1:] = mid
+    right[:-1] = mid
+    lo = np.minimum(np.minimum(rows, left), right)
+    hi = np.maximum(np.maximum(rows, left), right)
+    ok = (hi >= 0) & (lo < y)               # spans that cross the visible levels
+    np.clip(lo, 0, y - 1, out=lo)
+    np.clip(hi, 0, y - 1, out=hi)
+    cols = np.broadcast_to(np.arange(x, dtype=np.int64)[:, None], rows.shape)
+    start = lo[ok].astype(np.int64) * x + cols[ok]
+    stop = (hi[ok].astype(np.int64) + 1) * x + cols[ok]
+    size = (y + 1) * x
+    diff = np.bincount(start, minlength=size).astype(np.int32)
+    diff -= np.bincount(stop, minlength=size).astype(np.int32)
+    diff = diff.reshape(y + 1, x)
+    np.cumsum(diff, axis=0, out=diff)
+    return diff[:y]
 
-def cvec(x, y, psds, yt=0.05, yb=0.05, interp=16):
-    hist = vec(x, y, psds, yt, yb, interp)
-    return _fill(hist)
+def cvec(x: int, y: int, psds: np.ndarray, yt: float = 0.05, yb: float = 0.05) -> np.ndarray:
+    """Vector style matrix, what the persistence plot shows by default"""
+    return vec(x, y, psds, yt, yb)

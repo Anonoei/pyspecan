@@ -607,6 +607,26 @@ function drawHover(ctx, id, rt) {
     ctx.restore();
 }
 
+function drawTraces(ctx, axis, xOf, yOf, x0, w) {
+    for (const s of axis.traces) {
+        const n = s.y.length;
+        ctx.strokeStyle = ctx.fillStyle = s.color;
+        ctx.globalAlpha = s.alpha ?? 1;
+        ctx.lineWidth = s.width ?? 1.5;
+        if (s.kind === "scatter") {
+            for (let i = 0; i < n; i++) ctx.fillRect(xOf(s.x[i]) - 1, yOf(s.y[i]) - 1, 2, 2);
+            continue;
+        }
+        ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+            const x = s.x ? xOf(s.x[i]) : x0 + (i / (n - 1)) * w;
+            const y = yOf(s.y[i]);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+}
+
 function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
     let x0 = ox + MARGIN.l, y0 = oy + MARGIN.t, w = W - MARGIN.l - MARGIN.r, h = H - MARGIN.t - MARGIN.b;
     if (w <= 10 || h <= 10) return;
@@ -649,6 +669,12 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
             ctx.drawImage(image.canvas, x0, y0, w, h);
         }
         drawBands(ctx, axis, xOf, x0, y0, w, h);
+        if (axis.ymin != null && axis.traces.length) { // traces over a level axis image (persistence)
+            ctx.save();
+            ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
+            drawTraces(ctx, axis, xOf, yOf, x0, w);
+            ctx.restore();
+        }
         drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h);
         drawOffscale(ctx, axis, x0, y0, w, h);
         return;
@@ -656,23 +682,7 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
     ctx.save();
     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
     drawBands(ctx, axis, xOf, x0, y0, w, h);
-    for (const s of axis.traces) {
-        const n = s.y.length;
-        ctx.strokeStyle = ctx.fillStyle = s.color;
-        ctx.globalAlpha = s.alpha ?? 1;
-        ctx.lineWidth = s.width ?? 1.5;
-        if (s.kind === "scatter") {
-            for (let i = 0; i < n; i++) ctx.fillRect(xOf(s.x[i]) - 1, yOf(s.y[i]) - 1, 2, 2);
-            continue;
-        }
-        ctx.beginPath();
-        for (let i = 0; i < n; i++) {
-            const x = s.x ? xOf(s.x[i]) : x0 + (i / (n - 1)) * w;
-            const y = yOf(s.y[i]);
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-    }
+    drawTraces(ctx, axis, xOf, yOf, x0, w);
     ctx.restore(); // also restores globalAlpha
     drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h);
     drawOffscale(ctx, axis, x0, y0, w, h);

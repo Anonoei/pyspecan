@@ -173,6 +173,12 @@ class Controller:
     # --- commands --- #
     def command(self, cmd: str):
         self.log.trace("command(%s)", cmd)
+        if cmd == "stop":
+            # not under the lock: the playback thread holds it for a whole block (a persistence plot takes long),
+            # and waiting for it here freezes a view that calls this from its event loop. The flag is all it needs,
+            # the block in flight finishes and the next tick sees it
+            self.playing = False
+            return
         with self.lock:
             if cmd == "start":
                 if not self.sink.ready():

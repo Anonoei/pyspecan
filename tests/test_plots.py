@@ -439,3 +439,61 @@ def test_markers_outside_the_span_say_so_instead_of_reading_the_floor():
     assert "outside span" not in t["M6"][0][3] and float(t["M6"][0][3].split()[0]) > -100
     assert [b.owner for b in f.axes[0].bands] == ["M6"] and f.axes[0].markers == [m for m in f.axes[0].markers if m.owner == ""]
     json.dumps(f.to_dict())
+
+# --- persistence --- #
+def _pst_run(blocks, **kw):
+    model = FakeModel(nfft=64, overlap=0.5)
+    src = Source(model)
+    p = PLOTS.get("Persistence")(src, **{"x": 0, "y": 100, "ref_level": 0, "scale_div": 10, **kw})
+    frames = []
+    for block in blocks:
+        feed(src, model, block)
+        frames.append(p.render().axes[0])
+    return frames
+
+def test_persistence_traces_live_and_max_hold():
+    sig = tone(2000)
+    quiet = (sig * 1e-4).astype(np.complex64)
+    first, second = _pst_run([sig, quiet], show_live=True, show_max=True)
+    live = {t.name: t for t in second.traces}
+    assert set(live) == {"max", "live"}
+    assert len(live["live"].y) == 64 == second.image.data.shape[1]
+    assert (live["max"].y >= live["live"].y).all()
+    assert live["max"].y.max() > live["live"].y.max() + 20 # the tone is still held after it is gone
+    assert live["max"].alpha < 1
+    assert _pst_run([sig])[0].traces == [] # off by default
+
+def test_persistence_signal_goes_dark_at_once_and_leaves_a_ghost():
+    sig = tone(2000)
+    quiet = (sig * 1e-4).astype(np.complex64)
+    a, b = _pst_run([sig, quiet], ghost=0.0)
+    ga, gb = _pst_run([sig, quiet], ghost=0.4)
+    old = (a.image.data > 0) & (b.image.data == 0)       # lit by the first block only
+    assert old.any()
+    assert (b.image.data[old] == 0).all()                # no ghost: dark at once
+    assert (gb.image.data[old] > 0).all()                # ghost: still there
+    assert (gb.image.data[old] <= ga.image.data[old] * 0.4 + 1).all() # dimmer than it was
+    live = b.image.data > 0
+    assert (gb.image.data[live] == b.image.data[live]).all() # what is lit now is not dimmed
+
+def test_persistence_ghost_fades_with_ghost_time():
+    sig = tone(2000)
+    quiet = (sig * 1e-4).astype(np.complex64)
+    a, b = _pst_run([sig, quiet], ghost=0.0)
+    old = (a.image.data > 0) & (b.image.data == 0)
+    kept = _pst_run([sig, quiet], persistence=0.0)[1].image.data
+    gone = _pst_run([sig, quiet], persistence=1e-4)[1].image.data
+    assert (kept[old] > 0).all() and (gone[old] == 0).all()
+
+def test_persistence_style_and_width():
+    sig = tone(2000)
+    vec, = _pst_run([sig], style="vector", x=128)
+    dot, = _pst_run([sig], style="dot", x=128)
+    assert vec.image.data.shape[1] == dot.image.data.shape[1] == 128
+    assert (vec.image.data > 0).sum() >= (dot.image.data > 0).sum()
+
+def test_persistence_scale_does_not_flicker():
+    sig = tone(2000)
+    f = _pst_run([sig, sig, sig], persistence=5.0)
+    assert f[0].image.data.max() == 255 and f[2].image.data.max() == 255
+    assert f[2].image.data.dtype == np.uint8
