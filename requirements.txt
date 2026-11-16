@@ -1,2 +1,2 @@
-numpy
-pysdrlib
+numpy>=2.0
+pysdrlib>=0.4.3

@@ -35,6 +35,39 @@ class Trace:
     width: float = 1.5
 
 @dataclass
+class Marker:
+    """A labeled mark in data coordinates. kind "point": a triangle at (x, y) with the label, "vline": a vertical line at x"""
+    x: float
+    y: float = 0.0
+    label: str = ""
+    color: str = YELLOW
+    kind: str = "point"          # "point" | "vline"
+    owner: str = ""              # id of the marker it belongs to
+    edit: str = ""               # the setting dragging it changes (its x), "" when it can not be dragged
+
+@dataclass
+class Band:
+    """A shaded x span (channel, adjacent channel, occupied bandwidth edges)"""
+    lo: float
+    hi: float
+    color: str = BLUE
+    alpha: float = 0.15
+    label: str = ""
+    owner: str = ""              # id of the marker it belongs to
+    edit: tuple[str, str] | None = None # the (center, width) settings dragging its body / edges change, None when fixed
+
+@dataclass
+class TableRow:
+    id: str                      # the marker this row belongs to, "" for a continuation row of the one above
+    cells: list[str]
+
+@dataclass
+class Table:
+    """The marker / measurement table, views show it only when it has rows"""
+    columns: list[str]
+    rows: list[TableRow] = field(default_factory=list)
+
+@dataclass
 class Image:
     """A heat map covering the axis' x/y range, row 0 is the top row
 
@@ -57,7 +90,7 @@ class Axis:
     zmin: float | None = None
     zmax: float | None = None
     xfmt: str = "num"            # "freq" | "num"
-    yfmt: str = "num"
+    yfmt: str = "num"            # "freq" | "num" | "log10" (y is log10 of the value, labeled like 1e-3)
     xlabel: str = ""
     ylabel: str = ""
     square: bool = False
@@ -66,11 +99,15 @@ class Axis:
     offscale: str | None = None  # "above" | "below": the data is outside the y range
     traces: list[Trace] = field(default_factory=list)
     image: Image | None = None
+    markers: list[Marker] = field(default_factory=list)
+    bands: list[Band] = field(default_factory=list)
 
 @dataclass
 class Frame:
     axes: list[Axis]
     title: str = ""
+    readout: list[tuple[str, str]] = field(default_factory=list) # (label, value) facts about the plot (RBW, averaging, stats)
+    table: Table | None = None   # markers and measurements
     ptime: float = 0.0           # seconds spent computing, set by the controller
 
     def features(self) -> set[str]:
@@ -86,7 +123,10 @@ class Frame:
 
     def to_dict(self, digits=2) -> dict:
         """json-serializable form, for the web view"""
-        return {"title": self.title, "ptime": self.ptime, "axes": [_axis_dict(ax, digits) for ax in self.axes]}
+        return {"title": self.title, "ptime": self.ptime, "readout": [[str(k), str(v)] for k, v in self.readout],
+                "table": None if self.table is None else {
+                    "columns": list(self.table.columns), "rows": [{"id": r.id, "cells": [str(c) for c in r.cells]} for r in self.table.rows]},
+                "axes": [_axis_dict(ax, digits) for ax in self.axes]}
 
 def _list(arr, digits):
     return np.round(np.asarray(arr, dtype=np.float64), digits).tolist()
@@ -103,6 +143,8 @@ def _axis_dict(ax: Axis, digits) -> dict:
         if t.z is not None:
             td["z"] = _list(t.z, digits)
         d["traces"].append(td)
+    d["markers"] = [{"x": float(m.x), "y": float(m.y), "label": m.label, "color": m.color, "kind": m.kind, "owner": m.owner, "edit": m.edit} for m in ax.markers]
+    d["bands"] = [{"lo": float(b.lo), "hi": float(b.hi), "color": b.color, "alpha": b.alpha, "label": b.label, "owner": b.owner, "edit": list(b.edit) if b.edit else None} for b in ax.bands]
     if ax.image is not None:
         im = ax.image
         data = np.ascontiguousarray(im.data, dtype=np.uint8)

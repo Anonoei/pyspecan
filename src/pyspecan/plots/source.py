@@ -22,7 +22,7 @@ class Stream:
     def __init__(self, nfft: int, hop: int, window: str):
         self.nfft = nfft
         self.hop = hop
-        self.win = WindowLUT[window](nfft)
+        self.win = np.asarray(WindowLUT[window](nfft), dtype=np.float32) # float32 keeps the fft complex64
         self.carry = np.empty(0, dtype=np.complex64)
         self.seen = -2        # tick of the last block consumed
         self.result = np.empty((0, nfft), dtype=np.complex64)

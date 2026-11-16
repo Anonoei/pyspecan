@@ -10,55 +10,67 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: executable-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   pyinstaller-build:
-    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: pyspecan
+            path: dist/pyspecan
+          - os: windows-latest
+            artifact: pyspecan.exe
+            path: dist/pyspecan.exe
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
 
-      - name: Build executable Nix
+      - name: Install tkinter (Linux)
+        if: runner.os == 'Linux'
         run: |
-          python -m pip install .
-          python -m pip install pyinstaller
-          pyinstaller src/build.spec
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
+      - name: Build executable
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[tk]" pyinstaller
+          pyinstaller --distpath dist --workpath build src/build.spec
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pyspecan
-          path: dist/
-
-      - name: Build executable Win
-        uses: JackMcKew/pyinstaller-action-windows@main
-        with:
-          path: src
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pyspecan.exe
-          path: src/dist/windows
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.path }}
+          if-no-files-found: error
 
   pyinstaller-upload:
+    name: Upload to release
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs:
       - pyinstaller-build
+    if: github.event_name == 'release'
     permissions:
       contents: write
 
     steps:
-      - name: Retrieve artifact Nix
-        uses: actions/download-artifact@v4
+      - name: Retrieve artifacts
+        uses: actions/download-artifact@v6
         with:
-          name: pyspecan
-          path: dist/
-
-      - name: Retrieve artifact Win
-        uses: actions/download-artifact@v4
-        with:
-          name: pyspecan.exe
-          path: dist/
+          path: dist
+          merge-multiple: true
 
       - name: Upload artifacts
         uses: softprops/action-gh-release@v2

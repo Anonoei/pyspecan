@@ -157,3 +157,16 @@ dialog ul { list-style: none; margin: 8px 0; padding: 0; max-height: 50vh; overf
 dialog li { padding: 3px 8px; cursor: pointer; }
 dialog li:hover { background: hsl(0 0% 18%); }
 dialog .dlg-actions { text-align: right; }
+
+.pyspecan .readout { display: flex; flex-wrap: wrap; gap: 2px 16px; padding: 3px 8px; font-size: 0.85rem; border-top: 1px solid var(--border-muted); font-variant-numeric: tabular-nums; }
+.pyspecan .mtable { overflow-x: auto; border-top: 1px solid var(--border-muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.pyspecan .mtable table { border-collapse: collapse; }
+.pyspecan .mtable th { text-align: left; font-weight: normal; color: var(--text-muted); padding: 1px 8px; }
+.pyspecan .mtable td { padding: 1px 8px; white-space: nowrap; }
+.pyspecan .mtable tr.cont td { color: var(--text-muted); }
+.pyspecan .marker-editor { border-top: 1px solid var(--border-muted); padding: 2px 8px; display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem; }
+.pyspecan .mk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; }
+.pyspecan .mk-row input[type=text], .pyspecan .mk-row input[type=number] { width: 7em; padding: 1px 4px; }
+.pyspecan .canvas-box { min-height: 140px; }
+.pyspecan .mk-panel { max-height: 40%; overflow: auto; flex: 0 1 auto; }
+.pyspecan .mk-panel > :not([hidden]) { border-top: 1px solid var(--border-muted); }

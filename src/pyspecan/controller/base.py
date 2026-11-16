@@ -19,7 +19,7 @@ import time
 
 from .. import logger
 from ..model.model import Model
-from ..model.sink.file import Format
+from ..model.sink.file import FORMATS
 from ..obj import Frequency
 from ..plots import PlotSet, Source, available, plot_kwargs
 from ..plots.frame import Frame, LINE, SCATTER, IMAGE
@@ -73,6 +73,43 @@ class Controller:
     def set_plot(self, pid: str, key: str, value):
         with self.lock:
             self.plots.get(pid).set(key, value)
+            if key != "enabled": # pausing a plot must not draw it
+                self.redraw()
+
+    def _markers(self, pid: str):
+        plot = self.plots.get(pid)
+        if not plot.MARKERS:
+            raise ValueError(f"{plot.NAME} has no markers")
+        return plot.markers
+
+    def add_marker(self, pid: str, kind: str, **params) -> str:
+        with self.lock:
+            mid = self._markers(pid).add(kind, **params)
+            self.redraw()
+            return mid
+
+    def del_marker(self, pid: str, mid: str):
+        with self.lock:
+            self._markers(pid).remove(mid)
+            self.redraw()
+
+    def set_marker(self, pid: str, mid: str, key: str, value):
+        with self.lock:
+            self._markers(pid).set(mid, key, value)
+            self.redraw()
+
+    def set_marker_params(self, pid: str, mid: str, values: dict):
+        """Several settings of one marker at once, one redraw (a mouse drag edits center and width together)"""
+        with self.lock:
+            self._markers(pid).set_many(mid, values)
+            self.redraw()
+
+    def redraw(self):
+        """Draw the current block again, markers edited while stopped would show nothing until the next block"""
+        with self.lock:
+            if self.playing or self.source.seq == 0: # playing: the next block shows it, nothing read yet: nothing to draw
+                return
+            self.deliver(self.plots.update(self.log), self.get_status())
 
     def reset_plots(self):
         with self.lock:
@@ -120,11 +157,14 @@ class Controller:
                 "plot_types": self.plot_types,
                 **self.plots.describe(),
             }
+            radio = sink.status()
+            if radio is not None:
+                state["radio"] = radio
             if sink.SEEKABLE:
                 state.update({
                     "path": str(sink.get_path() or ""),
                     "fmt": sink.get_fmt().name,
-                    "formats": Format.choices(),
+                    "formats": FORMATS,
                     "max_samp": sink.max_samp,
                     "time_tot": strfmt_td(dt.timedelta(seconds=sink.tot_time())),
                 })
@@ -133,11 +173,18 @@ class Controller:
     # --- commands --- #
     def command(self, cmd: str):
         self.log.trace("command(%s)", cmd)
+        if cmd == "stop":
+            # not under the lock: the playback thread holds it for a whole block (a persistence plot takes long),
+            # and waiting for it here freezes a view that calls this from its event loop. The flag is all it needs,
+            # the block in flight finishes and the next tick sees it
+            self.playing = False
+            return
         with self.lock:
             if cmd == "start":
                 if not self.sink.ready():
                     raise ValueError("no file selected" if self.sink.SEEKABLE else "no device")
                 self.playing = True
+                self.message = ""
             elif cmd == "stop":
                 self.playing = False
             elif cmd == "reset":
@@ -145,6 +192,19 @@ class Controller:
                 self.model.reset()
                 self.reset_plots()
                 self.message = ""
+            elif cmd in ("claim", "release", "reconnect"):
+                self._need_radio()
+                self.playing = False
+                if cmd == "reconnect":
+                    self.sink.reconnect()
+                    self.reset_plots()
+                elif cmd == "claim":
+                    self.sink.claim_control()
+                    self.reset_plots()
+                else:
+                    self.sink.release_control()
+                self.message = f"{self.sink.status()['control']}: {self.sink.name}"
+                self.state_changed()
             elif cmd in ("next", "prev"):
                 if not self.sink.ready():
                     raise ValueError("no file selected" if self.sink.SEEKABLE else "no device")
@@ -158,13 +218,26 @@ class Controller:
     def setting(self, key: str, value):
         self.log.trace("setting(%s, %s)", key, value)
         with self.lock:
-            if key == "fs":
-                Frequency.get(value)
-                self.model.set_fs(value)
+            if key in ("fs", "cf"):
+                asked = Frequency.get(value)
+                (self.model.set_fs if key == "fs" else self.model.set_cf)(value)
+                self.reset_plots() # the carried samples and what was averaged are from the old tuning
+                got = (self.model.get_fs() if key == "fs" else self.model.get_cf())
+                # the radio decides what it can do (pysdrlib clamps and snaps), say so instead of looking like it took it
+                self.message = "" if got.raw == asked.raw else f"{key} is {got} ({asked} is not available)"
+            elif key == "device":
+                self._need_radio()
+                self.playing = False
+                self.sink.set_device(value)
                 self.reset_plots()
-            elif key == "cf":
-                Frequency.get(value)
-                self.model.set_cf(value)
+                self.message = f"{self.sink.status()['control']}: {self.sink.name}"
+                self.state_changed()
+            elif key == "antenna":
+                self._need_radio()
+                self.sink.set_antenna(value)
+                self.reset_plots() # a chain with another converter retunes it
+                self.message = f"antenna {value}"
+                self.state_changed()
             elif key == "nfft_exp":
                 exp = int(value)
                 if not 2 <= exp <= 20:
@@ -188,7 +261,7 @@ class Controller:
                 self.set_path(value)
             elif key == "fmt":
                 self._need_file()
-                if value not in Format.choices():
+                if value not in FORMATS:
                     raise ValueError(f"unknown format {value!r}")
                 self.playing = False
                 self.sink.set_fmt(value)
@@ -196,6 +269,14 @@ class Controller:
                 self.reset_plots()
             else:
                 raise ValueError(f"unknown setting {key!r}")
+
+    def _need_radio(self):
+        if self.sink.status() is None:
+            raise ValueError("the sink is a file, there is no radio")
+
+    def radios(self) -> list[dict]:
+        """Radios that can be picked, a server that is down does not get in the way"""
+        return self.sink.radios() if self.sink.status() is not None else []
 
     def _need_file(self):
         if not self.sink.SEEKABLE:
@@ -222,6 +303,10 @@ class Controller:
         valid = sink.next(count) if forward else sink.prev(count)
         if not valid:
             return False
+        if sink.take_retuned(): # a radio controlled elsewhere was retuned: what was carried is from the old tuning
+            self.source.reset()
+            self.plots.reset()
+            self.state_changed()
         self.source.tick()
         self.deliver(self.plots.update(self.log), self.get_status())
         return True
@@ -234,7 +319,10 @@ class Controller:
                 return False
             try:
                 valid = self.step()
-                self.message = "" if valid else "END"
+                if not valid:
+                    self.message = "END"
+                elif self.message == "END":
+                    self.message = ""
             except Exception as e: # keep playback alive
                 self.report_error("playback failed", e)
                 valid = False
@@ -273,3 +361,7 @@ class Controller:
     def quit(self):
         self.running = False
         self.playing = False
+        try:
+            self.sink.close() # a radio on a server is detached from, not left streaming
+        except Exception as e:
+            self.log.warning("closing the sink: %s", e)

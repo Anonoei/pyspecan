@@ -3,8 +3,7 @@ name: Deploy docs
 on:
   push:
     branches:
-      - main  # Set a branch name to trigger deployment
-  pull_request:
+      - main  # Pull requests only check that the docs build: see the Tests workflow
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -21,36 +20,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy
+  # Build and deploy are separate jobs so a failed deploy can be re-run alone: re-running a job that uploads the
+  # "github-pages" artifact adds a second one to the run, and deploy-pages refuses to choose between two.
+  build:
+    name: Build
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write      # to deploy to Pages
-      id-token: write   # to verify the deployment originates from an appropriate source
-      contents: write
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-
+    timeout-minutes: 10
     steps:
       - name: Checkout repo
         uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pyproject.toml
 
-      - name: Install dependencies
+      # Editable, so pdoc documents src/pyspecan; the extras let the GUI modules import
+      - name: Install package
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pdoc3
-      - name: Install package
-        run: python -m pip install .
+          python -m pip install -e ".[tk,web,docs]"
 
       - name: Build docs
-        run: |
-            python -m pdoc -o docs --html --force --skip-errors src/pyspecan
+        run: python -m pdoc -o docs --html --force --skip-errors src/pyspecan
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -58,6 +50,19 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: './docs/pyspecan'
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

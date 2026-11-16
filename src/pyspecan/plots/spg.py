@@ -20,37 +20,41 @@ class _Spectrogram(FreqPlot):
         super().reset()
         self._clear = True # tell the view to drop its history
 
-    def rows(self) -> np.ndarray:
-        """The new rows of this tick (k, nfft), in dB"""
+    def raw_rows(self) -> np.ndarray:
+        """The new rows of this tick (k, nfft), in dB, before the vbw"""
         raise NotImplementedError()
 
     def render(self):
-        rows = self.rows()
-        if not len(rows):
+        raw = self.raw_rows()
+        if not len(raw):
             return None
-        rows = rows[-self.max_count:]
+        raw = raw[-self.max_count:]
+        self.last = raw[-1] # what markers measure
+        rows = self.smooth(raw)
         btm, top = self.y_range(rows)
         data = (np.clip((rows - btm) / (top - btm), 0.0, 1.0) * 255).astype(np.uint8)
         clear, self._clear = self._clear, False
         fmin, fmax = self.source.freq_range()
-        return Frame([Axis(
+        frame = Frame([Axis(
             xmin=fmin, xmax=fmax, xfmt="freq", ylabel="sweeps",
             image=Image(data, cmap=self.cmap, scroll=True, rows=self.max_count, clear=clear),
-        )], title=self.TITLE)
+        )], title=self.TITLE, readout=self.rbw_readout(rows.shape[-1]))
+        self.apply_markers(frame, image=True)
+        return frame
 
 @plot("Spectrogram")
 class SPG(_Spectrogram):
-    """One row per swept frame of the block"""
+    """One row per refresh: the last swept frame of the block, the trace the PSD plot draws"""
     TITLE = "Spectrogram"
 
-    def rows(self):
-        return self.psd_rows("swept")
+    def raw_rows(self):
+        return self.psd_rows("swept", smooth=False)[-1:]
 
 @plot("RT Spectrogram")
 class RTSPG(_Spectrogram):
     """One row per block: the mean of its overlapped (realtime) frames"""
     TITLE = "RT Spectrogram"
 
-    def rows(self):
-        rows = self.psd_rows("rt")
+    def raw_rows(self):
+        rows = self.psd_rows("rt", smooth=False)
         return rows.mean(axis=0, keepdims=True) if len(rows) else rows

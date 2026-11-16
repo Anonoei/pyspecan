@@ -9,7 +9,8 @@ from .settings import override, without
 class FFT(HoldMixin, FreqPlot):
     """Magnitude and phase of the block's last swept FFT"""
     TITLE = "FFT"
-    SETTINGS = override(without(FreqPlot.SETTINGS, "vbw"),
+    MARKERS = False # linear magnitude, markers measure dB traces
+    SETTINGS = override(without(FreqPlot.SETTINGS, "vbw", "unit", "cal_db", "ext_gain"),
         ref_level={"default": 50.0}, scale_div={"default": 5.0}, window={"default": "rect"},
     ) + HoldMixin.SETTINGS
 

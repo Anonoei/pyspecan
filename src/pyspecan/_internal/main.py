@@ -18,9 +18,17 @@ def define_args():
     mon = args.get_group(parser, "developer toggles")
     mon.add_argument("--mon_mem", action="store_true")
     mon.add_argument("--profile", action="store_true")
+    parser.add_argument("--list", action="store_true", help="list the radios that can be used and exit: those attached here, and with -d tcp://host:5555 those a pysdrlib server hosts")
     return parser
 
+def _list_radios(device):
+    from ..model.sink.live import list_devices
+    address = device if device and "://" in device else None
+    print("\n".join(list_devices(address)))
+
 def _main(args):
+    if args.list:
+        return _list_radios(getattr(args, "device", None))
     SpecAn(**vars(args))
 
 def _process_args(parser):
@@ -31,6 +39,8 @@ def _process_args(parser):
     elif "--help" in sys.argv:
         run_help = True
         sys.argv.pop(sys.argv.index("--help"))
+    if "--list" in sys.argv and not any(a in ("-s", "--sink") or a.startswith("--sink=") for a in sys.argv):
+        sys.argv += ["-s", "live"] # listing is about radios, which is what -d means for a live sink
     args, remaining = parser.parse_known_args()
 
     view = View.get(args.view)
@@ -56,8 +66,11 @@ def _process_args(parser):
         exit()
     return args
 
-def main():
+def define_args_with_view():
     parser = define_args()
     parser.add_argument("-v", "--view", type=str, default=View.tkGUI.name, choices=View.choices())
     parser.add_argument("-s", "--sink", type=str.upper, default=Sink.FILE.name, choices=Sink.choices())
-    _main(_process_args(parser))
+    return parser
+
+def main():
+    _main(_process_args(define_args_with_view()))

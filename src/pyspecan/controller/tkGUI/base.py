@@ -46,6 +46,7 @@ class Controller(_Controller):
         self._queue_lock = threading.Lock()
         self._message_until = 0.0
         self._polling = False
+        self._dirty = False
         self._deferred: list = []
 
         v = self.view
@@ -83,6 +84,9 @@ class Controller(_Controller):
             self._queue.clear()
         self.panels.on_reset()
 
+    def state_changed(self):
+        self._dirty = True # the playback thread must not touch widgets, the poll shows it
+
     def _poll(self):
         """Main thread: draw what the playback thread produced, follow its state"""
         if not self.running or self._polling:
@@ -100,7 +104,11 @@ class Controller(_Controller):
             self.panels.render() # also draws panes that were rebuilt and are waiting for their last frame
             if queued:
                 self.view.tb_var_draw_time.set(f"{time.perf_counter() - t0:06.3f}s")
-            self.draw_tb()
+            if self._dirty:
+                self._dirty = False
+                self.refresh() # the radio was retuned elsewhere, or went away
+            else:
+                self.draw_tb()
             self._poll_id = self.view.root.after(POLL, self._poll)
         except tk.TclError:
             if self.running:
@@ -145,16 +153,16 @@ class Controller(_Controller):
         """Change a setting, errors go to the message label instead of the console"""
         try:
             self.setting(key, value)
-        except (ValueError, OSError) as e:
+        except Exception as e: # also what the radio library raises (Busy, NotController...)
             self.show_message(str(e))
         self.refresh()
 
     def run_command(self, cmd):
         try:
             self.command(cmd)
-        except (ValueError, OSError) as e:
+        except Exception as e: # also what the radio library raises (Busy, NotController...)
             self.show_message(str(e))
-        self.draw_tb()
+        self.refresh() # a command can change who controls the radio, and the settings with it
 
     def when_idle(self, fn):
         """Run `fn` now, or once the drawing in progress is done: drawing runs the event loop, and

@@ -40,6 +40,12 @@ class Controller(_Controller):
             (("seek",), "seek <sample>", "jump to a sample", self.cmd_seek),
             (("open", "path", "f"), "open <path>", "open a file", self.cmd_open),
             (("fmt",), "fmt <format>", "file format", self.cmd_fmt),
+            (("radios",), "radios", "list the radios that can be used, and how to pick one", self.cmd_radios),
+            (("device", "dev"), "device <target>", "use a radio: a driver, or tcp://host:5555/<id>", self.cmd_device),
+            (("antenna", "ant"), "antenna [port]", "list the radio's receive antennas, or select one", self.cmd_antenna),
+            (("claim",), "claim", "take control of a hosted radio that is free", lambda a: self._radio_cmd("claim")),
+            (("release",), "release", "give up control of a hosted radio, and keep watching", lambda a: self._radio_cmd("release")),
+            (("reconnect",), "reconnect", "connect to the radio again", lambda a: self._radio_cmd("reconnect")),
             (("fs",), "fs <rate>", "sample rate, e.g. 250k", self.cmd_fs),
             (("cf",), "cf <freq>", "center frequency", self.cmd_cf),
             (("nfft",), "nfft <n>", "FFT size, a power of two (or its exponent)", self.cmd_nfft),
@@ -52,6 +58,7 @@ class Controller(_Controller):
             (("del", "rm"), "del <id>", "remove a plot", self.cmd_del),
             (("type",), "type <id> <type>", "change a plot's type", self.cmd_type),
             (("move", "mv"), "move <id> <where> [target]", "left|right|above|below <target>, or end for a new row at the bottom", self.cmd_move),
+            (("marker", "mk"), "marker <id> add|set|del|kinds ...", "markers and measurements: add <kind> [key=value ...], set <marker> <key> <value>, del <marker>", self.cmd_marker),
             (("set",), "set <id> <key> <value>", "change a plot setting, e.g. set p1 vbw 5", self.cmd_set),
         ):
             for name in names:
@@ -101,8 +108,8 @@ class Controller(_Controller):
             return
         try:
             self.commands[cmd][2](args)
-        except (ValueError, KeyError, TypeError, OSError) as e:
-            print(f"error: {e}")
+        except Exception as e: # also what the radio library raises (Busy, NotController...)
+            print(f"error: {type(e).__name__}: {e}" if not isinstance(e, ValueError) else f"error: {e}")
 
     def _need(self, args, n, usage):
         if len(args) < n:
@@ -123,10 +130,42 @@ class Controller(_Controller):
         st = self.get_state()
         print(f"  sink {st['sink']}  fs {st['fs']}  cf {st['cf']}  nfft {st['nfft']}  overlap {st['overlap']}")
         print(f"  block {st['block_size']} samples ({st['sweep']} ms, asked for {st['sweep_samples']})  show {st['show']} ms")
+        radio = st.get("radio")
+        if radio:
+            print(f"  radio {radio['device']} ({radio['control']}{', ' + str(radio['lag']) + ' s behind' if radio['lag'] else ''}{', spectrum mirrored, corrected' if radio.get('inverted') else ''})")
+            for a in radio.get("antennas", []):
+                print(f"    antenna {'*' if a['selected'] else ' '} {a['label']}")
         if "path" in st:
             print(f"  file {st['path'] or '-'}  format {st['fmt']}  at {st['cur_samp']}/{st['max_samp']}  {st['time_cur']} / {st['time_tot']}")
         if self.message:
             print(f"  {self.message}")
+
+    def cmd_radios(self, args):
+        for r in self.radios():
+            print(f"  {r['label']:<70} device {r['target']}" if r["target"] else f"  {r['label']}")
+
+    def cmd_device(self, args):
+        self._need(args, 1, "device <target>")
+        self.setting("device", args[0])
+        self.cmd_status([])
+
+    def cmd_antenna(self, args):
+        """antenna [port]: list the receive antennas of the radio, or select one"""
+        self._need_radio_ports()
+        if args:
+            self.setting("antenna", " ".join(args))
+        for a in self.sink.antennas():
+            print(f"  {'*' if a['selected'] else ' '} {a['label']}{'  (spectrum mirrored, corrected)' if a['inverted'] else ''}")
+
+    def _need_radio_ports(self):
+        if self.sink.status() is None:
+            raise ValueError("the sink is a file, there is no radio")
+        if not self.sink.antennas():
+            raise ValueError("this radio has no selectable antennas")
+
+    def _radio_cmd(self, cmd):
+        self.command(cmd)
+        self.cmd_status([])
 
     def cmd_draw(self, args):
         self.draw()
@@ -246,6 +285,25 @@ class Controller(_Controller):
             self._need(args, 3, "move <id> <left|right|above|below> <target>")
         self.move_plot(args[0], args[2] if len(args) > 2 else None, where)
         print("  " + "  |  ".join(" ".join(row) for row in self.plots.layout))
+
+    def cmd_marker(self, args):
+        self._need(args, 2, "marker <id> add <kind> [key=value ...] | set <marker> <key> <value> | del <marker> | kinds")
+        pid, op, rest = args[0], args[1].lower(), args[2:]
+        if op == "kinds":
+            for kind, fields in self.plots.get(pid).markers.kinds().items():
+                print(f"  {kind:<8} " + "  ".join(f["key"] for f in fields))
+        elif op == "add":
+            self._need(rest, 1, "marker <id> add <kind> [key=value ...]")
+            params = dict(kv.split("=", 1) for kv in rest[1:] if "=" in kv)
+            print(f"  added {self.add_marker(pid, rest[0], **params)}")
+        elif op == "set":
+            self._need(rest, 3, "marker <id> set <marker> <key> <value>")
+            self.set_marker(pid, rest[0], rest[1], " ".join(rest[2:]))
+        elif op in ("del", "rm"):
+            self._need(rest, 1, "marker <id> del <marker>")
+            self.del_marker(pid, rest[0])
+        else:
+            raise ValueError("usage: marker <id> add|set|del|kinds ...")
 
     def cmd_set(self, args):
         self._need(args, 3, "set <id> <key> <value>")

@@ -134,7 +134,7 @@ class Controller(_Controller):
                 self.plot_command(msg["op"], msg)
             else:
                 return f"unknown message type {kind!r}"
-        except (ValueError, KeyError, TypeError, OSError) as e:
+        except Exception as e: # also what the radio library raises (Busy, NotController...)
             self.log.debug("bad message %s: %s", msg, e)
             self.state_changed() # resync the client's inputs
             return f"{type(e).__name__}: {e}"
@@ -154,5 +154,13 @@ class Controller(_Controller):
                 self.move_plot(msg["id"], msg.get("target"), msg["where"])
             elif op == "set":
                 self.set_plot(msg["id"], msg["key"], msg.get("value"))
+            elif op == "marker_add":
+                self.add_marker(msg["id"], msg["kind"], **(msg.get("params") or {}))
+            elif op == "marker_del":
+                self.del_marker(msg["id"], msg["marker"])
+            elif op == "marker_set" and "params" in msg:
+                self.set_marker_params(msg["id"], msg["marker"], msg["params"])
+            elif op == "marker_set":
+                self.set_marker(msg["id"], msg["marker"], msg["key"], msg.get("value"))
             else:
                 raise ValueError(f"unknown plot op {op!r}")

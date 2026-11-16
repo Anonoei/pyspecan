@@ -1,0 +1,95 @@
+"""Measurement plots that are not markers on a frequency trace: CCDF and power vs time
+
+Channel power, ACPR and occupied bandwidth are marker kinds, see markers.py.
+"""
+import numpy as np
+
+from ..measure import CCDF as _CCDF
+from ..measure import channel, units, windows
+from .base import Plot, plot
+from .frame import Axis, Frame, Trace, RED, YELLOW
+from .freq import POWER_UNIT, FreqPlot, fmt_hz, freq_text, hz
+from .settings import Setting, override, without
+
+def _db(p: float) -> float:
+    return float(units.lin_to_db(p))
+
+@plot("CCDF")
+class CCDFPlot(Plot):
+    """Complementary CDF of the instantaneous power, accumulated over every block since the last reset"""
+    TITLE = "CCDF"
+    SETTINGS = (
+        Setting("bins", "Bins", "int", default=1000, min=100, max=20000, step=100, reset=True, flags=("--ccdf_bins",), help="histogram bins over 160 dB"),
+        Setting("show_gauss", "Gaussian ref", "check", default=True, help="the CCDF of Gaussian noise"),
+    )
+
+    def reset(self):
+        self.ccdf = _CCDF(self.bins) # type: ignore
+
+    def render(self):
+        samples = self.source.samples
+        if not len(samples):
+            return None
+        self.ccdf.update(samples)
+        x, p = self.ccdf.curve()
+        keep = p >= 1e-8
+        x, p = x[keep], p[keep]
+        xmax = max(12.0, float(x.max()) + 1.0) if len(x) else 12.0
+        traces = []
+        if self.show_gauss: # type: ignore
+            gx = np.linspace(0, xmax, 200)
+            traces.append(Trace(-(10.0 ** (gx / 10.0)) * np.log10(np.e), gx, color=RED, name="gauss", width=1.0))
+        traces.append(Trace(np.log10(p), x, color=YELLOW, name="ccdf"))
+        s = self.ccdf.stats()
+        f = lambda v: "-" if not np.isfinite(v) else f"{v:.2f} dB"
+        readout = [("Samples", f"{self.ccdf.total}"), ("Average", f(s["avg"])), ("Peak", f(s["peak"])), ("PAPR", f(s["papr"]))]
+        readout += [(f"{pc:g}%", f(s[f"p{pc:g}"])) for pc in (10, 1, 0.1, 0.01)]
+        return Frame([Axis(
+            xmin=0, xmax=xmax, ymin=-6, ymax=0, yfmt="log10", xlabel="dB above average", ylabel="P(> x)", traces=traces,
+        )], title=self.TITLE, readout=readout)
+
+@plot("Power vs Time")
+class PowerVsTime(FreqPlot):
+    """Band power of every overlapped (realtime) frame, scrolling. Time resolution is hop / fs"""
+    TITLE = "Power vs Time"
+    MARKERS = False
+    SETTINGS = override(without(FreqPlot.SETTINGS, "vbw"), scale_div={"default": 5.0}) + (
+        Setting("pvt_freq", "Center freq", "text", default="", coerce=freq_text, hint="center", flags=("--pvt_freq",), help="band center frequency"),
+        Setting("pvt_bw", "Bandwidth", "text", default="", coerce=freq_text, hint="0 = wideband", flags=("--pvt_bw",), help="band width, 0 or blank for the whole band"),
+        Setting("history", "History", "int", default=500, min=2, max=100000, reset=True, flags=("--history",), help="frames kept"),
+    )
+
+    def reset(self):
+        super().reset()
+        self._hist = np.empty(0)
+
+    def render(self):
+        spectra = self.source.spectra("rt", self.window)
+        if not len(spectra):
+            return None
+        fs, n = self.source.fs, spectra.shape[-1]
+        db = units.scale(spectra, fs, windows.window(self.window, n), self.unit, self.cal_db, self.ext_gain)
+        dens = self.density_lin(db) if db.ndim == 1 else np.vstack([self.density_lin(r) for r in db])
+        freqs = self.bin_freqs(n)
+        bw = hz(self.pvt_bw, 0.0) # type: ignore
+        if bw > 0:
+            c = hz(self.pvt_freq, self.source.cf) # type: ignore
+            lo, hi = c - bw/2, c + bw/2
+        else:
+            lo, hi = freqs[0] - fs/n/2, freqs[-1] + fs/n/2
+        power = np.atleast_1d(channel.band_power(dens, freqs, lo, hi))
+        self._hist = np.concatenate((self._hist, units.lin_to_db(power)))[-self.history:] # type: ignore
+        h = self._hist
+        dt = self.source.hop("rt", n) / fs
+        btm, top = self.y_range(h)
+        x = (np.arange(len(h)) - len(h) + 1) * dt
+        lin_mean = float(np.mean(units.db_to_lin(h)))
+        u = POWER_UNIT[self.unit]
+        return Frame([Axis(
+            xmin=-(self.history - 1) * dt, xmax=0, ymin=btm, ymax=top, offscale=self.offscale(h, btm, top), # type: ignore
+            xlabel="time (s)", ylabel=u, traces=[Trace(h, x, name="pvt")],
+        )], title=self.TITLE, readout=[
+            ("Band", "wideband" if bw <= 0 else f"{fmt_hz(c)}, {fmt_hz(bw)}"), # type: ignore
+            ("Average", f"{_db(lin_mean):.2f} {u}"), ("Peak", f"{h.max():.2f} {u}"), ("Min", f"{h.min():.2f} {u}"),
+            ("Resolution", f"{dt*1e3:.3g} ms"),
+        ])
