@@ -25,7 +25,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 keywords = ["anonoei", "sdr", "speca", "specan"]
-dependencies = ["numpy>=2.0", "pysdrlib>=0.4.3"]
+dependencies = ["numpy>=2.0", "pysdrlib>=0.4.4"]
 
 [project.optional-dependencies]
 tk = ["matplotlib"]

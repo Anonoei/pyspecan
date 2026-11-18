@@ -4,10 +4,12 @@ from ..utils.registry import Registry
 from .base import Model, args_model
 from .sink import SinkFile, args_file
 from .sink import SinkLive, args_live
+from .sink import SinkTcpIq, args_tcpiq
 
 SINKS: Registry = Registry("sink")
 SINKS.register(_Sink.FILE.name)((SinkFile, args_file))
 SINKS.register(_Sink.LIVE.name)((SinkLive, args_live))
+SINKS.register(_Sink.TCPIQ.name)((SinkTcpIq, args_tcpiq))
 
 def GetSink(sink: _Sink):
     return SINKS.get(sink.name)[0]

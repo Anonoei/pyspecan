@@ -5,6 +5,7 @@ class Sink(Enum):
     NONE = "none"
     FILE = "file"
     LIVE = "live"
+    TCPIQ = "tcpiq"
 
     @classmethod
     def choices(cls):
