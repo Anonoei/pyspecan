@@ -134,6 +134,14 @@ mypkg = "mypkg.specan_plots"
 ```
 See the `pyspecan.plots` docstring for a full example. `PYSPECAN_NO_EXTENSIONS=1` turns them off.
 
+## Profiling
+`python dev/profile_plots.py` times every plot alone on a synthetic capture and gives its cost in PSDs (a PSD on the
+same blocks is 1.0), its median / p90 / first block in ms, and its share of real time (over 100% it can not keep up
+with live samples at that rate on its own). `--markers` adds what each marker kind costs on a PSD, `--nfft`,
+`--sweep` (block length, ms), `--plots`, `--set "Scope trig_mode=roll"` change what is timed, `--json` keeps the
+numbers to compare runs. In a layout plots share the FFT frames and the DSP plots one signal search, so together
+they cost less than the sum.
+
 # Install
 1. Run `pip install pyspecan`, to install (`pyspecan[tk]`, `[web]`, `[dsp]` for the views and the DSP plots)
 2. Run `python3 -m pyspecan --help` to view available arguments

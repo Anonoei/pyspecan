@@ -9,6 +9,14 @@ from .settings import Setting
 
 SETTING_COUNT = Setting("count", "Samples", "int", default=0, min=0, step=256, hint="0 = fft size", help="samples to plot, 0 for one FFT worth", group="Timebase")
 
+def density(y: np.ndarray, x: np.ndarray, rows: int, cols: int, yr: tuple, xr: tuple) -> np.ndarray:
+    """(rows, cols) counts of the points (x, y) over the ranges, row 0 at the top (the largest y): np.histogram2d's
+    counts by direct integer binning (it binary searches every point, many times slower)"""
+    j = np.floor((np.asarray(x, dtype=np.float64) - xr[0]) * (cols / (xr[1] - xr[0]))).astype(np.int64)
+    i = np.floor((yr[1] - np.asarray(y, dtype=np.float64)) * (rows / (yr[1] - yr[0]))).astype(np.int64)
+    ok = (i >= 0) & (i < rows) & (j >= 0) & (j < cols)
+    return np.bincount(i[ok] * cols + j[ok], minlength=rows * cols).reshape(rows, cols).astype(np.float64)
+
 class TimePlot(Plot):
     """Plots of the raw samples"""
     def block(self) -> np.ndarray:
@@ -121,8 +129,7 @@ class IQDensity(Plot):
         if peak > self.amp or self.hist is None: # outgrew the range: start over with headroom
             self.amp, self.hist = (peak * 1.25) or 1.0, None
         a = self.amp
-        h, _, _ = np.histogram2d(samps.imag, samps.real, self.bins, range=[[-a, a], [-a, a]])
-        h = h[::-1] # row 0 is the top: +Q
+        h = density(samps.imag, samps.real, self.bins, self.bins, (-a, a), (-a, a)) # row 0 is the top: +Q
         self.hist = h if self.hist is None else self.hist * self.decay + h
         top = float(self.hist.max())
         img = np.log1p(self.hist) * (255.0 / np.log1p(top)) if top > 0 else np.zeros_like(self.hist)

@@ -88,21 +88,51 @@ def rrc(t: np.ndarray, beta: float) -> np.ndarray:
     from rpps.signal.filters.shaping import rrc_pulse
     return rrc_pulse(t, beta)
 
+def fast_tau(x: np.ndarray, sps: float, beta: float, lo: int = 0, hi: int | None = None, grid: int = 16) -> float:
+    """rpps' best_tau (the symbol timing in [0, sps) that maximises the matched filter's output energy, on the
+    absolute lattice tau + k sps) for a part x[lo:hi], at a fraction of the cost: the matched filter runs once as a
+    convolution, its output is interpolated `grid` times finer by FFT, and each candidate timing reads its energy off
+    that, where best_tau builds the filter matrix again for every candidate"""
+    from rpps.math.interp import peak
+    hi = len(x) if hi is None else hi
+    seg = np.asarray(x[lo:hi], dtype=np.complex128)
+    L = int(np.ceil(SPAN * sps))
+    if len(seg) < 4 * L:
+        from rpps.sync.time.mat import best_tau
+        return best_tau(x, sps, beta, SPAN, lo, hi, grid)[0]
+    h = rrc(np.arange(-L, L + 1) / sps, beta)
+    z = np.convolve(seg, h / np.sqrt(np.sum(h**2)), "same")[L:-L] # z[i] is the output at sample lo + L + i
+    n = len(z)
+    Z = np.fft.fft(z)
+    pad = np.zeros(n * grid, complex)
+    half = n // 2
+    pad[:half], pad[-(n - half):] = Z[:half], Z[half:]
+    zu = np.abs(np.fft.ifft(pad) * grid) ** 2 # at (lo + L + i / grid)
+    start = lo + L + 2 * sps # clear of the interpolation's wrap at the ends
+    stop = lo + L + n - 2 * sps
+    energy = np.zeros(grid)
+    for g in range(grid):
+        tau = g * sps / grid
+        k = np.arange(np.ceil((start - tau) / sps), np.floor((stop - tau) / sps) + 1)
+        idx = np.rint((tau + k * sps - lo - L) * grid).astype(np.int64)
+        idx = idx[(idx >= 0) & (idx < len(zu))]
+        energy[g] = zu[idx].mean() if len(idx) else 0.0
+    g, d = peak(energy, circular=True, log=False)
+    return float(((g + d) * sps / grid) % sps)
+
 def track_timing(x: np.ndarray, sps: float, beta: float) -> tuple[float, float]:
     """(sps, tau) over x: a rate a little off makes the timing drift across x, the drift between its first and last
     TIMING_SAMPLES corrects the rate (as rpps' detector refines it, one round: the lock keeps the result, so it
     converges block by block). tau is from the latest samples, the symbol lattice being absolute"""
-    from rpps.sync.time.mat import best_tau
     n = len(x)
     seg = min(TIMING_SAMPLES, n // 2)
     end = n - seg
     if end > 4 * seg // 3: # far enough apart to see a drift
-        a, _ = best_tau(x, sps, beta, SPAN, 0, seg)
-        z, _ = best_tau(x, sps, beta, SPAN, end, n)
+        a = fast_tau(x, sps, beta, 0, seg)
+        z = fast_tau(x, sps, beta, end, n)
         drift = (z - a + sps/2) % sps - sps/2
         sps += drift / (end / sps)
-    tau, _ = best_tau(x, sps, beta, SPAN, end)
-    return sps, tau
+    return sps, fast_tau(x, sps, beta, end)
 
 def _strength(s) -> float:
     """How strong a found signal is: its total in-band power (a tone's SNR in its own narrow band is large, its power

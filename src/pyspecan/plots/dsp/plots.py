@@ -8,6 +8,7 @@ import numpy as np
 from ..base import Plot, plot
 from ..frame import BLUE, GREEN, IMAGE, LINE, RED, SCATTER, THREE_D, YELLOW, Axis, Frame, Image, Marker, Table, TableRow, Trace, fmt_time, time_unit
 from ..freq import SETTING_CMAP, fmt_hz
+from ..iq import density
 from ..settings import Setting
 from .analyzer import SPAN, Lock, NoLock, Selection, analyzer, rrc
 
@@ -170,8 +171,7 @@ class ConstellationDensity(DSPPlot):
         if lk is None:
             return self.empty([Axis(xmin=-lim, xmax=lim, ymin=-lim, ymax=lim, square=True, xlabel="I", ylabel="Q")], sel, why)
         lim = max(1.5, 1.3 * float(np.max(np.abs(lk.points))))
-        h, _, _ = np.histogram2d(lk.syms.imag, lk.syms.real, self.bins, range=[[-lim, lim], [-lim, lim]]) # type: ignore
-        h = h[::-1] # row 0 is the top: +Q
+        h = density(lk.syms.imag, lk.syms.real, self.bins, self.bins, (-lim, lim), (-lim, lim)) # type: ignore # row 0: +Q
         self.hist = h if self.hist is None or self.hist.shape != h.shape else self.hist * self.decay + h # type: ignore
         top = float(self.hist.max())
         img = np.rint(np.log1p(self.hist) * (255.0 / np.log1p(top))) if top > 0 else np.zeros_like(self.hist)
@@ -344,7 +344,7 @@ class EyeDiagram(DSPPlot):
         u, z = eye_points(lk, self.cols)
         lim = 1.6 * float(max(np.max(np.abs(lk.points.real)), np.max(np.abs(lk.points.imag)), 0.5))
         rng = [[-lim, lim], [0.0, 2.0]]
-        new = np.stack([np.histogram2d(part, u, (self.rows, self.cols), range=rng)[0][::-1] for part in (z.real, z.imag)])
+        new = np.stack([density(part, u, self.rows, self.cols, rng[0], rng[1]) for part in (z.real, z.imag)])
         self.hist = new if self.hist is None or self.hist.shape != new.shape else self.hist * self.decay + new
         axes = []
         for k, name in enumerate(("I", "Q")):
