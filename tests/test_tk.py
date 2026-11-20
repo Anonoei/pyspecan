@@ -264,7 +264,10 @@ def test_hover_readout_follows_the_pointer(app):
     wait_for(app, lambda: pane.keep.get("frame") is not None and not pane.dirty)
     _mouse(pane, "motion_notify_event", 1000)
     text = pane.plotter.ax(0).art("hov_t")
-    assert text.get_visible() and "f 99" in text.get_text() and "trace" in text.get_text()
+    first = text.get_text().split("\n")[0] # "f 998.4 Hz": the pointer's frequency, to within a pixel or two
+    value, unit = first.split()[1:3]
+    hz = float(value) * {"Hz": 1, "kHz": 1e3}[unit]
+    assert text.get_visible() and abs(hz - 1000) < 30 and "trace" in text.get_text(), text.get_text()
     assert str(pane.canvas_widget.cget("cursor")) == "crosshair"
     from matplotlib.backend_bases import LocationEvent
     canvas = pane.plotter.ax(0).ax.figure.canvas

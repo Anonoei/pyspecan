@@ -16,7 +16,6 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from ...backend.mpl.color import cmap
 from ...backend.mpl.plot import BlitPlot
-from ...obj import Frequency
 from ...plots import Scroller
 from ...plots.drag import MIN_DRAG_PX, TOOLS, Drag, commit, hit_test, preview, settled
 from ...plots.frame import Axis, Frame, Image, fmt_time
@@ -32,6 +31,13 @@ def _log10_label(v: float) -> str:
     """y values holding log10 of the quantity: -3 -> 1e-3"""
     m, e = f"{10.0 ** v:.0e}".split("e")
     return f"{m}e{int(e)}"
+
+def _hz_tick(v: float) -> str:
+    """A frequency as a short tick label: 62.5k, -1.2M, 500"""
+    for scale, suffix in ((1e9, "G"), (1e6, "M"), (1e3, "k")):
+        if abs(v) >= scale:
+            return f"{v / scale:.4g}{suffix}"
+    return f"{v:.4g}"
 
 MARK_TOP_PX = 22 # a point marker's triangle stays this far below the top, so its label shows
 
@@ -797,8 +803,11 @@ class PlotPane:
         return None
 
     def _freq_ticks(self, mpl, lo, hi):
-        ticks = np.linspace(lo, hi, 5)
-        mpl.ax.set_xticks(ticks, [str(Frequency.get(f)) for f in ticks])
+        """As many ticks as fit the axis' width (up to 5), labeled short: 62.5k, -1.2M"""
+        width = mpl.ax.get_window_extent().width
+        n = int(np.clip(width // 85 + 1, 2, 5))
+        ticks = np.linspace(lo, hi, n)
+        mpl.ax.set_xticks(ticks, [_hz_tick(f) for f in ticks])
 
     def _draw_image(self, i: int, ax: Axis, mpl, xmin, xmax):
         im: Image = ax.image # type: ignore

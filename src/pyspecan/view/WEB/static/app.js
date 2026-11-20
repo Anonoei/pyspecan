@@ -1094,6 +1094,19 @@ function drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h) {
     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
     ctx.lineWidth = 1;
     ctx.textAlign = "left";
+    // labels step out of each other's way: one that would overlap an earlier one moves a line up (down at the top edge)
+    const placed = [];
+    const label = (text, x, y, step) => {
+        const wd = ctx.measureText(text).width, ht = 12;
+        let yy = y;
+        for (let k = 0; k < 6; k++) {
+            const hit = placed.some((r) => x < r.x + r.w + 2 && r.x < x + wd + 2 && yy - ht < r.y && r.y - ht < yy);
+            if (!hit) break;
+            yy += step;
+        }
+        placed.push({x, y: yy, w: wd});
+        ctx.fillText(text, x, yy);
+    };
     for (const m of axis.markers || []) {
         ctx.strokeStyle = ctx.fillStyle = m.color;
         if (m.kind === "hline") {
@@ -1109,12 +1122,12 @@ function drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h) {
         if (x < x0 || x > x0 + w) continue;
         if (m.kind === "vline") {
             ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + h); ctx.stroke();
-            if (m.label) ctx.fillText(m.label, x + 3, y0 + 12);
+            if (m.label) label(m.label, x + 3, y0 + 12, 13);
             continue;
         }
         const y = Math.min(Math.max(yOf(m.y), y0 + 26), y0 + h);
         ctx.beginPath(); ctx.moveTo(x, y - 2); ctx.lineTo(x - 5, y - 11); ctx.lineTo(x + 5, y - 11); ctx.closePath(); ctx.fill();
-        if (m.label) ctx.fillText(m.label, Math.min(x + 6, x0 + w - 24), y - 13);
+        if (m.label) label(m.label, Math.min(x + 6, x0 + w - 24), y - 13, y - 13 - 13 > y0 + 10 ? -13 : 13);
     }
     ctx.restore();
 }
