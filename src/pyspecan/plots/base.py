@@ -32,7 +32,7 @@ class About:
     cost: float | None = None
 
 def about_text(name: str, a: dict) -> str:
-    """What a plot does as plain text (a tooltip, the console's about): its category, Data, Shows, Use it to, Cost.
+    """What a plot does as plain text (a tooltip, the console's about): its category, Data, Shows, Use, Cost.
     `a` is Plot.about()"""
     lines = [f"{name} ({a['category']})"]
     if a["data"]:
@@ -40,7 +40,7 @@ def about_text(name: str, a: dict) -> str:
     if a["shows"]:
         lines.append(f"Shows: {a['shows']}")
     if a["use"]:
-        lines += ["Use it to:", *[f"  • {u}" for u in a["use"]]]
+        lines += ["Use:", *[f"  • {u}" for u in a["use"]]]
     if a["cost"]:
         lines.append(f"Cost: {a['cost']}")
     return "\n".join(lines)

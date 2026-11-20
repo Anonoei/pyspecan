@@ -1290,7 +1290,7 @@ def test_every_plot_says_what_it_does():
         cls = PLOTS.get(name)
         a = cls.about()
         assert cls.CATEGORY in CATEGORIES and cls.CATEGORY != "Other", name
-        assert a["data"] and a["shows"] and a["use"] and a["cost"], name # Data, Shows, Use it to, Cost
+        assert a["data"] and a["shows"] and a["use"] and a["cost"], name # Data, Shows, Use, Cost
         assert all(u and u[0].isupper() for u in a["use"]), name
 
 def test_about_of_a_plot_that_says_nothing():

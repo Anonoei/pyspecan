@@ -85,13 +85,13 @@ def test_add_menu_groups_and_describes_the_plots(page):
     assert group("Spectrum") == 3 and group("Time-frequency") == 5
     page.locator(".add-menu-item[data-name='Persistence']").hover()
     card = page.inner_text("#add-menu-info")
-    assert card.startswith("Persistence") and "Data" in card and "Shows" in card and "Use it to" in card and "Cost" in card
+    assert card.startswith("Persistence") and "Data" in card and "Shows" in card and "Use" in card and "Cost" in card
     assert "heavy, about 16x a PSD" in card
     assert "Data: " in page.get_attribute(".add-menu-item[data-name='PSD']", "title") # the plain text tooltip too
     page.keyboard.press("Escape")
     assert not page.locator("#add-menu").is_visible()
     title = page.get_attribute(".plot-header .plot-name", "title") # the plot's name in its header says the same
-    assert title.startswith("PSD (Spectrum)") and "Use it to:" in title
+    assert title.startswith("PSD (Spectrum)") and "Use:" in title
 
 def test_add_dropdown_then_drag_and_drop(page):
     for name in ("Spectrogram", "IQ", "Persistence"):

@@ -77,7 +77,7 @@ def test_the_add_menu_groups_the_plots_and_adds_one(app):
     sub.event_generate("<<MenuSelect>>")
     settle(app)
     text = app.tooltip.label.cget("text")
-    assert text.startswith("Persistence (Spectrum)") and "Data:" in text and "Use it to:" in text and "heavy" in text
+    assert text.startswith("Persistence (Spectrum)") and "Data:" in text and "Use:" in text and "heavy" in text
     sub.unpost()
     assert layout(app) == [["PSD"]]
     add(app, "Spectrogram")

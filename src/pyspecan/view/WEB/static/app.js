@@ -147,13 +147,13 @@ function toggleAddMenu(open) {
     if (!menu.hidden) { showAbout(null); const first = menu.querySelector(".add-menu-item"); if (first) first.focus({preventScroll: true}); }
 }
 
-// what a plot does: the category, Data (its input and what is done to it), Shows, Use it to, and its cost
+// what a plot does: the category, Data (its input and what is done to it), Shows, Use, and its cost
 function aboutCard(name, a) {
     if (!a) return [el("p", {className: "muted", textContent: "Point at a plot to see what it does"})];
     const part = (label, text) => (text ? [el("div", {className: "about-label", textContent: label}), el("p", {textContent: text})] : []);
     return [el("div", {className: "about-name", textContent: name}), el("div", {className: "muted about-cat", textContent: a.category}),
         ...part("Data", a.data), ...part("Shows", a.shows),
-        ...(a.use && a.use.length ? [el("div", {className: "about-label", textContent: "Use it to"}),
+        ...(a.use && a.use.length ? [el("div", {className: "about-label", textContent: "Use"}),
             el("ul", {}, ...a.use.map((u) => el("li", {textContent: u})))] : []),
         ...part("Cost", a.cost)];
 }
@@ -165,7 +165,7 @@ function aboutText(name, a) {
     const lines = [`${name} (${a.category})`];
     if (a.data) lines.push(`Data: ${a.data}`);
     if (a.shows) lines.push(`Shows: ${a.shows}`);
-    if (a.use && a.use.length) lines.push("Use it to:", ...a.use.map((u) => `  • ${u}`));
+    if (a.use && a.use.length) lines.push("Use:", ...a.use.map((u) => `  • ${u}`));
     if (a.cost) lines.push(`Cost: ${a.cost}`);
     return lines.join("\n");
 }
