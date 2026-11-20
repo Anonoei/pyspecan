@@ -187,10 +187,11 @@ dialog .dlg-actions { text-align: right; }
 .pyspecan .add-menu { position: relative; display: inline-block; }
 .pyspecan .add-menu-panel {
     position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; display: flex; gap: 0;
+    flex-direction: row-reverse; /* the list under the button, the card beside it on the left */
     background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
     max-height: calc(100vh - 70px);
 }
-.pyspecan .add-menu-list { overflow-y: auto; padding: 6px 0; min-width: 14em; border-right: 1px solid var(--border-muted); }
+.pyspecan .add-menu-list { overflow-y: auto; padding: 6px 0; min-width: 14em; border-left: 1px solid var(--border-muted); }
 .pyspecan .add-menu-cat { padding: 5px 12px 1px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
 .pyspecan .add-menu-item {
     display: block; width: 100%; text-align: left; border: none; border-radius: 0; background: none; padding: 1px 12px 1px 20px;
