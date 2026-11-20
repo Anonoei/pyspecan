@@ -186,10 +186,16 @@ def test_peak_marker_steps_with_its_buttons(page):
     add_plot(page, "PSD")
     page.wait_for_function("Object.keys(state.plots).length === 1")
     pid = _ids(page)[0]
-    page.select_option(f"#addmk-{pid}", "peak")
+    # a block first, then the marker: it lands on this block's highest peak and every level below is read off this block
+    # (the source still holds the block from before the rewind, so adding it first would land on that one)
     page.click("#btn-next")
+    page.wait_for_function("(id) => runtime[id].frame", arg=pid)
+    page.select_option(f"#addmk-{pid}", "peak")
     freq = lambda: page.evaluate("(id) => state.plots[id].markers[0].params.freq", pid)
     page.wait_for_function("(id) => state.plots[id].markers[0] && state.plots[id].markers[0].params.freq !== ''", arg=pid)
+    page.wait_for_function("""(id) => { const want = parseFloat(state.plots[id].markers[0].params.freq);
+        const m = runtime[id].frame.axes[0].markers.find((m) => m.label === state.plots[id].markers[0].id);
+        return m && Math.abs(m.x - want) < 1; }""", arg=pid) # the frame that shows where it landed
     level = lambda: float(page.evaluate("(id) => runtime[id].frame.table.rows[0].cells[3]", pid).split()[0])
     first = float(freq()) # landed on the highest peak: the QPSK signal near 150 kHz
     assert 100e3 < first < 200e3

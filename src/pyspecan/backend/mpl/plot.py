@@ -13,9 +13,6 @@ class _Plot:
         self._canv = fig.canvas
         self._axs = {}
 
-    def show(self):
-        print(f"axs: {self._axs}")
-
     def update(self):
         """Update plot"""
         self._canv.draw()

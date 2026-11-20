@@ -35,11 +35,15 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      # Extras (tk, web, test) come from pyproject.toml. Browser tests skip themselves without playwright.
+      # Extras (tk, web, dsp, test) come from pyproject.toml. dsp needs rpps >= 0.5.0 from PyPI
       - name: Install package
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[tk,web,test]"
+          python -m pip install -e ".[tk,web,dsp,test]"
+
+      # The browser tests (tests/test_web_*.py) drive a real chromium through playwright
+      - name: Install chromium for playwright
+        run: python -m playwright install --with-deps chromium
 
       # test_tk needs a display: xvfb on Linux, Windows has one
       - name: Run tests (Linux)
@@ -52,6 +56,31 @@ jobs:
       - name: Run tests (Windows)
         if: runner.os != 'Linux'
         run: python -m pytest -q --durations=10
+
+  without-rpps:
+    # rpps is optional: everything but the DSP plots must work without it (they skip, the rest runs)
+    name: Without rpps (Python 3.12, Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYSPECAN_NO_RPPS: "1"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install package (no dsp extra)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[tk,web,test]"
+          python -m playwright install --with-deps chromium
+      - name: Run tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb python3-tk
+          xvfb-run -a python -m pytest -q --durations=10
 
   package:
     name: Wheel and sdist

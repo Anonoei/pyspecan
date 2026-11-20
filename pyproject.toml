@@ -30,8 +30,8 @@ dependencies = ["numpy>=2.0", "pysdrlib>=0.4.4"]
 [project.optional-dependencies]
 tk = ["matplotlib"]
 web = ["fastapi", "uvicorn", "jinja2", "websockets"]
-dsp = ["rpps>=0.4.1"] # signal search, constellation, eye diagram, network analyzer (pyspecan.plots.dsp)
-test = ["pytest", "httpx", "pysdrlib[remote]"]
+dsp = ["rpps>=0.5.0"] # signal search, constellation, eye diagram, network analyzer (pyspecan.plots.dsp)
+test = ["pytest", "httpx", "pysdrlib[remote]", "playwright"]
 docs = ["pdoc3"]
 dev = ["pyspecan[tk,web,dsp,test,docs]", "twine", "build", "bumpver"]
 
