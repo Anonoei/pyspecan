@@ -552,6 +552,10 @@ function dragged(rt, axis, i) {
     return {...axis, bands: (axis.bands || []).map((b) => (b.owner === d.owner && b.edit && b.edit[1] === d.edit[1] ? {...b, lo, hi} : b))};
 }
 
+// can new markers be drawn on axis i: a frequency axis of a plot that has markers
+const canDraw = (id, rt, i) => rt.tool !== "off" && i >= 0 && !!rt.frame && rt.frame.axes[i].xfmt === "freq"
+    && !!(state.plots[id] && state.plots[id].markers);
+
 function bindCanvas(id, canvas) {
     canvas.style.touchAction = "none";
     canvas.addEventListener("pointerleave", () => { const rt = runtime[id]; rt.hover = null; if (!rt.drag) drawPlot(id); });
@@ -564,7 +568,7 @@ function bindCanvas(id, canvas) {
             const [px, py] = pointerPos(rt, ev), hit = hitTest(rt, px, py);
             const i = axisAt(rt, py);
             canvas.style.cursor = hit ? (hit.mode === "move" ? "grab" : hit.mode === "level" ? "ns-resize" : "ew-resize")
-                : (rt.tool !== "off" && i >= 0 && rt.frame && rt.frame.axes[i].xfmt === "freq" ? "crosshair" : "");
+                : (canDraw(id, rt, i) ? "crosshair" : "");
             return;
         }
         const [qx, qy] = pointerPos(rt, ev), d = rt.drag, g = rt.geom[d.i];
@@ -591,7 +595,7 @@ function bindCanvas(id, canvas) {
         let d = hitTest(rt, px, py);
         if (!d) {
             const i = axisAt(rt, py);
-            if (i < 0 || rt.tool === "off" || rt.frame.axes[i].xfmt !== "freq") return;
+            if (!canDraw(id, rt, i)) return;
             const g = rt.geom[i], x = dataX(g, px);
             d = {i, mode: "new", lo: x, hi: x};
         }
@@ -697,7 +701,7 @@ function drawHover(ctx, id, rt) {
     }
     if (!g.isImage) {
         const y = g.ymax - ((py - g.y0) / g.h) * (g.ymax - g.ymin);
-        const fy = axis.yfmt === "log10" ? fmtLog10 : (v) => v.toFixed(2);
+        const fy = axis.yfmt === "log10" ? fmtLog10 : axis.yfmt === "freq" ? fmtHzFull : (v) => v.toFixed(2);
         lines.push(`cursor ${fy(y)} ${unit}`.trim());
         const t = (axis.traces || [])[axis.traces.length - 1]; // the plot's own trace is the last one
         if (t && t.y.length && !rt.drag) {
@@ -755,7 +759,7 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
     const xOf = (v) => x0 + ((v - xmin) / (xmax - xmin)) * w;
     const yOf = (v) => y0 + (1 - (v - ymin) / (ymax - ymin)) * h;
     const fmtX = fmtXOf(axis, xmin, xmax, false);
-    const fmtY = axis.yfmt === "log10" ? fmtLog10 : fmtNum;
+    const fmtY = axis.yfmt === "log10" ? fmtLog10 : axis.yfmt === "freq" ? fmtHz : fmtNum;
     const labelY = !isImage || axis.ymin != null; // a scrolling image has no y values to label
     out.geom = {x0, y0, w, h, xmin, xmax, ymin, ymax, isImage};
 

@@ -123,6 +123,15 @@ class FreqPlot(Plot):
         fmin, _ = self.source.freq_range()
         return fmin + np.arange(n) * (self.source.fs / n)
 
+    def reduced(self, y: np.ndarray, points: int, mode: str = "peak") -> tuple[np.ndarray | None, np.ndarray]:
+        """`y` (one value per bin) through the detector, with the frequency of each group's center.
+        x is None when nothing was reduced (one point per bin, see Trace)"""
+        n = len(y)
+        x, out = detector.reduce(y, points, mode)
+        if len(out) >= n:
+            return None, out
+        return self.bin_freqs(n)[0] + x * (self.source.fs / n), out
+
     def density_lin(self, y_db: np.ndarray) -> np.ndarray:
         """Trace in the plot's unit -> linear power per Hz, so integrating over frequency gives power"""
         lin = units.db_to_lin(y_db)
@@ -242,10 +251,7 @@ class TraceMixin:
         frequency of each group's center as x, so it lines up with the markers (which use bin frequencies)"""
         for t in traces:
             if t.x is None:
-                n = len(t.y)
-                x, t.y = detector.reduce(t.y, self.points, self.detector) # type: ignore
-                if len(t.y) < n:
-                    t.x = self.bin_freqs(n)[0] + x * (self.source.fs / n) # type: ignore
+                t.x, t.y = self.reduced(t.y, self.points, self.detector) # type: ignore
         return traces
 
     def avg_readout(self) -> list[tuple[str, str]]:

@@ -14,6 +14,7 @@ import numpy as np
 from ..measure import trigger
 from .base import Plot, plot
 from .frame import Axis, Frame, Marker, Trace, YELLOW, BLUE, GREEN, RED, fmt_time
+from .freq import fmt_hz, freq_text, hz
 from .settings import Setting
 
 COLS = 500          # screen columns: traces longer than 2*COLS points are drawn as a min / max envelope
@@ -245,3 +246,35 @@ class Scope(Plot):
         return self._frame(Axis(
             xmin=-n/fs, xmax=0.0, ymin=ymin, ymax=ymax, xfmt="time", xlabel="Time", traces=traces,
         ), [("Trig", "roll"), ("Span", fmt_time(n / fs))])
+
+@plot("Frequency vs Time")
+class FreqVsTime(Plot):
+    """Instantaneous frequency (an FM discriminator): the phase step between samples, as an offset from the
+    tuned frequency. Shows FM / FSK deviation, chirps and frequency hops"""
+    TITLE = "Frequency vs Time"
+    SETTINGS = (
+        Setting("count", "Samples", "int", default=4096, min=2, step=256, help="samples to plot", group="Timebase"),
+        Setting("smooth", "Smoothing", "int", default=1, min=1, max=4096, help="samples averaged (moving average), 1 for none",
+                group="Display"),
+        Setting("fspan", "Freq span", "text", default="", coerce=freq_text, hint="sample rate",
+                help="height of the frequency axis, centered on the tuned frequency", group="Display"),
+    )
+
+    def render(self):
+        samps = self.source.samples[-self.count:]
+        if len(samps) < 2:
+            return None
+        fs = self.source.fs or 1.0
+        f = np.angle(samps[1:] * np.conj(samps[:-1])) * (fs / (2 * np.pi))
+        if self.smooth > 1 and len(f) > self.smooth:
+            f = np.convolve(f, np.full(self.smooth, 1.0 / self.smooth), "valid")
+        t = np.arange(len(f)) / fs
+        x, y = _zigzag(t, f) # a long trace as a min / max envelope
+        span = hz(self.fspan, fs) or fs
+        return Frame([Axis(
+            xmin=0.0, xmax=len(samps) / fs, xfmt="time", ymin=-span / 2, ymax=span / 2, yfmt="freq",
+            xlabel="Time", ylabel="Offset", traces=[Trace(y, x, color=GREEN, name="freq")],
+        )], title=self.TITLE, readout=[
+            ("Mean", fmt_hz(float(f.mean()))), ("Deviation", fmt_hz(float(f.max() - f.min()) / 2)),
+            ("RMS", fmt_hz(float(f.std()))),
+        ])

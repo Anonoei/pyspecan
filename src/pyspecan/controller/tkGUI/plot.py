@@ -413,6 +413,8 @@ class PlotPane:
             self.lim[i]["yfmt"] = ax.yfmt
             if ax.yfmt == "log10":
                 mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: _log10_label(v)))
+            elif ax.yfmt == "freq":
+                mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: fmt_hz(v)))
             else:
                 mpl.ax.yaxis.set_major_formatter(ScalarFormatter())
 
@@ -692,7 +694,7 @@ class PlotPane:
             lines = [f"{name} {fx(x)}"]
         if ax.image is None:
             unit = str(getattr(self.plot, "unit", "") or "")
-            fy = _log10_label if ax.yfmt == "log10" else (lambda v: f"{v:.2f}")
+            fy = _log10_label if ax.yfmt == "log10" else fmt_hz if ax.yfmt == "freq" else (lambda v: f"{v:.2f}")
             lines.append(f"cursor {fy(y)} {unit}".strip())
             if ax.traces and d is None:
                 t = ax.traces[-1] # the plot's own trace is the last one

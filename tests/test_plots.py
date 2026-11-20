@@ -964,3 +964,82 @@ def test_bands_with_a_y_span_are_hit_inside_it():
     assert hit_test(ax, 0, px, 500, 10, None, level) is None and hit_test(ax, 0, px, 500, 90, None, level) is None
     assert hit_test(ax, 0, px, 500).mode == "move" # no levels: x only
     assert hit_test(ax, 0, px, 750, 90, None, level) is None and hit_test(ax, 0, px, 750, 5, None, level).mode == "move" # up to the top
+
+# --- 3d spectrogram, frequency vs time, occupancy, iq density --- #
+def test_3d_spectrogram_keeps_rows_newest_in_front():
+    model = FakeModel(nfft=256)
+    src = Source(model)
+    p = PLOTS.get("3D Spectrogram")(src, max_count=4, points=64)
+    p.markers.add("channel", freq="100", bw="50")
+    for i in range(6):
+        feed(src, model, _two_tones(1024, nfft=256, seed=i))
+        f = p.update()
+    ax = f.axes[0]
+    assert ax.projection == "3d" and (ax.ymin, ax.ymax) == (0, 3) and p.FEATURES == {"line", "3d"}
+    assert [t.name for t in ax.traces] == ["r3", "r2", "r1", "r0"] # oldest at the back drawn first
+    assert all(len(t.x) == len(t.y) == len(t.z) == 64 and set(t.y) == {float(t.name[1:])} for t in ax.traces)
+    assert all(ax.zmin <= t.z.min() and t.z.max() <= ax.zmax for t in ax.traces) # clipped to the level range
+    newest = ax.traces[-1]
+    assert abs(newest.x[int(np.argmax(newest.z))] - 100) < 1000 / 64 # the strong tone, at its frequency
+    assert [(b.lo, b.hi) for b in ax.bands if b.label == "M1"] == [(75.0, 125.0)] and f.table is not None # on the floor
+    p.set("framing", "rt")
+    feed(src, model, _two_tones(1024, nfft=256))
+    assert len(p.update().axes[0].traces) == 1 # a reset
+
+def test_frequency_vs_time_tracks_a_tone_and_fm():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    p = PLOTS.get("Frequency vs Time")(src, count=500)
+    feed(src, model, clean(2000, f=0.1)) # 100 Hz
+    f = p.update()
+    ax = f.axes[0]
+    assert ax.xfmt == "time" and ax.yfmt == "freq" and (ax.ymin, ax.ymax) == (-500.0, 500.0)
+    np.testing.assert_allclose(ax.traces[0].y, 100.0, atol=1e-3)
+    assert dict(f.readout)["Mean"] == "100 Hz"
+    t = np.arange(4000) / 1000
+    fm = np.exp(2j*np.pi*np.cumsum(50*np.sin(2*np.pi*5*t)) / 1000).astype(np.complex64) # 50 Hz deviation
+    p.set("fspan", "200")
+    p.set("count", 4000)
+    feed(src, model, fm)
+    f = p.update()
+    assert (f.axes[0].ymin, f.axes[0].ymax) == (-100.0, 100.0)
+    assert dict(f.readout)["Deviation"].startswith("50") or dict(f.readout)["Deviation"].startswith("49.9")
+    assert len(f.axes[0].traces[0].y) <= 1000 # drawn as an envelope
+
+def test_occupancy_counts_bins_above_the_threshold():
+    model = FakeModel(nfft=256)
+    src = Source(model)
+    p = PLOTS.get("Occupancy")(src, points=0)
+    for i in range(3):
+        feed(src, model, _two_tones(4096, nfft=256, seed=i))
+        f = p.update()
+    live, occ = f.axes
+    level = live.markers[0]
+    assert (level.kind, level.owner, level.edit, level.y) == ("hline", "", "threshold", p.thr) # drag it to set the threshold
+    freqs = p.bin_freqs(256)
+    pct = occ.traces[0].y
+    assert pct[np.argmin(np.abs(freqs - 100))] == 100.0 and pct[np.argmin(np.abs(freqs - 400))] < 10.0 # tone vs noise
+    assert dict(f.readout)["Frames"] == str(p.frames) and p.frames > 3
+    p.set("threshold", "200") # above everything: nothing is occupied, the counts restart
+    feed(src, model, _two_tones(4096, nfft=256))
+    f = p.update()
+    assert f.axes[1].traces[0].y.max() == 0.0 and f.axes[0].markers[0].y == 200.0
+
+def test_iq_density_puts_symbols_in_their_quadrants():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    p = PLOTS.get("IQ Density")(src, bins=32, decay=0.0)
+    rng = np.random.default_rng(0)
+    sym = ((rng.integers(0, 2, 4000) * 2 - 1) + 1j * (rng.integers(0, 2, 4000) * 2 - 1)) / np.sqrt(2)
+    feed(src, model, (sym + 0.02 * rng.standard_normal(4000)).astype(np.complex64))
+    f = p.update()
+    ax = f.axes[0]
+    img = ax.image.data
+    assert img.shape == (32, 32) and img.dtype == np.uint8 and ax.square and ax.xmin == -ax.xmax
+    quads = [img[:16, 16:], img[:16, :16], img[16:, :16], img[16:, 16:]] # +I+Q (top right), -I+Q, -I-Q, +I-Q
+    assert all(q.max() > 200 for q in quads) and img.max() == 255
+    assert img[14:18, 14:18].max() == 0 # nothing at the origin
+    one = np.full(4000, (1 + 1j) / np.sqrt(2), dtype=np.complex64) # only the top right symbol
+    feed(src, model, one)
+    img = p.update().axes[0].image.data
+    assert img[:16, 16:].max() == 255 and img[16:, :16].max() == 0 # decay 0: only the latest block

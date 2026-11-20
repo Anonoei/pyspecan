@@ -293,7 +293,8 @@ def draw_axis(ax: Axis, image_data, width: int, height: int, use_color=True) -> 
     labels: dict[int, str] = {}
     for i in range(ticks):
         row = round(i * (plot_rows - 1) / (ticks - 1))
-        labels[row] = (fmt_log10 if ax.yfmt == "log10" else fmt_num)(yr[1] - i / (ticks - 1) * (yr[1] - yr[0]))
+        fy = fmt_log10 if ax.yfmt == "log10" else fmt_hz if ax.yfmt == "freq" else fmt_num
+        labels[row] = fy(yr[1] - i / (ticks - 1) * (yr[1] - yr[0]))
     lw = min(max((len(s) for s in labels.values()), default=0) + 1, 10)
     cols = max(width - lw - 1, 4)
     if ax.square: # a braille cell is 2 dots wide, 4 tall: twice the columns make a square
