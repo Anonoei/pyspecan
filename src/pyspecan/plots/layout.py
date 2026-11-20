@@ -18,7 +18,7 @@ import shlex
 from dataclasses import dataclass, field
 
 from .base import PLOTS
-from .settings import GLOBAL_SETTINGS, by_key
+from .settings import ANALYSIS_SETTINGS, GLOBAL_SETTINGS, HAVE_RPPS, by_key
 
 @dataclass
 class PlotSpec:
@@ -41,7 +41,7 @@ class LayoutSpec:
 def default() -> LayoutSpec:
     return LayoutSpec([[PlotSpec("PSD")]])
 
-EXT_HINT = "plots and marker kinds from extensions need their package installed"
+EXT_HINT = "plots and marker kinds from extensions need their package installed, the DSP ones pyspecan[dsp] (rpps)"
 
 def _norm(name: str) -> str:
     return "".join(ch for ch in str(name).lower() if ch.isalnum())
@@ -122,7 +122,15 @@ def from_dict(d: dict) -> LayoutSpec:
             out.append(PlotSpec(resolve_type(p["type"]), dict(p.get("settings", {})), p.get("link") or None,
                                 [dict(m) for m in markers]))
         rows.append(out)
-    return LayoutSpec(rows, dict(d.get("globals", {})))
+    return LayoutSpec(rows, _known_globals(dict(d.get("globals", {}))))
+
+def _known_globals(globals: dict) -> dict:
+    """A layout's globals without the analysis settings when rpps is missing: saved where it was installed, they
+    have nothing to set here (the DSP plots themselves still fail, naming what to install)"""
+    if HAVE_RPPS:
+        return globals
+    dsp = {s.key for s in ANALYSIS_SETTINGS}
+    return {k: v for k, v in globals.items() if k not in dsp}
 
 def to_dict(spec: LayoutSpec) -> dict:
     d: dict = {}

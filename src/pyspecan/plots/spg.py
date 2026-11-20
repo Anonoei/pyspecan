@@ -1,4 +1,5 @@
 from collections import deque
+from dataclasses import replace
 
 import numpy as np
 
@@ -102,4 +103,5 @@ class SPG3D(FreqPlot):
             ylabel="rows ago", projection="3d", aspect=(2.0, 1.2, 0.7), traces=traces,
         )], title=self.TITLE, readout=self.rbw_readout(len(self.last)))
         self.apply_markers(frame)
+        frame.axes[0].bands = [replace(b, ylo=None, yhi=None) for b in frame.axes[0].bands] # y is age here, not level
         return frame

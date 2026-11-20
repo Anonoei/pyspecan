@@ -4,6 +4,8 @@ A plot declares what the user can change once, as `Setting`s. Defaults,
 parsing and validation live here, and every view builds its widgets from the
 same descriptors (html inputs, tk widgets, console commands).
 """
+import importlib.util
+import os
 from dataclasses import dataclass, replace
 from typing import Any, Callable
 
@@ -91,10 +93,43 @@ def grouped(settings: tuple, **changes) -> tuple:
 def by_key(settings, key: str) -> Setting | None:
     return next((s for s in settings if s.key == key), None)
 
+def _have_rpps() -> bool:
+    """Is the optional DSP library (rpps) installed. Found without importing it, the plots that use it import it
+    when they first run. PYSPECAN_NO_RPPS=1 hides it"""
+    if os.environ.get("PYSPECAN_NO_RPPS"):
+        return False
+    try:
+        return importlib.util.find_spec("rpps") is not None
+    except (ImportError, ValueError):
+        return False
+
+HAVE_RPPS = _have_rpps()
+
+def _freq_text(value) -> str:
+    """coerce for a frequency like '1.2M', blank stays blank"""
+    from ..obj import Frequency
+    s = str(value).strip()
+    if s:
+        Frequency.get(s)
+    return s
+
+# the signal the DSP plots analyse (pyspecan.plots.dsp), shared by every plot: picking a signal's box on any
+# spectrum selects it for all of them
+ANALYSIS_SETTINGS = (
+    Setting("dsp_freq", "Signal freq", "text", default="", coerce=_freq_text, hint="strongest", flags=("--dsp_freq",),
+            scope="global", group="Analysis", help="center of the signal the DSP plots analyse, blank for the strongest found"),
+    Setting("dsp_bw", "Signal BW", "text", default="", coerce=_freq_text, hint="as found", flags=("--dsp_bw",),
+            scope="global", group="Analysis", help="its bandwidth, blank for the width the signal search found"),
+    Setting("dsp_mod", "Modulation", "select", default="auto", options=("auto", "bpsk", "qpsk", "8psk", "16QAM", "64QAM"),
+            flags=("--dsp_mod",), scope="global", group="Analysis", help="the constellation to lock to, 'auto' finds it"),
+    Setting("dsp_baud", "Symbol rate", "text", default="", coerce=_freq_text, hint="auto", flags=("--dsp_baud",),
+            scope="global", group="Analysis", help="symbol rate when known, like 50k, blank to find it"),
+)
+
 # instrument wide, every plot reads the same values
 GLOBAL_SETTINGS = (
     Setting("cal_db", "Cal (dBm @ 0 dBFS)", "number", default=0.0, step=1, reset=True, flags=("--cal_db",), scope="global", group="Calibration",
             help="dBm reading of a full scale tone, for the dBm units"),
     Setting("ext_gain", "Ext gain (dB)", "number", default=0.0, step=1, reset=True, flags=("--ext_gain",), scope="global", group="Calibration",
             help="gain ahead of the receiver, removed from dBm readings"),
-)
+) + (ANALYSIS_SETTINGS if HAVE_RPPS else ())

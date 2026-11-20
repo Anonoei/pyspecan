@@ -58,6 +58,24 @@ that shows every sample as a min/max envelope.
 - Screens longer than one block are filled across blocks
 - For faster updates, lower the samples per block and the frame interval together, e.g. `-st 20 --show 20` (about 50 updates/s). Faster than the screen can redraw only adds lag.
 
+## DSP plots (optional)
+With [RPPS](https://github.com/Anonoei/RPPS) installed (`pip install pyspecan[dsp]`), pyspecan finds and analyses signals.
+Without it everything else works the same, and these plots are not listed.
+- The `signals` marker (any spectrum: PSD, spectrograms, persistence, 3D spectrogram) boxes every signal found in the
+  block, with its width, SNR and duty cycle in the marker table. The analysed one is green: click a box to analyse that
+  signal, drag a box's edges to adjust it
+- "Constellation": the analysed signal's symbols after timing, carrier and gain recovery, over the ideal points, with
+  modulation, symbol rate, roll-off, Es/N0, EVM and carrier offset
+- "Eye Diagram": its matched filter output over two symbols, I and Q
+- "Network Analyzer": the link's frequency response across the signal (magnitude, phase, group delay), measured blind
+  from the decided symbols, no stimulus needed
+- The "Analysis" globals (`--dsp_freq`, `--dsp_bw`, `--dsp_mod`, `--dsp_baud`) pick the signal and, when known, its
+  modulation and symbol rate. Blank picks the strongest signal and finds the rest
+```
+python3 -m pyspecan -v web -f <file> -F cf64 -fs 1M \
+    --plot "PSD marker=signals" --plot constellation --row --plot "eye diagram" --plot "network analyzer"
+```
+
 ## Plot extensions
 Other packages can add plots and marker kinds, which every view then lists. Name a module that
 registers them (`@plot("Name")`, `@marker_kind("name")`) under the `pyspecan.plots` entry point group:
@@ -68,7 +86,7 @@ mypkg = "mypkg.specan_plots"
 See the `pyspecan.plots` docstring for a full example. `PYSPECAN_NO_EXTENSIONS=1` turns them off.
 
 # Install
-1. Run `pip install pyspecan`, to install
+1. Run `pip install pyspecan`, to install (`pyspecan[tk]`, `[web]`, `[dsp]` for the views and the DSP plots)
 2. Run `python3 -m pyspecan --help` to view available arguments
 
 # Contributing

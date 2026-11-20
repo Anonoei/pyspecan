@@ -116,7 +116,9 @@ def test_tick_paces_and_stops_at_the_end(capture):
 def test_plot_types_follow_the_views_features(capture):
     c = make(capture)
     c.FEATURES = {"line"}
-    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "Scope", "Frequency vs Time", "CCDF", "Power vs Time", "Occupancy"]
+    from pyspecan.plots.settings import HAVE_RPPS
+    dsp = ["Network Analyzer"] if HAVE_RPPS else [] # the optional DSP plots
+    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "Scope", "Frequency vs Time", "CCDF", "Power vs Time", "Occupancy", *dsp]
     with pytest.raises(ValueError):
         c.add_plot("Spectrogram")
 

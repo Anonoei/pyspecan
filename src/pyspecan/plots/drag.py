@@ -149,7 +149,7 @@ def num(v: float) -> str:
 def commit(tool: str, drag: Drag, wide: bool) -> tuple[str, str, dict] | None:
     """What a finished drag means: ("add", kind, params), ("set", marker id, params), ("plot", "", settings)
     for a mark of the plot itself, or None for nothing. `wide`: the drag covered at least MIN_DRAG_PX pixels.
-    A plain click on an existing marker does nothing"""
+    A plain click on an existing marker does nothing, on a box of the plot's (a found signal) it applies the box"""
     lo, hi = drag.span
     if drag.mode == "new":
         if tool == "point" and not wide:
@@ -159,6 +159,8 @@ def commit(tool: str, drag: Drag, wide: bool) -> tuple[str, str, dict] | None:
             return "add", tool, {"freq": hz((lo + hi) / 2), key: hz(hi - lo)}
         return None
     if not drag.moved:
+        if drag.mode in ("move", "left", "right") and not drag.owner and isinstance(drag.edit, tuple): # a click on a box of the plot picks it (a narrow one is all edge)
+            return "plot", "", {drag.edit[0]: hz((lo + hi) / 2), drag.edit[1]: hz(max(hi - lo, 1.0))}
         return None
     op = "set" if drag.owner else "plot"
     if drag.mode == "level":

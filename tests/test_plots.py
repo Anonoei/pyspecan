@@ -790,7 +790,8 @@ def test_global_cal_reaches_every_plot():
     assert plots.get(a).cal_db == 5 and plots.get(b).cal_db == 5
     plots.set(a, "ext_gain", 3) # a plot's set of a global key also reaches all
     assert plots.get(b).ext_gain == 3
-    assert plots.describe()["globals"]["settings"] == {"cal_db": 5.0, "ext_gain": 3.0}
+    got = plots.describe()["globals"]["settings"]
+    assert {k: got[k] for k in ("cal_db", "ext_gain")} == {"cal_db": 5.0, "ext_gain": 3.0} # (and the DSP globals with rpps)
     with pytest.raises(ValueError):
         plots.set_global("vbw", 1)
 

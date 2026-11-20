@@ -608,7 +608,8 @@ function bindCanvas(id, canvas) {
     const finish = (ev, cancel) => {
         const rt = runtime[id], d = rt.drag;
         if (!d) return;
-        if (cancel || !(d.moved || d.mode === "new")) rt.drag = null; // a plain click on a marker does nothing
+        // a plain click on a marker does nothing, on a box of the plot's (a found signal) it applies the box
+        if (cancel || !(d.moved || d.mode === "new" || (["move", "left", "right"].includes(d.mode) && !d.owner && Array.isArray(d.edit)))) rt.drag = null;
         else commitDrag(id, rt, d, rt.geom[d.i]);
         drawPlot(id);
     };

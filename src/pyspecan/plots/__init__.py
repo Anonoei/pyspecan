@@ -26,6 +26,8 @@ module and name it under the "pyspecan.plots" entry point group:
         def render(self):
             ...                                 # read self.source, return a Frame
 
+With rpps installed (pip install pyspecan[dsp]) the DSP plots of `pyspecan.plots.dsp` register too.
+
 Frequency plots that carry markers subclass `FreqPlot`, new marker kinds subclass `MarkerKind`
 with `@marker_kind("name")`. Extensions load after the built in plots (so pickers list them
 last), in entry point name order. One that fails to import or registers a name already taken
@@ -48,6 +50,9 @@ from .source import Source
 from . import psd, spg, pst, fft, iq, scope, measure, markers
 from .freq import FreqPlot
 from .markers import MarkerKind, MARKER_KINDS, marker_kind
+from .settings import HAVE_RPPS
+if HAVE_RPPS: # the DSP plots and the signals marker, see plots.dsp
+    from . import dsp
 
 EXTENSION_GROUP = "pyspecan.plots"
 _log = logging.getLogger(__name__)

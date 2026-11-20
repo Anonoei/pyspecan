@@ -275,6 +275,31 @@ def test_scope_trigger_level_is_dragged_along_y(page):
     plot(page, "Scope").locator("button[title='remove plot']").click()
     page.wait_for_function("!Object.values(state.plots).some((p) => p.name === 'Scope')")
 
+def test_clicking_a_found_signal_selects_it_for_analysis(page):
+    from pyspecan.plots.settings import HAVE_RPPS
+    if not HAVE_RPPS:
+        pytest.skip("needs rpps (pyspecan[dsp])")
+    if page.locator("#btn-stop").is_enabled():
+        page.click("#btn-stop")
+    pid = _psd_id(page)
+    for m in _markers(page, pid): # start clean
+        page.evaluate("([id, mid]) => plotOp('marker_del', {id, marker: mid})", [pid, m["id"]])
+    page.wait_for_function("(id) => state.plots[id].markers.length === 0", arg=pid)
+    page.select_option(f"#addmk-{pid}", "signals")
+    page.click("#btn-next")
+    page.wait_for_function("(id) => runtime[id].frame.axes[0].bands.some((b) => b.edit && b.owner === '')", arg=pid)
+    assert page.evaluate("state.globals.settings.dsp_freq") == ""
+    xy = page.evaluate("""(id) => { const rt = runtime[id], g = rt.geom[0], r = rt.canvas.getBoundingClientRect();
+        const b = rt.frame.axes[0].bands.find((b) => b.owner === '' && b.edit), f = (b.lo + b.hi) / 2, y = (b.ylo + b.yhi) / 2;
+        return [r.left + g.x0 + (f - g.xmin) / (g.xmax - g.xmin) * g.w, r.top + g.y0 + (1 - (y - g.ymin) / (g.ymax - g.ymin)) * g.h, f]; }""", pid)
+    page.mouse.click(*xy[:2])
+    page.wait_for_function("state.globals.settings.dsp_freq !== ''")
+    assert abs(float(page.evaluate("state.globals.settings.dsp_freq")) - xy[2]) < 1.0 # the box's center: a click picks it
+    assert page.evaluate("[...document.querySelectorAll('#globals input')].some((e) => e.value !== '' && Math.abs(parseFloat(e.value) - %f) < 1)" % xy[2])
+    page.evaluate("(id) => plotOp('marker_del', {id, marker: state.plots[id].markers[0].id})", pid)
+    for key in ("dsp_freq", "dsp_bw"):
+        page.evaluate(f"set('{key}', '')")
+
 def test_settings_sections_links_and_globals(page):
     """Settings are grouped in collapsible sections, linked plots share level settings and markers, cal is global"""
     if page.locator("#btn-stop").is_enabled():
