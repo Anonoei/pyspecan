@@ -651,10 +651,11 @@ class PlotPane:
         self._redraw()
 
     def _set_plot(self, params: dict):
-        """A dragged mark of the plot itself: its settings, the settings panel follows"""
+        """A dragged (or clicked) mark of the plot itself: its settings. The widgets follow, the sidebar's too: a
+        found signal's box sets the global analysis settings"""
         for key, value in params.items():
             self.ctrl.set_plot(self.pid, key, value)
-        self.ctrl.panels.refresh()
+        self.ctrl.refresh()
 
     def _expire(self, d: Drag):
         if self.drag is d:

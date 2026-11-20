@@ -220,6 +220,26 @@ def test_the_scope_trigger_level_is_dragged_along_y(app):
     app.command("next")
     wait_for(app, lambda: pane.drag is None and not pane.dirty)
 
+def test_clicking_a_found_signal_selects_it(app):
+    from pyspecan.plots.settings import HAVE_RPPS
+    if not HAVE_RPPS:
+        pytest.skip("needs rpps (pyspecan[dsp])")
+    pid = ids(app)["PSD"]
+    pane = app.panels.panes[pid]
+    app.add_marker(pid, "signals")
+    app.command("next")
+    wait_for(app, lambda: pane.keep.get("frame") is not None and not pane.dirty
+             and any(b.edit and not b.owner for b in pane.keep["frame"].axes[0].bands))
+    box = next(b for b in pane.keep["frame"].axes[0].bands if b.edit and not b.owner)
+    centre = (box.lo + box.hi) / 2
+    level = (box.ylo + box.yhi) / 2
+    _mouse(pane, "button_press_event", centre, level)
+    _mouse(pane, "button_release_event", centre, level) # a click: nothing moved
+    assert abs(float(app.plots.globals["dsp_freq"]) - centre) < 1.0
+    assert app.global_vars["dsp_freq"].get() == app.plots.globals["dsp_freq"] # the sidebar follows
+    app.command("next")
+    wait_for(app, lambda: pane.drag is None and not pane.dirty)
+
 def test_hover_readout_follows_the_pointer(app):
     pid = ids(app)["PSD"]
     pane = app.panels.panes[pid]
