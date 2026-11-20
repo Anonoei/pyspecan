@@ -5,7 +5,11 @@ Subclasses declare `SETTINGS`, implement `render()` and register with `@plot("Na
 """
 from ..utils.registry import Registry
 from .frame import Frame, LINE
-from .settings import Setting
+from .settings import GLOBAL_SETTINGS, Setting, by_key
+
+def default_globals(**kwargs) -> dict:
+    """Values of the GLOBAL_SETTINGS, from `kwargs` where given"""
+    return {s.key: s.parse(kwargs.get(s.key, s.default)) for s in GLOBAL_SETTINGS}
 
 PLOTS: Registry = Registry("plot")
 
@@ -21,54 +25,83 @@ def available(features) -> list[str]:
     return [name for name, cls in PLOTS.items() if cls.FEATURES <= set(features)]
 
 class Plot:
+    """Settings resolve through a hierarchy: global (`globals`, shared by every plot) -> link group
+    (`link.values`, for "link" scope settings while the plot is linked) -> the plot's own values"""
     NAME = ""
     TITLE = ""
     SETTINGS: tuple[Setting, ...] = ()
     FEATURES: frozenset = frozenset({LINE}) # drawing features the frames need, see plots.frame
     MARKERS = False                         # carries a `markers` set the user can add markers and measurements to
+    LINK_DOMAIN: str | None = None          # plots of the same domain can be linked to share their "link" settings
 
-    def __init__(self, source, **kwargs):
-        """`kwargs` may carry initial values for any of this plot's settings, others are ignored"""
+    def __init__(self, source, globals: dict | None = None, **kwargs):
+        """`kwargs` may carry initial values for any of this plot's settings, others are ignored, bad ones raise ValueError.
+        `globals` is the dict of global values shared with the other plots (built from `kwargs` when not given)"""
         self.source = source
         self.enabled = True # False -> paused
+        self.link = None    # plotset.Link while linked
+        self.globals = globals if globals is not None else default_globals(**kwargs)
+        self._scope = {s.key: s.scope for s in self.SETTINGS}
         self._cfg = {}
         for s in self.SETTINGS:
-            try:
-                self._cfg[s.key] = s.parse(kwargs.get(s.key, s.default))
-            except ValueError:
-                if s.key not in kwargs:
-                    raise
-                self._cfg[s.key] = s.parse(s.default) # a bad launch argument falls back to the default
+            self._cfg[s.key] = s.parse(kwargs.get(s.key, s.default)) # raises on a bad value
         self.reset()
 
     def __getattr__(self, name):
         # only reached when normal lookup fails: settings read as attributes
-        cfg = self.__dict__.get("_cfg", {})
+        d = self.__dict__
+        link = d.get("link")
+        if link is not None and d.get("_scope", {}).get(name) == "link" and name in link.values:
+            return link.values[name]
+        cfg = d.get("_cfg", {})
         if name in cfg:
             return cfg[name]
+        g = d.get("globals")
+        if g is not None and name in g:
+            return g[name]
         raise AttributeError(name)
 
     # --- settings --- #
+    def setting(self, key: str) -> Setting | None:
+        """The descriptor of one of this plot's settings or a global one"""
+        return by_key(self.SETTINGS, key) or by_key(GLOBAL_SETTINGS, key)
+
+    def store(self, s: Setting) -> dict:
+        """Where the value of `s` lives for this plot"""
+        if s.scope == "global":
+            return self.globals
+        if s.scope == "link" and self.link is not None:
+            return self.link.values
+        return self._cfg
+
+    def own_values(self) -> dict:
+        """This plot's own and link values, without the globals"""
+        return {s.key: getattr(self, s.key) for s in self.SETTINGS}
+
     def fields(self) -> list[dict]:
         """Description of the editable settings, for building a view's widgets"""
         return [s.to_dict() for s in self.SETTINGS]
 
     def settings(self) -> dict:
-        return {"enabled": self.enabled, **self._cfg}
+        return {"enabled": self.enabled, **self.own_values()}
 
     def set(self, key, value):
-        """Change a setting (or `enabled`), raises ValueError if it is unknown or invalid"""
+        """Change a setting (or `enabled`), raises ValueError if it is unknown or invalid.
+        Only this plot hears of the change, `PlotSet.set` tells every plot sharing the value"""
         if key == "enabled":
             self.enabled = bool(value)
             return
-        for s in self.SETTINGS:
-            if s.key == key:
-                self._cfg[key] = s.parse(value)
-                self.changed(key)
-                if s.reset:
-                    self.reset()
-                return
-        raise ValueError(f"unknown plot setting {key!r}")
+        s = self.setting(key)
+        if s is None:
+            raise ValueError(f"unknown plot setting {key!r}")
+        self.store(s)[key] = s.parse(value)
+        self.apply(s)
+
+    def apply(self, s: Setting):
+        """React to a changed value of `s`"""
+        self.changed(s.key)
+        if s.reset:
+            self.reset()
 
     def changed(self, key):
         """A setting changed, called before the reset it may trigger"""

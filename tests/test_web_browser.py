@@ -254,3 +254,71 @@ def test_hover_shows_frequency_and_level_under_the_cursor(page):
     page.wait_for_function("(id) => !runtime[id].hover", arg=pid)
     page.wait_for_timeout(200)
     assert readout_pixels() == base
+
+def test_settings_sections_links_and_globals(page):
+    """Settings are grouped in collapsible sections, linked plots share level settings and markers, cal is global"""
+    if page.locator("#btn-stop").is_enabled():
+        page.click("#btn-stop")
+    if plot(page, "Spectrogram").count() == 0:
+        page.select_option("#sel-add-plot", "Spectrogram")
+        page.wait_for_function("[...document.querySelectorAll('.plot-header b')].some(b => b.textContent === 'Spectrogram')")
+    psd, spg = plot(page, "PSD"), plot(page, "Spectrogram")
+    psd.locator("button[title=settings]").click()
+    sections = psd.locator(".plot-settings > details.section > summary").all_inner_texts()
+    assert sections[:3] == ["Level", "Processing", "Trace"], sections
+    adv = psd.locator("details.section.advanced").first
+    assert not adv.evaluate("d => d.open") and adv.locator("select").first.is_hidden() # advanced starts folded
+    adv.locator("summary").click()
+    assert adv.evaluate("d => d.open")
+
+    # link the spectrogram to the PSD from its header
+    pid = _psd_id(page)
+    spg.locator(".plot-header select[title^='link']").select_option(pid)
+    page.wait_for_function("Object.keys(state.links).length === 1")
+    assert psd.locator(".link-chip").inner_text().strip().startswith("🔗") and spg.locator(".link-chip").count() == 1
+    psd = plot(page, "PSD")
+    assert psd.locator("details.section.advanced").first.evaluate("d => d.open")
+    assert psd.locator(".control-group.linked").count() == 5
+    ref = psd.locator("input[id$='-ref_level']")
+    ref.fill("-33")
+    ref.press("Enter")
+    page.wait_for_function("Object.values(state.plots).filter((p) => p.link).every((p) => p.settings.ref_level === -33)")
+    # a marker added on one linked plot shows on both
+    before = len(_markers(page, pid))
+    psd.locator("[id^=addmk-]").select_option("peak")
+    page.wait_for_function("(n) => Object.values(state.plots).filter((p) => p.link).every((p) => p.markers.length === n)", arg=before + 1)
+    assert page.evaluate("new Set(Object.values(state.plots).filter((p) => p.link).map((p) => JSON.stringify(p.markers))).size") == 1
+
+    # global calibration in the side panel
+    page.fill("#g-cal_db", "-7")
+    page.press("#g-cal_db", "Enter")
+    page.wait_for_function("state.globals.settings.cal_db === -7")
+
+    # unlink: values stay, the plots go their own way
+    spg = plot(page, "Spectrogram")
+    spg.locator(".plot-header select[title^='link']").select_option("-")
+    page.wait_for_function("Object.keys(state.links).length === 0")
+    assert page.evaluate("Object.values(state.plots).filter((p) => p.name === 'Spectrogram')[0].settings.ref_level") == -33
+    page.screenshot(path=os.environ.get("PYSPECAN_SHOT", "/dev/null"), full_page=False) if os.environ.get("PYSPECAN_SHOT") else None
+
+def test_save_and_load_layout(page, tmp_path):
+    import json
+    with page.expect_download() as dl:
+        page.click("#btn-layout-save")
+    saved = json.loads(open(dl.value.path()).read())
+    assert dl.value.suggested_filename == "pyspecan-layout.json"
+    assert saved["globals"]["cal_db"] == -7 # set by the previous test
+    assert [[p["type"] for p in row] for row in saved["rows"]] == layout(page)
+
+    path = tmp_path / "l.json"
+    path.write_text(json.dumps({"rows": [[{"type": "PSD", "link": "a", "settings": {"vbw": 4}, "markers": [{"kind": "peak"}]},
+                                          {"type": "Spectrogram", "link": "a"}], [{"type": "Scope"}]]}))
+    page.set_input_files("#in-layout", str(path))
+    page.wait_for_function("Object.keys(state.plots).length === 3 && Object.keys(state.links).length === 1")
+    assert layout(page) == [["PSD", "Spectrogram"], ["Scope"]]
+    assert page.evaluate("state.globals.settings.cal_db") == 0 # left out of the file: back to the default
+
+    path.write_text(json.dumps({"rows": [[{"type": "Laser"}]]}))
+    page.set_input_files("#in-layout", str(path))
+    page.wait_for_function("document.querySelector('#lbl-message').textContent.includes('Laser')")
+    assert layout(page) == [["PSD", "Spectrogram"], ["Scope"]] # a bad file changes nothing

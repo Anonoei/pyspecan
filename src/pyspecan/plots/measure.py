@@ -19,8 +19,8 @@ class CCDFPlot(Plot):
     """Complementary CDF of the instantaneous power, accumulated over every block since the last reset"""
     TITLE = "CCDF"
     SETTINGS = (
-        Setting("bins", "Bins", "int", default=1000, min=100, max=20000, step=100, reset=True, flags=("--ccdf_bins",), help="histogram bins over 160 dB"),
-        Setting("show_gauss", "Gaussian ref", "check", default=True, help="the CCDF of Gaussian noise"),
+        Setting("bins", "Bins", "int", default=1000, min=100, max=20000, step=100, reset=True, help="histogram bins over 160 dB", group="Measurement"),
+        Setting("show_gauss", "Gaussian ref", "check", default=True, help="the CCDF of Gaussian noise", group="Measurement"),
     )
 
     def reset(self):
@@ -54,9 +54,9 @@ class PowerVsTime(FreqPlot):
     TITLE = "Power vs Time"
     MARKERS = False
     SETTINGS = override(without(FreqPlot.SETTINGS, "vbw"), scale_div={"default": 5.0}) + (
-        Setting("pvt_freq", "Center freq", "text", default="", coerce=freq_text, hint="center", flags=("--pvt_freq",), help="band center frequency"),
-        Setting("pvt_bw", "Bandwidth", "text", default="", coerce=freq_text, hint="0 = wideband", flags=("--pvt_bw",), help="band width, 0 or blank for the whole band"),
-        Setting("history", "History", "int", default=500, min=2, max=100000, reset=True, flags=("--history",), help="frames kept"),
+        Setting("pvt_freq", "Center freq", "text", default="", coerce=freq_text, hint="center", help="band center frequency", group="Measurement"),
+        Setting("pvt_bw", "Bandwidth", "text", default="", coerce=freq_text, hint="0 = wideband", help="band width, 0 or blank for the whole band", group="Measurement"),
+        Setting("history", "History", "int", default=500, min=2, max=100000, reset=True, help="frames kept", group="Measurement"),
     )
 
     def reset(self):

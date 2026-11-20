@@ -6,19 +6,32 @@ from ..specan import SpecAn
 
 from ..config import config, View, Sink
 from ..model.model import ModelArgs
-from ..plots import args_plots
+from ..plots import args_plots, layout_from_kwargs
 from ..controller.controller import ControllerArgs
 
 from ..utils import args
 
-def define_args():
-    parser = argparse.ArgumentParser("pyspecan", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+def define_args(view: View = View.tkGUI) -> argparse.ArgumentParser:
+    """The options that decide which other options exist: the view and the sink"""
+    parser = argparse.ArgumentParser("pyspecan", add_help=False)
     args.update_register(parser)
-    # mon = parser.add_argument_group("developer toggles")
+    parser.add_argument("-v", "--view", type=str, default=view.name, choices=View.choices())
+    parser.add_argument("-s", "--sink", type=str.upper, default=None, choices=Sink.choices(),
+                        help=f"sample source (default: {Sink.FILE.name}, {Sink.LIVE.name} with --list)")
+    parser.add_argument("--list", action="store_true", help="list the radios that can be used and exit: those attached here, and with -d tcp://host:5555 those a pysdrlib server hosts")
     mon = args.get_group(parser, "developer toggles")
     mon.add_argument("--mon_mem", action="store_true")
     mon.add_argument("--profile", action="store_true")
-    parser.add_argument("--list", action="store_true", help="list the radios that can be used and exit: those attached here, and with -d tcp://host:5555 those a pysdrlib server hosts")
+    return parser
+
+def build_parser(view: View, sink: Sink, base: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
+    """The full parser for `view` and `sink`"""
+    parser = argparse.ArgumentParser("pyspecan", parents=[base or define_args()],
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    args.update_register(parser)
+    ModelArgs(sink, parser)
+    ControllerArgs(view, sink, parser)
+    args_plots(parser)
     return parser
 
 def _list_radios(device):
@@ -26,51 +39,38 @@ def _list_radios(device):
     address = device if device and "://" in device else None
     print("\n".join(list_devices(address)))
 
-def _main(args):
-    if args.list:
-        return _list_radios(getattr(args, "device", None))
-    SpecAn(**vars(args))
+def _main(ns: argparse.Namespace):
+    if ns.list:
+        return _list_radios(getattr(ns, "device", None))
+    kwargs = vars(ns)
+    try:
+        kwargs["layout"] = layout_from_kwargs(kwargs) # fail before any window opens
+    except (ValueError, OSError) as e:
+        sys.exit(f"pyspecan: layout: {e}")
+    kwargs.pop("layout_items", None)
+    SpecAn(**kwargs)
 
-def _process_args(parser):
-    run_help = False
-    if "-h" in sys.argv:
-        run_help = True
-        sys.argv.pop(sys.argv.index("-h"))
-    elif "--help" in sys.argv:
-        run_help = True
-        sys.argv.pop(sys.argv.index("--help"))
-    if "--list" in sys.argv and not any(a in ("-s", "--sink") or a.startswith("--sink=") for a in sys.argv):
-        sys.argv += ["-s", "live"] # listing is about radios, which is what -d means for a live sink
-    args, remaining = parser.parse_known_args()
+def parse_args(argv=None, view: View = View.tkGUI) -> argparse.Namespace:
+    base = define_args(view)
+    pre, _ = base.parse_known_args(argv)
 
-    view = View.get(args.view)
-    if view == View.NONE:
-        raise err.UnknownOption(f"Unknown view {args.view}")
+    v = View.get(pre.view)
+    if v == View.NONE:
+        raise err.UnknownOption(f"Unknown view {pre.view}")
+    if pre.sink is None:
+        pre.sink = Sink.LIVE.name if pre.list else Sink.FILE.name # listing is about radios
+    s = Sink.get(pre.sink)
+    if s == Sink.NONE:
+        raise err.UnknownOption(f"Unknown sink: {pre.sink}")
 
-    sink = Sink.get(args.sink)
-    if sink == Sink.NONE:
-        raise err.UnknownOption(f"Unknown sink: {args.sink}")
-
-    if args.mon_mem:
-        config.MON_MEM = True
-    if args.profile:
-        config.PROFILE = True
-
-    ModelArgs(sink, parser)
-    args_plots(parser)
-    ControllerArgs(view, sink, parser)
-
-    args = parser.parse_args()
-    if run_help:
-        parser.print_help()
-        exit()
-    return args
-
-def define_args_with_view():
-    parser = define_args()
-    parser.add_argument("-v", "--view", type=str, default=View.tkGUI.name, choices=View.choices())
-    parser.add_argument("-s", "--sink", type=str.upper, default=Sink.FILE.name, choices=Sink.choices())
-    return parser
+    ns = build_parser(v, s, base).parse_args(argv)
+    ns.sink = s.name
+    config.MON_MEM = ns.mon_mem
+    config.PROFILE = ns.profile
+    return ns
 
 def main():
-    _main(_process_args(define_args_with_view()))
+    _main(parse_args())
+
+def main_cui():
+    _main(parse_args(view=View.CUI))

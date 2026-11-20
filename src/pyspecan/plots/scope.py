@@ -88,18 +88,18 @@ def _zigzag(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 class Scope(Plot):
     TITLE = "Scope"
     SETTINGS = (
-        Setting("channel", "Show", "select", default="I/Q", options=CHANNELS, reset=True),
+        Setting("channel", "Show", "select", default="I/Q", options=CHANNELS, reset=True, group="Timebase"),
         Setting("time_div", "Time / div", "text", default="auto", coerce=time_text, hint="auto, 10u, 2m", reset=True,
-                flags=("--time_div",), help="scope time per division, 10 per screen ('auto': one FFT)"),
-        Setting("v_div", "Value / div", "text", default="auto", coerce=_per_div, hint="auto"),
+                help="scope time per division, 10 per screen ('auto': one FFT)", group="Timebase"),
+        Setting("v_div", "Value / div", "text", default="auto", coerce=_per_div, hint="auto", group="Timebase"),
         Setting("trig_mode", "Trigger", "select", default="auto", options=MODES, reset=True,
-                flags=("--trig_mode",), help="scope trigger mode, roll is an untriggered strip chart"),
-        Setting("trig_src", "Trig source", "select", default="I", options=trigger.SOURCES),
-        Setting("trig_edge", "Trig edge", "select", default="rising", options=trigger.EDGES),
-        Setting("trig_level", "Trig level", "number", default=0.0, step=0.05, flags=("--trig_level",), help="scope trigger level"),
-        Setting("trig_pos", "Pre-trigger %", "number", default=10.0, min=0, max=100, step=5),
-        Setting("holdoff", "Holdoff", "text", default="", coerce=time_text, hint="0"),
-        Setting("overlay", "Overlay", "int", default=8, min=1, max=64, hint="sweeps per refresh"),
+                help="scope trigger mode, roll is an untriggered strip chart", group="Trigger"),
+        Setting("trig_src", "Trig source", "select", default="I", options=trigger.SOURCES, group="Trigger"),
+        Setting("trig_edge", "Trig edge", "select", default="rising", options=trigger.EDGES, group="Trigger"),
+        Setting("trig_level", "Trig level", "number", default=0.0, step=0.05, help="scope trigger level", group="Trigger"),
+        Setting("trig_pos", "Pre-trigger %", "number", default=10.0, min=0, max=100, step=5, group="Trigger"),
+        Setting("holdoff", "Holdoff", "text", default="", coerce=time_text, hint="0", group="Trigger", advanced=True),
+        Setting("overlay", "Overlay", "int", default=8, min=1, max=64, hint="sweeps per refresh", group="Timebase", advanced=True),
     )
 
     def reset(self):

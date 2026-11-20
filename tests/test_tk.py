@@ -146,3 +146,54 @@ def test_markers_draw_on_psd_and_spectrogram_with_a_table(app):
     wait_for(app, lambda: not psd.dirty and not psd.plotter.ax(0).art("mk0").get_visible() and not psd.tree.winfo_ismapped())
     with pytest.raises(ValueError):
         app.add_marker(i["PSD"], "nope")
+
+def _find(widget, cls):
+    """Every descendant widget of a class, depth first"""
+    out = []
+    for child in widget.winfo_children():
+        if isinstance(child, cls):
+            out.append(child)
+        out += _find(child, cls)
+    return out
+
+def test_settings_sections_link_and_globals(app):
+    from tkinter import ttk
+    psd = ids(app)["PSD"]
+    spg = app.panels.add("Spectrogram")
+    settle(app)
+    pane = app.panels.panes[spg]
+    sections = [b.cget("text") for b in _find(pane.pane.settings, ttk.Button)]
+    assert "▾ Level" in sections and "▾ Processing" in sections and "▸ Advanced" not in sections # spectrogram has no advanced
+    picker = next(c for c in _find(pane.pane.settings, ttk.Combobox) if "none" in c.cget("values"))
+    picker.set(next(v for v in picker.cget("values") if v.startswith(psd)))
+    picker.event_generate("<<ComboboxSelected>>")
+    settle(app)
+    assert app.plots.get(psd).link is app.plots.get(spg).link is not None
+    pane = app.panels.panes[spg] # settings were rebuilt
+    pane.vars["ref_level"].set("-25")
+    pane.commit("ref_level")
+    assert app.plots.get(psd).ref_level == -25 and app.panels.panes[psd].vars["ref_level"].get() == "-25.0"
+    app.global_vars["cal_db"].set("4")
+    app.apply_setting("cal_db", "4")
+    assert app.plots.get(psd).cal_db == 4 == app.plots.get(spg).cal_db
+
+def test_save_and_load_layout_buttons(app, tmp_path, monkeypatch):
+    from pyspecan.utils import dialog
+    app.panels.add("Spectrogram")
+    path = tmp_path / "saved.json"
+    monkeypatch.setattr(dialog, "save_file", lambda *a, **k: path)
+    app.view.tb_btn_layout_save.invoke()
+    assert '"Spectrogram"' in path.read_text()
+
+    path.write_text('{"rows": [[{"type": "Scope"}, {"type": "PSD", "settings": {"vbw": 2}}]]}')
+    monkeypatch.setattr(dialog, "get_file", lambda *a, **k: path)
+    app.view.tb_btn_layout_load.invoke()
+    settle(app)
+    assert layout(app) == [["Scope", "PSD"]] and set(app.panels.panes) == set(app.plots.plots)
+    assert app.plots.get(ids(app)["PSD"]).vbw == 2.0
+
+    path.write_text('{"rows": [[{"type": "PSD", "settings": {"vbw": -1}}]]}')
+    app.view.tb_btn_layout_load.invoke()
+    settle(app)
+    assert layout(app) == [["Scope", "PSD"]] # a bad file changes nothing, the toolbar says why
+    assert "not loaded" in app.view.tb_lbl_msg.cget("text")

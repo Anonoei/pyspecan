@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Callable
 
 KINDS = ("number", "int", "text", "select", "check")
+SCOPES = ("plot", "link", "global") # where a value lives: in the plot, shared by its link group, shared by every plot
 
 @dataclass(frozen=True)
 class Setting:
@@ -24,10 +25,15 @@ class Setting:
     coerce: Callable | None = None # custom parser for kind "text"
     flags: tuple = ()              # command line flags, exposes the setting as an argument
     help: str = ""
+    group: str = "General"         # section views show it in
+    scope: str = "plot"            # see SCOPES
+    advanced: bool = False         # folded away under the section's "Advanced"
 
     def __post_init__(self):
         if self.kind not in KINDS:
             raise ValueError(f"unknown setting kind {self.kind!r}")
+        if self.scope not in SCOPES:
+            raise ValueError(f"unknown setting scope {self.scope!r}")
 
     def with_(self, **changes) -> "Setting":
         return replace(self, **changes)
@@ -56,10 +62,11 @@ class Setting:
 
     def to_dict(self) -> dict:
         """json-serializable description for views"""
-        d = {"key": self.key, "label": self.label, "kind": "number" if self.kind == "int" else self.kind}
+        d = {"key": self.key, "label": self.label, "kind": "number" if self.kind == "int" else self.kind,
+             "group": self.group, "scope": self.scope, "advanced": self.advanced}
         if self.kind == "int":
             d["step"] = 1
-        for k in ("min", "max", "step", "hint"):
+        for k in ("min", "max", "step", "hint", "help"):
             v = getattr(self, k)
             if v not in (None, ""):
                 d[k] = v
@@ -76,3 +83,18 @@ def override(settings: tuple, **changes) -> tuple:
 
 def without(settings: tuple, *keys) -> tuple:
     return tuple(s for s in settings if s.key not in keys)
+
+def grouped(settings: tuple, **changes) -> tuple:
+    """Copy of `settings` with the same changes for every one: grouped(S, group="Trace")"""
+    return tuple(s.with_(**changes) for s in settings)
+
+def by_key(settings, key: str) -> Setting | None:
+    return next((s for s in settings if s.key == key), None)
+
+# instrument wide, every plot reads the same values
+GLOBAL_SETTINGS = (
+    Setting("cal_db", "Cal (dBm @ 0 dBFS)", "number", default=0.0, step=1, reset=True, flags=("--cal_db",), scope="global", group="Calibration",
+            help="dBm reading of a full scale tone, for the dBm units"),
+    Setting("ext_gain", "Ext gain (dB)", "number", default=0.0, step=1, reset=True, flags=("--ext_gain",), scope="global", group="Calibration",
+            help="gain ahead of the receiver, removed from dBm readings"),
+)

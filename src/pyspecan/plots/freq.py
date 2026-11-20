@@ -17,7 +17,7 @@ def _ref_level(value):
         return "auto"
     return float(value)
 
-SETTING_CMAP = Setting("cmap", "Colors", "select", default="magma", options=tuple(colormap.names()), flags=("--cmap",), help="image color map")
+SETTING_CMAP = Setting("cmap", "Colors", "select", default="magma", options=tuple(colormap.names()), help="image color map", group="Display")
 
 def to_psd(spectra: np.ndarray, fs: float, window: str = "blackman", unit: str = "dB/Hz", cal_db: float = 0.0, ext_gain_db: float = 0.0) -> np.ndarray:
     """(k, nfft) complex spectra of x * `window` -> dB in `unit`, corrected for the window's power"""
@@ -68,21 +68,30 @@ class FreqPlot(Plot):
     unsmoothed trace, and call `apply_markers(frame)` with the frame they built.
     """
     MARKERS = True
+    LINK_DOMAIN = "spectrum"
     SETTINGS = (
-        Setting("ref_level", "Ref level", "text", default="auto", coerce=_ref_level, hint="auto", flags=("-rl", "--ref_level"), help="ref level (number or 'auto')"),
-        Setting("scale_div", "Scale / div", "number", default=10.0, min=0.0001, step=1, flags=("-sd", "--scale_div"), help="scale per division"),
-        Setting("vbw", "VBW", "number", default=10.0, min=0, step=1, reset=True, flags=("-vb", "--vbw"), help="video bandwidth"),
-        Setting("window", "Window", "select", default="blackman", options=tuple(WindowLUT), reset=True, flags=("-w", "--window"), help="FFT window function"),
-        Setting("unit", "Unit", "select", default="dB/Hz", options=units.UNITS, reset=True, flags=("--unit",), help="level unit"),
-        Setting("cal_db", "Cal (dBm @ 0 dBFS)", "number", default=0.0, step=1, reset=True, flags=("--cal_db",), help="dBm reading of a full scale tone, for the dBm units"),
-        Setting("ext_gain", "Ext gain (dB)", "number", default=0.0, step=1, reset=True, flags=("--ext_gain",), help="gain ahead of the receiver, removed from dBm readings"),
+        Setting("ref_level", "Ref level", "text", default="auto", coerce=_ref_level, hint="auto", help="ref level (number or 'auto')",
+                group="Level", scope="link"),
+        Setting("scale_div", "Scale / div", "number", default=10.0, min=0.0001, step=1, help="scale per division",
+                group="Level", scope="link"),
+        Setting("unit", "Unit", "select", default="dB/Hz", options=units.UNITS, reset=True, help="level unit",
+                group="Level", scope="link"),
+        Setting("vbw", "VBW", "number", default=10.0, min=0, step=1, reset=True, help="video bandwidth",
+                group="Processing", scope="link"),
+        Setting("window", "Window", "select", default="blackman", options=tuple(WindowLUT), reset=True, help="FFT window function",
+                group="Processing", scope="link"),
     )
 
     def __init__(self, source, **kwargs):
         from .markers import MarkerSet # markers import this module
-        self.markers = MarkerSet(self)
+        self.own_markers = MarkerSet()
         self.last = None
         super().__init__(source, **kwargs)
+
+    @property
+    def markers(self):
+        """The link's shared markers while linked, each member measures them on its own trace"""
+        return self.link.markers if self.link is not None and self.link.markers is not None else self.own_markers
 
     def reset(self):
         self._auto = None # resolved level while ref_level is "auto"
@@ -91,6 +100,8 @@ class FreqPlot(Plot):
     def changed(self, key):
         if key == "ref_level":
             self._auto = None
+            if self.link is not None:
+                self.link.auto = None
 
     def smooth(self, psd: np.ndarray) -> np.ndarray:
         """`psd` ((n,) or (k, n)) smoothed by the vbw"""
@@ -127,7 +138,7 @@ class FreqPlot(Plot):
         levels) a marker is a vertical line"""
         if self.last is None:
             return
-        marks, bands, table = self.markers.evaluate(self.last, self.bin_freqs(len(self.last)))
+        marks, bands, table = self.markers.evaluate(self, self.last, self.bin_freqs(len(self.last)))
         ax = frame.axes[0]
         ax.markers += [replace(m, y=0.0, kind="vline") if image and m.kind == "point" else m for m in marks]
         ax.bands += bands
@@ -137,10 +148,16 @@ class FreqPlot(Plot):
         """The numeric ref level, "auto" is resolved from the first data seen"""
         if self.ref_level != "auto":
             return self.ref_level
-        if self._auto is None:
+        link = self.link
+        auto = link.auto if link is not None else self._auto
+        if auto is None: # linked plots use the level the first of them to render resolved
             vmax = float(np.nanmax(values)) if np.isfinite(values).any() else 0.0
-            self._auto = int(vmax * 0.9) if vmax < 0 else int(vmax * 1.1)
-        return self._auto
+            auto = int(vmax * 0.9) if vmax < 0 else int(vmax * 1.1)
+            if link is not None:
+                link.auto = auto
+            else:
+                self._auto = auto
+        return auto
 
     def y_range(self, values) -> tuple[float, float]:
         top = self.resolve_ref(values)
@@ -157,8 +174,8 @@ class FreqPlot(Plot):
 class HoldMixin:
     """Min / max hold traces"""
     SETTINGS = (
-        Setting("show_max", "Max hold", "check", default=True),
-        Setting("show_min", "Min hold", "check", default=True),
+        Setting("show_max", "Max hold", "check", default=True, group="Trace"),
+        Setting("show_min", "Min hold", "check", default=True, group="Trace"),
     )
 
     def reset_hold(self):
@@ -197,10 +214,12 @@ class HoldMixin:
 class TraceMixin:
     """Averaging and the display detector, for the plots that show a trace"""
     SETTINGS = (
-        Setting("avg", "Average", "select", default="off", options=("off", "power", "log", "exp"), flags=("--avg",), help="trace averaging"),
-        Setting("avg_count", "Avg count", "int", default=10, min=1, max=10000, flags=("--avg_count",), help="traces averaged"),
-        Setting("detector", "Detector", "select", default="peak", options=detector.MODES, flags=("--detector",), help="how bins are reduced to display points"),
-        Setting("points", "Points", "int", default=1001, min=0, max=65536, step=100, hint="0 = all bins", flags=("--points",), help="display points, 0 for every bin"),
+        Setting("avg", "Average", "select", default="off", options=("off", "power", "log", "exp"), help="trace averaging", group="Processing"),
+        Setting("avg_count", "Avg count", "int", default=10, min=1, max=10000, help="traces averaged", group="Processing"),
+        Setting("detector", "Detector", "select", default="peak", options=detector.MODES, help="how bins are reduced to display points",
+                group="Trace", advanced=True),
+        Setting("points", "Points", "int", default=1001, min=0, max=65536, step=100, hint="0 = all bins", help="display points, 0 for every bin",
+                group="Trace", advanced=True),
     )
 
     def reset_avg(self):

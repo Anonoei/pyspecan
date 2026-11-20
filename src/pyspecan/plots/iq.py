@@ -6,7 +6,7 @@ from .base import Plot, plot
 from .frame import Axis, Frame, Trace, YELLOW, BLUE, RED, GREEN, SCATTER, LINE, THREE_D
 from .settings import Setting
 
-SETTING_COUNT = Setting("count", "Samples", "int", default=0, min=0, step=256, hint="0 = fft size", help="samples to plot, 0 for one FFT worth")
+SETTING_COUNT = Setting("count", "Samples", "int", default=0, min=0, step=256, hint="0 = fft size", help="samples to plot, 0 for one FFT worth", group="Timebase")
 
 class TimePlot(Plot):
     """Plots of the raw samples"""

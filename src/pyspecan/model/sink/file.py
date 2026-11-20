@@ -10,8 +10,7 @@ from pysdrlib import File as _File
 # reading from a file that was never opened: newer pysdrlib raises NotOpen, older ones fail on a missing handle
 NotOpen = getattr(getattr(pysdrlib, "err", None), "NotOpen", AttributeError)
 
-from ...utils import args
-from .sink import Sink, args_sink
+from .sink import Sink
 
 from ... import err
 
@@ -19,9 +18,7 @@ from ... import err
 FORMATS = [f.name for f in _Formats if f.is_complex]
 DEFAULT_FORMAT = "cf64"
 
-def args_file(parser):
-    sink = args.get_group(parser, "Sink (FILE)")
-    args_sink(sink)
+def args_file(sink):
     sink.add_argument("-f", "--path", default=None, help="file path")
     sink.add_argument("-d", "--fmt", choices=FORMATS, default=DEFAULT_FORMAT, help="data format")
 

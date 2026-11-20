@@ -14,7 +14,7 @@ from ...model.model import Model
 from ...plots import colormap
 from ...plots.frame import Frame, LINE, SCATTER, IMAGE
 from ...view.WEB.base import View as GUI
-from ..base import Controller as _Controller, ControllerConfig
+from ..base import Controller as _Controller
 
 from .api import API
 from .websocket import WebSocketManager
@@ -24,7 +24,6 @@ def args_ctrl(parser):
     ctrl.add_argument("-p", "--port", type=int, default=8000, help="http port")
     ctrl.add_argument("--host", default="127.0.0.1", help="bind address, use 0.0.0.0 to expose on the network")
     ctrl.add_argument("--root", default=None, help="restrict the browser's file picker to this directory")
-    ctrl.add_argument("--show", default=ControllerConfig.show, type=float, help="[ms] time between frames")
     return ctrl
 
 class Controller(_Controller):
@@ -35,7 +34,6 @@ class Controller(_Controller):
         super().__init__(model, view, **kwargs)
         self.view: GUI = self.view # type hints
         self.root = pathlib.Path(kwargs["root"]).resolve() if kwargs.get("root") else None
-        self.add_plot("PSD")
 
         self.ws = WebSocketManager(self)
         self.api = API(self)
@@ -152,6 +150,12 @@ class Controller(_Controller):
                 self.set_plot_type(msg["id"], msg["name"])
             elif op == "move":
                 self.move_plot(msg["id"], msg.get("target"), msg["where"])
+            elif op == "link":
+                self.link_plot(msg["id"], msg["target"])
+            elif op == "unlink":
+                self.unlink_plot(msg["id"])
+            elif op == "layout_load":
+                self.load_layout(msg["text"])
             elif op == "set":
                 self.set_plot(msg["id"], msg["key"], msg.get("value"))
             elif op == "marker_add":

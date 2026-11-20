@@ -29,6 +29,7 @@ let state = null;
 let layoutSig = "";
 const runtime = {};      // plot id -> {frame, canvas, images: {axis index: {w, h, buf, canvas}}}
 const settingsOpen = new Set();
+const sectionOpen = {}; // "plot id:section" -> open, sections start open and "Advanced" folds closed
 
 function fmtHz(v) {
     for (const [scale, suffix] of SI) {
@@ -126,7 +127,24 @@ function applyState(s) {
     }
     applyRadio(s.radio);
     applyStatus(s);
+    applyGlobals(s.globals);
     syncPlots(s);
+}
+
+// --- settings every plot shares (calibration), under the source settings --- //
+let globalsSig = null;
+function applyGlobals(g) {
+    if (!g) return;
+    const sig = JSON.stringify(g.fields);
+    if (sig !== globalsSig) {
+        globalsSig = sig;
+        const groups = {};
+        for (const f of g.fields) (groups[f.group] ||= []).push(f);
+        $("globals").replaceChildren(...Object.entries(groups).map(([name, fields]) =>
+            el("details", {className: "section", open: true}, el("summary", {textContent: name}),
+                ...fields.map((f) => fieldInput(`g-${f.key}`, f, (v) => set(f.key, v))))));
+    }
+    for (const f of g.fields) setValue($(`g-${f.key}`), g.settings[f.key]);
 }
 
 // --- the radio of a live sink --- //
@@ -162,7 +180,7 @@ async function loadRadios() {
 
 // --- plots --- //
 function syncPlots(s) {
-    const sig = JSON.stringify([s.layout, Object.entries(s.plots).map(([id, p]) => [id, p.name])]);
+    const sig = JSON.stringify([s.layout, Object.entries(s.plots).map(([id, p]) => [id, p.name, p.link, p.linkable])]);
     if (sig !== layoutSig) {
         layoutSig = sig;
         buildPlots(s);
@@ -245,12 +263,12 @@ function buildPlot(id, p) {
     const ptime = el("span", {id: `ptime-${id}`, className: "muted"});
 
     const settings = el("div", {id: `settings-${id}`, className: "plot-settings", hidden: !settingsOpen.has(id)},
-        ...p.fields.map((f) => buildField(id, f)));
+        ...buildSections(id, p));
     rt.canvas = el("canvas");
     bindCanvas(id, rt.canvas);
     const header = el("div", {className: "plot-header", title: "drag to move"},
-        el("span", {className: "grip", textContent: "⠿"}), el("b", {textContent: p.name}), ptime,
-        el("span", {className: "right"}, ...(p.marker_kinds ? [toolMenu(id), markerMenu(id, p)] : []), pause, gear, del));
+        el("span", {className: "grip", textContent: "⠿"}), el("b", {textContent: p.name}), ...linkChip(p), ptime,
+        el("span", {className: "right"}, ...(p.marker_kinds ? [toolMenu(id), markerMenu(id, p)] : []), ...linkMenu(id, p), pause, gear, del));
     rt.readout = el("div", {className: "readout", hidden: true});
     rt.table = el("div", {className: "mtable", hidden: true});
     rt.editor = el("div", {className: "marker-editor", id: `markers-${id}`, hidden: true});
@@ -307,20 +325,75 @@ function updateMarkers(id, p) {
     }));
 }
 
-function buildField(id, f) {
+// --- links: linked plots share level / processing settings, the auto ref level and markers --- //
+function linkChip(p) {
+    if (!p.link) return [];
+    const others = state.links[p.link] || [];
+    return [el("span", {className: "link-chip", textContent: `🔗 ${p.link}`, title: `linked with ${others.join(", ")}`})];
+}
+
+function linkMenu(id, p) {
+    if (!p.linkable.length && !p.link) return [];
+    const sel = el("select", {className: "link-menu", title: "link to another plot: they share ref level, scale, VBW, window, unit and markers"},
+        new Option(p.link ? `Linked ${p.link}` : "Link…", ""),
+        ...(p.link ? [new Option("Unlink", "-")] : []),
+        ...p.linkable.filter((t) => !p.link || state.plots[t].link !== p.link)
+            .map((t) => new Option(`→ ${state.plots[t].name} (${t})`, t)));
+    sel.onchange = () => {
+        if (sel.value === "-") plotOp("unlink", {id});
+        else if (sel.value) plotOp("link", {id, target: sel.value});
+        sel.value = "";
+    };
+    return [sel];
+}
+
+// settings grouped into collapsible sections, rarely used ones folded under "Advanced"
+function buildSections(id, p) {
+    const groups = {};
+    for (const f of p.fields) (groups[f.group] ||= []).push(f);
+    return Object.entries(groups).map(([name, fields]) => {
+        const basic = fields.filter((f) => !f.advanced), adv = fields.filter((f) => f.advanced);
+        const children = basic.map((f) => buildField(id, f, p));
+        if (adv.length) children.push(section(`${id}:${name}:adv`, "Advanced", false, adv.map((f) => buildField(id, f, p)), "advanced"));
+        return section(`${id}:${name}`, name, true, children);
+    });
+}
+
+function section(key, title, dflt, children, cls = "") {
+    const d = el("details", {className: `section ${cls}`, open: sectionOpen[key] ?? dflt},
+        el("summary", {textContent: title}), el("div", {className: "section-body"}, ...children));
+    d.ontoggle = () => { sectionOpen[key] = d.open; };
+    return d;
+}
+
+function fieldInput(inputId, f, send_) {
     const input = f.kind === "select"
         ? el("select", {}, ...f.options.map((o) => new Option(o, o)))
         : el("input", {type: f.kind === "check" ? "checkbox" : f.kind === "number" ? "number" : "text",
                        placeholder: f.hint || "", min: f.min ?? "", max: f.max ?? "", step: f.step ?? "any"});
-    input.id = `f-${id}-${f.key}`;
-    const send_ = (v) => plotOp("set", {id, key: f.key, value: v});
+    input.id = inputId;
     if (f.kind === "check") input.onchange = () => send_(input.checked);
     else if (f.kind === "select") input.onchange = () => send_(input.value);
     else {
         input.onkeydown = (ev) => { if (ev.key === "Enter") { send_(input.value); input.blur(); } };
-        input.onblur = () => { for (const [i, p] of Object.entries(state.plots)) updatePlotControls(i, p); };
+        input.onblur = () => { // back to what is really set
+            if (!state) return;
+            applyGlobals(state.globals);
+            for (const [i, p] of Object.entries(state.plots)) updatePlotControls(i, p);
+        };
     }
-    return el("div", {className: "control-group"}, el("label", {htmlFor: input.id, textContent: f.label}), input);
+    const label = el("label", {htmlFor: input.id, textContent: f.label});
+    if (f.help) label.title = f.help;
+    return el("div", {className: "control-group"}, label, input);
+}
+
+function buildField(id, f, p) {
+    const group = fieldInput(`f-${id}-${f.key}`, f, (v) => plotOp("set", {id, key: f.key, value: v}));
+    if (p.link && f.scope === "link") {
+        group.classList.add("linked");
+        group.querySelector("label").title = `shared by link ${p.link}`;
+    }
+    return group;
 }
 
 function updatePlotControls(id, p) {
@@ -758,6 +831,13 @@ function bindInputs() {
     $("btn-next").onclick = () => cmd("next");
     const add = $("sel-add-plot");
     add.onchange = () => { if (add.value) plotOp("add", {name: add.value}); add.value = ""; };
+    const layoutFile = $("in-layout");
+    $("btn-layout-load").onclick = () => layoutFile.click();
+    layoutFile.onchange = async () => {
+        const file = layoutFile.files[0];
+        layoutFile.value = ""; // picking the same file again still loads it
+        if (file) plotOp("layout_load", {text: await file.text()});
+    };
     const sld = $("sld-samp");
     sld.addEventListener("pointerdown", () => (seeking = true));
     sld.addEventListener("change", () => { seeking = false; set("samp", sld.value); });

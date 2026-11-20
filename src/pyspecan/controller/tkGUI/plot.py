@@ -72,31 +72,102 @@ class PlotPane:
 
     # --- settings --- #
     def build_settings(self):
-        """One widget per declared setting"""
+        """The link picker, then one collapsible section per settings group (rarely used ones folded under
+        "Advanced"), then the markers"""
         parent = self.pane.settings
         for child in parent.winfo_children():
             child.destroy()
         self.vars = {}
         values = self.plot.settings()
-        for row, f in enumerate(self.plot.fields()):
-            key, kind = f["key"], f["kind"]
-            ttk.Label(parent, text=f["label"]).grid(row=row, column=0, sticky=tk.W)
-            if kind == "check":
-                var = tk.BooleanVar(parent, bool(values[key]))
-                w = ttk.Checkbutton(parent, variable=var, command=lambda k=key: self.commit(k))
-            elif kind == "select":
-                var = tk.StringVar(parent, str(values[key]))
-                w = ttk.Combobox(parent, textvariable=var, values=f["options"], state="readonly", width=9)
-                w.bind("<<ComboboxSelected>>", lambda e, k=key: self.commit(k))
-            else:
-                var = tk.StringVar(parent, str(values[key]))
-                w = ttk.Entry(parent, textvariable=var, width=10)
-                w.bind("<Return>", lambda e, k=key: self.commit(k))
-                w.bind("<FocusOut>", lambda e, k=key: self.refresh())
-            self.vars[key] = var
-            w.grid(row=row, column=1)
+        linked = self.plot.link is not None
+        self._link_picker(parent)
+        groups: dict[str, list[dict]] = {}
+        for f in self.plot.fields():
+            groups.setdefault(f["group"], []).append(f)
+        for name, fields in groups.items():
+            body = self._section(parent, name)
+            basic = [f for f in fields if not f["advanced"]]
+            adv = [f for f in fields if f["advanced"]]
+            for row, f in enumerate(basic):
+                self._field(body, row, f, values, linked)
+            if adv:
+                more = self._section(body, f"{name} advanced", text="Advanced", row=len(basic), default=False)
+                for row, f in enumerate(adv):
+                    self._field(more, row, f, values, linked)
         if self.plot.MARKERS:
-            self._marker_controls(parent, len(self.plot.fields()))
+            body = self._section(parent, "Markers")
+            self._marker_controls(body, 0)
+
+    def _section(self, parent, key: str, text: str | None = None, row: int | None = None, default=True) -> ttk.Frame:
+        """A titled section whose body the title button shows and hides, open state survives rebuilds"""
+        opened = self.keep.setdefault("sections", {})
+        opened.setdefault(key, default)
+        outer = ttk.Frame(parent)
+        if row is None:
+            outer.pack(side=tk.TOP, fill=tk.X, pady=(2, 0))
+        else:
+            outer.grid(row=row, column=0, columnspan=2, sticky=tk.EW)
+        body = ttk.Frame(outer, padding=(8, 0, 0, 2))
+        btn = ttk.Button(outer, style="Toolbutton")
+        def show():
+            btn.config(text=("▾ " if opened[key] else "▸ ") + (text or key))
+            if opened[key]:
+                body.pack(side=tk.TOP, fill=tk.X)
+            else:
+                body.pack_forget()
+        def toggle():
+            opened[key] = not opened[key]
+            show()
+        btn.config(command=toggle)
+        btn.pack(side=tk.TOP, anchor=tk.W)
+        show()
+        return body
+
+    def _field(self, parent, row: int, f: dict, values: dict, linked: bool):
+        key, kind = f["key"], f["kind"]
+        label = f["label"] + (" 🔗" if linked and f["scope"] == "link" else "")
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky=tk.W)
+        if kind == "check":
+            var = tk.BooleanVar(parent, bool(values[key]))
+            w = ttk.Checkbutton(parent, variable=var, command=lambda k=key: self.commit(k))
+        elif kind == "select":
+            var = tk.StringVar(parent, str(values[key]))
+            w = ttk.Combobox(parent, textvariable=var, values=f["options"], state="readonly", width=9)
+            w.bind("<<ComboboxSelected>>", lambda e, k=key: self.commit(k))
+        else:
+            var = tk.StringVar(parent, str(values[key]))
+            w = ttk.Entry(parent, textvariable=var, width=10)
+            w.bind("<Return>", lambda e, k=key: self.commit(k))
+            w.bind("<FocusOut>", lambda e, k=key: self.refresh())
+        self.vars[key] = var
+        w.grid(row=row, column=1)
+
+    def _link_picker(self, parent):
+        """Link this plot to another of its domain, they then share level / processing settings and markers"""
+        plots = self.ctrl.plots
+        targets = plots.linkable(self.pid)
+        if not targets and self.plot.link is None:
+            return
+        fr = ttk.Frame(parent)
+        fr.pack(side=tk.TOP, fill=tk.X)
+        ttk.Label(fr, text="Link").grid(row=0, column=0, sticky=tk.W)
+        names = {f"{t} {plots.get(t).NAME}": t for t in targets}
+        link = self.plot.link
+        current = f"{link.id}: " + ", ".join(m for m in link.members if m != self.pid) if link else "none"
+        var = tk.StringVar(fr, current)
+        box = ttk.Combobox(fr, textvariable=var, values=["none", *names], state="readonly", width=12)
+        box.grid(row=0, column=1)
+        def pick(_e):
+            choice = var.get()
+            try:
+                if choice == "none":
+                    self.ctrl.unlink_plot(self.pid)
+                elif choice in names:
+                    self.ctrl.link_plot(self.pid, names[choice])
+            except ValueError as e:
+                self.ctrl.show_message(str(e))
+            self.ctrl.when_idle(self.ctrl.panels.rebuild_settings)
+        box.bind("<<ComboboxSelected>>", pick)
 
     # --- markers --- #
     def _marker_controls(self, parent, row):
@@ -167,17 +238,19 @@ class PlotPane:
             self.tree.pack(side=tk.BOTTOM, fill=tk.X, before=self.fr_canv)
 
     def commit(self, key):
-        """Apply a widget's value to the plot, the widgets show what the plot really holds afterwards"""
+        """Apply a widget's value to the plot, the widgets (of every plot, linked ones follow) show what the plots really hold afterwards"""
         try:
             self.ctrl.set_plot(self.pid, key, self.vars[key].get())
         except ValueError as e:
             self.ctrl.show_message(str(e))
-        self.refresh()
+        self.ctrl.panels.refresh()
 
     def refresh(self):
+        self.plot = self.ctrl.plots.get(self.pid)
         values = self.plot.settings()
         for key, var in self.vars.items():
-            var.set(values[key])
+            if key in values:
+                var.set(values[key])
 
     def toggle(self):
         self.ctrl.set_plot(self.pid, "enabled", not self.plot.enabled)

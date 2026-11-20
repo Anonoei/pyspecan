@@ -3,12 +3,7 @@ import tkinter.ttk as ttk
 
 from ...backend.tk import widgets
 
-from ...utils import args
-from .sink import Sink, args_sink
-
-def args_file(parser):
-    sink = args.get_group(parser, "Sink (FILE)")
-    args_sink(sink)
+from .sink import Sink
 
 class SinkFile(Sink):
     __slots__ = (

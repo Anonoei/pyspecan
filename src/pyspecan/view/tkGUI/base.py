@@ -25,9 +25,6 @@ LUT = {
     "vi": tk.IntVar,
 }
 
-def args_view(parser):
-    pass
-
 class View(_View):
     """Parent tkGUI view class"""
 
@@ -60,7 +57,11 @@ class View(_View):
         self.tb_fr_add = ttk.Frame(self.fr_tb)
         self.tb_var_add = tk.StringVar(self.tb_fr_add, ADD_LABEL)
         self.tb_cb_add = ttk.Combobox(self.tb_fr_add, textvariable=self.tb_var_add, state="readonly", width=16)
-        self.tb_cb_add.pack(padx=4, pady=8)
+        self.tb_cb_add.pack(side=tk.LEFT, padx=4, pady=8)
+        self.tb_btn_layout_save = ttk.Button(self.tb_fr_add, text="Save layout")
+        self.tb_btn_layout_save.pack(side=tk.LEFT, padx=2)
+        self.tb_btn_layout_load = ttk.Button(self.tb_fr_add, text="Load layout")
+        self.tb_btn_layout_load.pack(side=tk.LEFT, padx=2)
         self.tb_btn_start: ttk.Button = None # type: ignore
         self.tb_btn_stop: ttk.Button = None # type: ignore
         self.tb_btn_reset: ttk.Button = None # type: ignore

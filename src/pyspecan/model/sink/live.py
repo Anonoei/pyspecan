@@ -5,16 +5,13 @@ import time
 import pysdrlib
 from pysdrlib import err as _err
 
-from ...utils import args
-from .sink import Sink, args_sink, SinkConfig
+from .sink import Sink, SinkConfig
 
 from ...obj import Frequency
 
 PROGRAM = "pyspecan" # what a pysdrlib server shows next to a radio this program holds
 
-def args_live(parser):
-    sink = args.get_group(parser, "Sink (LIVE)")
-    args_sink(sink)
+def args_live(sink):
     sink.add_argument("-d", "--device", default=None, help="radio to use: a driver name (uhd), 'auto' or nothing for the first one found (see --list), or one on a pysdrlib server: tcp://host:5555 (the first it hosts), tcp://host:5555/<id> (hackrf-0), tcp://host:5555/<driver> (open a new one)")
     sink.add_argument("--serial", default=None, help="which unit of the driver, as --list shows")
     sink.add_argument("--no-dc-block", action="store_true", help="keep the DC spike at the center (radios with a direct-conversion receiver, like the HackRF, have one): by default the average of each block is removed")

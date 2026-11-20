@@ -9,11 +9,13 @@ import math
 import threading
 import time
 import tkinter as tk
+from tkinter import ttk
 
 from ... import logger
-from ...utils import args
-from ..base import Controller as _Controller, ControllerConfig
+from ...utils import args, dialog
+from ..base import Controller as _Controller
 from ...model.model import Model
+from ...plots import GLOBAL_SETTINGS
 from ...plots.frame import Frame, LINE, SCATTER, IMAGE, THREE_D
 from ...view.tkGUI.base import View as GUI, ADD_LABEL
 
@@ -23,6 +25,7 @@ from .panels import PanelController
 from .sink import Sink
 
 POLL = 20 # [ms] between checks for new frames
+LAYOUT_FILES = [("pyspecan layout", "*.json"), ("All files", "*")]
 
 class TkConfig:
     theme = "Dark"
@@ -30,7 +33,6 @@ class TkConfig:
 def args_ctrl(parser):
     ctrl = args.get_group(parser, "View (tkGUI)")
     ctrl.add_argument("--theme", default=TkConfig.theme, choices=[k for k in theme_tk.theme.keys()])
-    ctrl.add_argument("--show", default=ControllerConfig.show, type=float, help="[ms] time between frames")
     return ctrl
 
 class Controller(_Controller):
@@ -62,10 +64,15 @@ class Controller(_Controller):
         style = kwargs.get("theme", TkConfig.theme)
         theme_tk.get(style)(self.view.root) # pyright: ignore[reportCallIssue]
 
+        self.global_vars: dict[str, tk.StringVar] = {}
+        self._build_globals()
+
         self.panels = PanelController(self, self.view.panel)
         v.tb_cb_add.config(values=self.plot_types)
         v.tb_cb_add.bind("<<ComboboxSelected>>", self.add_from_dropdown)
-        self.panels.add("PSD")
+        v.tb_btn_layout_save.config(command=self.save_layout_dialog)
+        v.tb_btn_layout_load.config(command=self.load_layout_dialog)
+        self.panels.rebuild()
 
         self.refresh()
         self.view.root.protocol("WM_DELETE_WINDOW", self.quit)
@@ -119,6 +126,22 @@ class Controller(_Controller):
             for fn in deferred:
                 fn()
 
+    def _build_globals(self):
+        """Settings every plot shares (calibration), one section per group under the source settings"""
+        groups: dict[str, list] = {}
+        for g in GLOBAL_SETTINGS:
+            groups.setdefault(g.group, []).append(g)
+        for name, settings in groups.items():
+            fr = ttk.LabelFrame(self.view.fr_cl, text=name)
+            fr.pack(padx=2, pady=2, fill=tk.X)
+            for row, g in enumerate(settings):
+                ttk.Label(fr, text=g.label).grid(row=row, column=0, sticky=tk.W)
+                var = tk.StringVar(fr)
+                ent = ttk.Entry(fr, textvariable=var, width=8)
+                ent.grid(row=row, column=1, sticky=tk.E)
+                ent.bind("<Return>", lambda e, k=g.key: self.apply_setting(k, self.global_vars[k].get()))
+                self.global_vars[g.key] = var
+
     # --- widgets <- state --- #
     def show_message(self, text: str, seconds=4.0):
         self._message_until = time.monotonic() + seconds
@@ -145,6 +168,10 @@ class Controller(_Controller):
         v.cl_var_overlap.set(f"{m.get_overlap():.2f}")
         v.cl_lbl_block_size.configure(text=str(m.get_block_size()))
         v.cl_lbl_sweep_samples.configure(text=str(m.get_sweep_samples()))
+        for key, var in self.global_vars.items():
+            var.set(str(self.plots.globals[key]))
+        if hasattr(self, "panels"):
+            self.panels.refresh()
         self.sink_ui.draw_cl()
         self.draw_tb()
 
@@ -171,6 +198,30 @@ class Controller(_Controller):
             self._deferred.append(fn)
         else:
             fn()
+
+    def save_layout_dialog(self):
+        path = dialog.save_file("Save layout", LAYOUT_FILES, ".json")
+        if path is None:
+            return
+        try:
+            path.write_text(self.save_layout() + "\n")
+        except OSError as e:
+            return self.show_message(f"Layout not saved: {e}")
+        self.show_message(f"Saved {path.name}")
+
+    def load_layout_dialog(self):
+        path = dialog.get_file(False, "Load layout", LAYOUT_FILES)
+        if path is None:
+            return
+        def load():
+            try:
+                self.load_layout(path.read_text())
+            except (OSError, ValueError) as e:
+                return self.show_message(f"Layout not loaded: {e}", seconds=8)
+            self.panels.keep.clear()
+            self.panels.rebuild()
+            self.show_message(f"Loaded {path.name}")
+        self.when_idle(load) # not in the middle of drawing the panes it replaces
 
     def add_from_dropdown(self, event=None):
         v = self.view

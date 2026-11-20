@@ -35,10 +35,10 @@ docs = ["pdoc3"]
 dev = ["pyspecan[tk,web,test,docs]", "twine", "build", "bumpver"]
 
 [project.scripts]
-pyspecan-cui = "pyspecan._internal.main:main_cli_swept"
+pyspecan-cui = "pyspecan._internal.main:main_cui"
 
 [project.gui-scripts]
-pyspecan = "pyspecan._internal.main:main_gui_swept"
+pyspecan = "pyspecan._internal.main:main"
 
 [project.urls]
 Homepage = "https://github.com/anonoei/pyspecan"

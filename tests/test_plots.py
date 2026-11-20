@@ -104,9 +104,10 @@ def test_settings_validate():
     psd.set("enabled", False)
     assert psd.update() is None
 
-def test_bad_launch_value_falls_back_to_default():
-    psd = PLOTS.get("PSD")(Source(FakeModel()), window="nope", vbw="3")
-    assert psd.window == "blackman" and psd.vbw == 3.0
+def test_bad_initial_value_raises():
+    assert PLOTS.get("PSD")(Source(FakeModel()), vbw="3").vbw == 3.0
+    with pytest.raises(ValueError, match="Window"):
+        PLOTS.get("PSD")(Source(FakeModel()), window="nope")
 
 def test_setting_reset_flag():
     model = FakeModel()
@@ -617,3 +618,118 @@ def test_scope_roll_block_longer_than_the_screen():
     mins = y[0::2]
     assert len(mins) == 500 and mins[-1] == 7200
     np.testing.assert_array_equal(np.diff(mins), 10)
+
+# --- settings hierarchy and links --- #
+def _linked(*names, **kw):
+    model = FakeModel(nfft=1024)
+    src = Source(model)
+    plots = PlotSet(src, globals=kw)
+    ids = [plots.add(n) for n in names]
+    return model, src, plots, ids
+
+def test_fields_carry_group_scope_and_advanced():
+    psd = PLOTS.get("PSD")(Source(FakeModel()))
+    fields = {f["key"]: f for f in psd.fields()}
+    assert fields["ref_level"]["group"] == "Level" and fields["ref_level"]["scope"] == "link"
+    assert fields["avg"]["scope"] == "plot" and fields["detector"]["advanced"]
+    assert "cal_db" not in fields # global now
+    assert all("group" in f for name, cls in PLOTS.items() for f in cls(Source(FakeModel())).fields())
+
+def test_link_shares_link_settings_only():
+    _, _, plots, (a, b) = _linked("PSD", "Spectrogram")
+    plots.set(b, "vbw", 3)
+    lid = plots.link(a, b)
+    assert plots.get(a).vbw == 3 and plots.get(a).link is plots.get(b).link
+    for key, value in (("ref_level", "-20"), ("scale_div", 5), ("window", "hanning"), ("unit", "dBFS")):
+        plots.set(a, key, value)
+        assert getattr(plots.get(b), key) == getattr(plots.get(a), key)
+    plots.set(a, "show_max", False) # plot scope stays per plot
+    assert plots.get(a).show_max is False
+    d = plots.describe()
+    assert d["links"] == {lid: [b, a]} and d["plots"][a]["link"] == lid
+    assert b in d["plots"][a]["linkable"]
+
+def test_link_change_resets_every_member():
+    model, src, plots, (a, b) = _linked("PSD", "Spectrogram")
+    plots.link(a, b)
+    feed(src, model, tone(4096))
+    plots.update()
+    assert plots.get(a)._max is not None
+    plots.set(b, "window", "hanning") # reset flagged, set on the other plot
+    assert plots.get(a)._max is None
+
+def test_linked_auto_ref_level_resolves_once():
+    model, src, plots, (a, b) = _linked("PSD", "RT Spectrogram")
+    plots.link(a, b)
+    feed(src, model, tone(4096))
+    frames = plots.update()
+    link = plots.get(a).link
+    assert link.auto is not None
+    assert frames[a].axes[0].ymax == link.auto
+    assert plots.get(b).resolve_ref(np.array([1000.0])) == link.auto # does not re-resolve
+    plots.set(b, "ref_level", "auto")
+    assert link.auto is None
+
+def test_unlink_keeps_values_and_splits_markers():
+    model, src, plots, (a, b, c) = _linked("PSD", "Spectrogram", "Persistence")
+    plots.get(a).markers.add("peak")
+    plots.get(b).markers.add("point")
+    plots.link(a, b)
+    plots.link(c, a) # joins the existing link
+    assert plots.get(a).markers is plots.get(b).markers is plots.get(c).markers
+    assert sorted(plots.get(a).markers.items) == ["M1", "M2"]
+    plots.set(c, "scale_div", 7)
+    plots.unlink(c)
+    assert plots.get(c).link is None and plots.get(c).scale_div == 7
+    assert plots.get(c).markers is not plots.get(a).markers and len(plots.get(c).markers) == 2
+    plots.set(c, "scale_div", 3)
+    assert plots.get(a).scale_div == 7
+    plots.remove(b) # the last member keeps the link's markers
+    assert plots.get(a).link is None and not plots.links and len(plots.get(a).markers) == 2
+
+def test_shared_markers_draw_on_every_member():
+    model, src, plots, (a, b) = _linked("PSD", "Spectrogram", unit="dBFS", vbw=0)
+    plots.link(b, a)
+    plots.get(a).markers.add("peak")
+    feed(src, model, _two_tones(4096))
+    frames = plots.update()
+    assert frames[a].table is not None and frames[b].table is not None
+    assert frames[b].axes[0].markers[0].kind == "vline"
+
+def test_link_needs_the_same_domain():
+    _, _, plots, (a, f, s) = _linked("PSD", "FFT", "Scope")
+    for other in (f, s):
+        with pytest.raises(ValueError):
+            plots.link(a, other)
+    with pytest.raises(ValueError):
+        plots.link(a, a)
+    assert plots.linkable(f) == []
+
+def test_retype_keeps_link_when_it_can():
+    _, _, plots, (a, b) = _linked("PSD", "Spectrogram")
+    plots.link(a, b)
+    plots.retype(a, "Persistence")
+    assert plots.get(a).link is plots.get(b).link is not None
+    plots.retype(a, "FFT")
+    assert plots.get(a).link is None and plots.get(b).link is None
+
+def test_global_cal_reaches_every_plot():
+    model, src, plots, (a, b) = _linked("PSD", "Power vs Time", unit="dBm", cal_db=-10)
+    assert plots.globals["cal_db"] == -10 and plots.get(a).cal_db == -10
+    plots.set_global("cal_db", 5)
+    assert plots.get(a).cal_db == 5 and plots.get(b).cal_db == 5
+    plots.set(a, "ext_gain", 3) # a plot's set of a global key also reaches all
+    assert plots.get(b).ext_gain == 3
+    assert plots.describe()["globals"]["settings"] == {"cal_db": 5.0, "ext_gain": 3.0}
+    with pytest.raises(ValueError):
+        plots.set_global("vbw", 1)
+
+def test_cal_db_still_a_cli_flag():
+    import argparse
+    from pyspecan.plots import args_plots, global_kwargs
+    parser = argparse.ArgumentParser()
+    args_plots(parser)
+    kw = vars(parser.parse_args(["--cal_db", "-7"]))
+    assert global_kwargs(kw) == {"cal_db": -7.0}
+    with pytest.raises(SystemExit): # per plot settings go in --plot / --layout now
+        parser.parse_args(["--vbw", "2"])

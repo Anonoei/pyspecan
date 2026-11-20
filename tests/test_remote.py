@@ -85,10 +85,8 @@ def test_claiming_tunes_and_streams_and_closing_leaves_it_hosted_and_free(server
 
 def test_plots_run_on_a_remote_radio(server):
     model = make(server, claim=True, Fs="1M", cf="100M")
-    c = Recorder(model, nfft=256)
+    c = Recorder(model, nfft=256, layout_items=["PSD", "Spectrogram"])
     try:
-        c.add_plot("PSD")
-        c.add_plot("Spectrogram")
         c.command("next")
         frames = c.ticks[-1]
         assert len(frames) == 2 and all(f.axes for f in frames.values())
@@ -155,8 +153,7 @@ def test_list_shows_hosted_radios_with_the_option_that_picks_each(server):
 
 def test_list_cli_flag_prints_and_exits(server, capsys, monkeypatch):
     from pyspecan._internal import main as m
-    monkeypatch.setattr(sys, "argv", ["pyspecan", "--list", "-d", server])
-    m._main(m._process_args(m.define_args_with_view()))
+    m._main(m.parse_args(["--list", "-d", server]))
     assert f"{server}/sim-0" in capsys.readouterr().out
 
 def test_a_server_address_alone_picks_a_radio(server, empty_server):

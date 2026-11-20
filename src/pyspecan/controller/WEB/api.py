@@ -1,5 +1,5 @@
 """HTTP API"""
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 class API:
     def __init__(self, parent):
@@ -13,6 +13,12 @@ class API:
         @self.router.get("/state")
         def get_state():
             return self.parent.get_state()
+
+        @self.router.get("/layout")
+        def get_layout():
+            """The plots as a --layout file"""
+            return Response(self.parent.save_layout(), media_type="application/json",
+                            headers={"Content-Disposition": 'attachment; filename="pyspecan-layout.json"'})
 
         @self.router.get("/radios")
         def radios():

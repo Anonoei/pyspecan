@@ -3,17 +3,15 @@ import numpy as np
 from .base import plot
 from .freq import FreqPlot, SETTING_CMAP
 from .frame import Axis, Frame, Image, IMAGE
-from .settings import Setting
+from .settings import Setting, override
 
 class _Spectrogram(FreqPlot):
     """Spectrogram, newest on top. Subclasses pick how the block is framed (FRAMING) and reduced"""
     FEATURES = frozenset({IMAGE})
     FRAMING = "swept"
-    SETTINGS = tuple(
-        s.with_(reset=True) if s.key in ("ref_level", "scale_div") else s for s in FreqPlot.SETTINGS
-    ) + (
+    SETTINGS = override(FreqPlot.SETTINGS, ref_level={"reset": True}, scale_div={"reset": True}) + (
         SETTING_CMAP,
-        Setting("max_count", "Max count", "int", default=256, min=1, max=4096, reset=True),
+        Setting("max_count", "History", "int", default=256, min=1, max=4096, reset=True, group="Display", hint="rows"),
     )
 
     def reset(self):

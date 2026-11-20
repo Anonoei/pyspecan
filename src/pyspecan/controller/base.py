@@ -21,12 +21,19 @@ from .. import logger
 from ..model.model import Model
 from ..model.sink.file import FORMATS
 from ..obj import Frequency
-from ..plots import PlotSet, Source, available, plot_kwargs
+from ..plots import GLOBAL_SETTINGS, PlotSet, Source, available, layout_from_kwargs, layout
+from ..utils import args
 from ..plots.frame import Frame, LINE, SCATTER, IMAGE
 from ..utils.time import strfmt_td
 
 class ControllerConfig:
     show = 50.0 # [ms] between frames
+
+def args_controller(parser):
+    """Options every view's controller takes"""
+    ctrl = args.get_group(parser, "Playback")
+    ctrl.add_argument("--show", default=ControllerConfig.show, type=float, help="[ms] time between frames")
+    return ctrl
 
 class Controller:
     """Parent controller class"""
@@ -37,7 +44,10 @@ class Controller:
         self.model = model
         self.view = view
         self.source = Source(model)
-        self.plots = PlotSet(self.source, **plot_kwargs(kwargs))
+        self.plots = PlotSet(self.source)
+        spec = layout_from_kwargs(kwargs)
+        layout.validate(spec, self.plot_types)
+        self.plots.apply(spec)
 
         self.lock = threading.RLock() # guards model + plots
         self.playing = False
@@ -71,10 +81,39 @@ class Controller:
         self.plots.move(pid, target, where)
 
     def set_plot(self, pid: str, key: str, value):
+        """Change a plot setting, plots linked to it (or every plot, for a global) follow"""
         with self.lock:
-            self.plots.get(pid).set(key, value)
+            self.plots.set(pid, key, value)
             if key != "enabled": # pausing a plot must not draw it
                 self.redraw()
+
+    def save_layout(self) -> str:
+        """The plots, their settings, links and markers as json, for --layout or load_layout"""
+        with self.lock:
+            return layout.dumps(self.plots.to_spec())
+
+    def load_layout(self, text: str):
+        """Replace the plots by a saved layout (json text), nothing changes when it is invalid"""
+        spec = layout.loads(text)
+        layout.validate(spec, self.plot_types)
+        with self.lock:
+            self.plots.apply(spec)
+            self.redraw()
+        self.state_changed()
+
+    def link_plot(self, pid: str, target: str) -> str:
+        """Link `pid` to `target`: they share level / processing settings, the auto ref level and markers"""
+        with self.lock:
+            lid = self.plots.link(pid, target)
+            self.redraw()
+        self.state_changed()
+        return lid
+
+    def unlink_plot(self, pid: str):
+        with self.lock:
+            self.plots.unlink(pid)
+            self.redraw()
+        self.state_changed()
 
     def _markers(self, pid: str):
         plot = self.plots.get(pid)
@@ -259,6 +298,9 @@ class Controller:
                 self.source.reset()
             elif key == "path":
                 self.set_path(value)
+            elif key in {g.key for g in GLOBAL_SETTINGS}:
+                self.plots.set_global(key, value)
+                self.redraw()
             elif key == "fmt":
                 self._need_file()
                 if value not in FORMATS:

@@ -1,18 +1,16 @@
 """CUI Controller: a command line over the shared controller core, plots are drawn as text"""
+import pathlib
 import shlex
 
-from ...plots import Scroller
+from ...plots import Scroller, layout
 from ...plots.frame import Frame, LINE, SCATTER, IMAGE
 from ...view.CUI.base import View as CUI, args_view
 from ...view.CUI.draw import draw_frame
 from ...model.model import Model
-from ..base import Controller as _Controller, ControllerConfig
+from ..base import Controller as _Controller
 
 def args_ctrl(parser):
     args_view(parser)
-    ctrl = parser.add_argument_group("Controller (CUI)")
-    ctrl.add_argument("--show", default=ControllerConfig.show, type=float, help="[ms] time between frames while playing")
-    return ctrl
 
 class Controller(_Controller):
     """CUI Controller"""
@@ -24,7 +22,6 @@ class Controller(_Controller):
         self.view.menu = self.menu
         self.frames: dict[str, tuple[Frame, list]] = {} # plot id -> latest frame and its images
         self.scrollers: dict[tuple, Scroller] = {}
-        self.add_plot("PSD")
 
         # name -> (usage, help, handler), the first name is the canonical one
         self.commands = {}
@@ -60,6 +57,11 @@ class Controller(_Controller):
             (("move", "mv"), "move <id> <where> [target]", "left|right|above|below <target>, or end for a new row at the bottom", self.cmd_move),
             (("marker", "mk"), "marker <id> add|set|del|kinds ...", "markers and measurements: add <kind> [key=value ...], set <marker> <key> <value>, del <marker>", self.cmd_marker),
             (("set",), "set <id> <key> <value>", "change a plot setting, e.g. set p1 vbw 5", self.cmd_set),
+            (("link",), "link <id> <target>", "link two plots: they share ref level, scale, vbw, window, unit and markers", self.cmd_link),
+            (("unlink",), "unlink <id>", "take a plot out of its link", self.cmd_unlink),
+            (("cal",), "cal <key> <value>", "set a global (every plot) setting: cal_db, ext_gain", self.cmd_cal),
+            (("save",), "save <file>", "save the plots, their settings, links and markers (relaunch with --layout <file>)", self.cmd_save),
+            (("load",), "load <file>", "replace the plots by a saved layout", self.cmd_load),
         ):
             for name in names:
                 self.commands[name] = (usage, text, fn)
@@ -252,18 +254,49 @@ class Controller(_Controller):
 
     # --- plots --- #
     def cmd_plots(self, args):
+        print("  global  " + "  ".join(f"{k}={v}" for k, v in self.plots.globals.items()))
         for pid, plot in self.plots:
-            vals = "  ".join(f"{k}={v}" for k, v in plot.settings().items())
-            print(f"  {pid:<4} {plot.NAME:<12} {vals}")
+            link = f" [{plot.link.id}]" if plot.link is not None else ""
+            values = plot.settings()
+            print(f"  {pid:<4} {plot.NAME}{link}{'' if values['enabled'] else ' (paused)'}")
+            groups: dict[str, list[str]] = {}
+            for s in plot.SETTINGS:
+                mark = "*" if plot.link is not None and s.scope == "link" else ""
+                groups.setdefault(s.group, []).append(f"{s.key}{mark}={values[s.key]}")
+            for name, items in groups.items():
+                print(f"       {name:<12} " + "  ".join(items))
+
+    def cmd_link(self, args):
+        self._need(args, 2, "link <id> <target>")
+        print(f"  {args[0]} -> {self.link_plot(args[0], args[1])}")
+
+    def cmd_unlink(self, args):
+        self._need(args, 1, "unlink <id>")
+        self.unlink_plot(args[0])
+
+    def cmd_cal(self, args):
+        self._need(args, 2, "cal <key> <value>")
+        self.setting(args[0], args[1])
+
+    def cmd_save(self, args):
+        self._need(args, 1, "save <file>")
+        path = pathlib.Path(" ".join(args)).expanduser()
+        path.write_text(self.save_layout() + "\n")
+        print(f"  saved {path}")
+
+    def cmd_load(self, args):
+        self._need(args, 1, "load <file>")
+        self.load_layout(pathlib.Path(" ".join(args)).expanduser().read_text())
+        self.frames.clear()
+        self.scrollers.clear()
+        self.cmd_plots([])
 
     def cmd_types(self, args):
         print("  " + ", ".join(self.plot_types))
 
     def cmd_add(self, args):
         self._need(args, 1, "add <type>")
-        name = " ".join(args)
-        match = {t.lower(): t for t in self.plot_types}.get(name.lower())
-        print(f"  added {self.add_plot(match or name)}")
+        print(f"  added {self.add_plot(layout.resolve_type(' '.join(args)))}")
 
     def cmd_del(self, args):
         self._need(args, 1, "del <id>")
@@ -272,8 +305,7 @@ class Controller(_Controller):
 
     def cmd_type(self, args):
         self._need(args, 2, "type <id> <type>")
-        name = " ".join(args[1:])
-        self.set_plot_type(args[0], {t.lower(): t for t in self.plot_types}.get(name.lower(), name))
+        self.set_plot_type(args[0], layout.resolve_type(" ".join(args[1:])))
         self.frames.pop(args[0], None)
         for k in [k for k in self.scrollers if k[0] == args[0]]:
             del self.scrollers[k]

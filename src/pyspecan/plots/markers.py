@@ -232,14 +232,33 @@ class OBW(_Band):
         return Result(rows, marks, bands)
 
 class MarkerSet:
-    """The markers of one plot, M1, M2, ... in the order they were added"""
-    def __init__(self, plot):
-        self.plot = plot
+    """The markers of one plot, or of every plot of a link, M1, M2, ... in the order they were added.
+    A set holds no plot: each plot evaluates it against its own trace"""
+    def __init__(self):
         self.items: dict[str, dict] = {} # id -> {"kind": name, "params": {...}}
         self._next = 1
 
     def __len__(self):
         return len(self.items)
+
+    def copy(self) -> "MarkerSet":
+        out = MarkerSet()
+        out.items = {mid: {"kind": it["kind"], "params": dict(it["params"])} for mid, it in self.items.items()}
+        out._next = self._next
+        return out
+
+    def merge(self, other: "MarkerSet"):
+        """Take in the markers of `other` under new ids. Delta markers keep pointing at their renumbered reference"""
+        renamed = {}
+        for mid, it in other.items.items():
+            renamed[mid] = f"M{self._next}"
+            self._next += 1
+        for mid, it in other.items.items():
+            params = dict(it["params"])
+            for k, v in params.items():
+                if k == "ref" and isinstance(v, str) and v.strip().upper() in renamed:
+                    params[k] = renamed[v.strip().upper()]
+            self.items[renamed[mid]] = {"kind": it["kind"], "params": params}
 
     def _kind(self, name: str) -> MarkerKind:
         return MARKER_KINDS.get(name)()
@@ -294,11 +313,11 @@ class MarkerSet:
     def kinds() -> dict[str, list[dict]]:
         return {name: [s.to_dict() for s in cls.PARAMS] for name, cls in MARKER_KINDS.items()}
 
-    def evaluate(self, trace: np.ndarray, freqs: np.ndarray) -> tuple[list[Marker], list[Band], Table | None]:
-        """Markers and bands to draw and the table, for the plot's latest trace"""
+    def evaluate(self, plot, trace: np.ndarray, freqs: np.ndarray) -> tuple[list[Marker], list[Band], Table | None]:
+        """Markers and bands to draw and the table, for `plot`'s latest trace"""
         if not self.items:
             return [], [], None
-        ctx = Context(self.plot, trace, freqs)
+        ctx = Context(plot, trace, freqs)
         marks, bands, rows = [], [], []
         for mid, it in self.items.items():
             kind = self._kind(it["kind"])

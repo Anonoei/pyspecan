@@ -10,8 +10,10 @@ class FFT(HoldMixin, FreqPlot):
     """Magnitude and phase of the block's last swept FFT"""
     TITLE = "FFT"
     MARKERS = False # linear magnitude, markers measure dB traces
+    LINK_DOMAIN = None # its levels are not dB, nothing to share with the dB plots
     SETTINGS = override(without(FreqPlot.SETTINGS, "vbw", "unit", "cal_db", "ext_gain"),
-        ref_level={"default": 50.0}, scale_div={"default": 5.0}, window={"default": "rect"},
+        ref_level={"default": 50.0, "scope": "plot"}, scale_div={"default": 5.0, "scope": "plot"},
+        window={"default": "rect", "scope": "plot"},
     ) + HoldMixin.SETTINGS
 
     def reset(self):

@@ -139,6 +139,16 @@ class PanelController:
                 return
             pane.render()
 
+    def refresh(self):
+        """Show every plot's current values (a linked or global change reaches several plots)"""
+        for pane in self.panes.values():
+            pane.refresh()
+
+    def rebuild_settings(self):
+        """Rebuild every settings column, links decide which widgets are shared"""
+        for pane in self.panes.values():
+            pane.build_settings()
+
     def on_reset(self):
         for pane in self.panes.values():
             pane.reset()
