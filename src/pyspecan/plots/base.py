@@ -54,10 +54,18 @@ def cost_text(cost: float | None) -> str:
     num = f"{cost:.2g}" if cost < 10 else f"{cost:.0f}"
     return f"{tier}, about {num}x a PSD"
 
+# every plot has it (added when it registers): heavy plots can skip blocks so the rest of a layout keeps up
+SETTING_EVERY = Setting("every", "Update every", "int", default=1, min=1, max=1000, hint="blocks", group="Display",
+                        help="render every Nth block only (the ones between are skipped, not computed): a heavy plot "
+                             "keeps the rest of the layout live")
+
 def plot(name: str):
-    """Register a plot class under `name`, the name views show in their plot picker"""
+    """Register a plot class under `name`, the name views show in their plot picker. Adds the "Update every"
+    setting every plot has"""
     def deco(cls):
         cls.NAME = name
+        if by_key(cls.SETTINGS, SETTING_EVERY.key) is None:
+            cls.SETTINGS = tuple(cls.SETTINGS) + (SETTING_EVERY,)
         return PLOTS.register(name)(cls)
     return deco
 
@@ -170,9 +178,20 @@ class Plot:
         """Drop accumulated state (holds, history)"""
 
     def update(self) -> Frame | None:
-        """Frame for the source's current block, None while paused or without data"""
+        """Frame for the source's current block, None while paused, without data, or on a block "Update every" skips.
+        The same block again (a redraw after a change while stopped) always renders"""
         if not self.enabled:
             return None
+        every = self._cfg.get("every", 1)
+        if every > 1:
+            seq = (getattr(self.source, "epoch", 0), getattr(self.source, "seq", 0))
+            if seq != self.__dict__.get("_seen"): # a new block: counted once, skipped unless it is the Nth
+                self._seen = seq
+                count = self.__dict__.get("_blocks", 0)
+                self._blocks = count + 1
+                if count % every:
+                    return None
+            # the same block again is a redraw after a change: it renders, skipped or not
         return self.render()
 
     def render(self) -> Frame | None:

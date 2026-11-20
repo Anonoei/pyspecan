@@ -103,6 +103,14 @@ the console draws all but 3D.
   delta, peaks (peak table), channel power, ACPR, OBW (and -x dB bandwidth), harmonics (dBc and THD), TOI (third order
   intercept from two tones), limit (a line to drag, pass / fail with the margin), and with RPPS signals (below)
 
+## Export and update rate
+- Every plot can save its latest frame: its traces as CSV (one row a point: axis, trace, x, y, and z in 3D), its marker
+  table as CSV, all of it as JSON, or a picture. Web: the ⤓ menu in a plot's header (the picture is the canvas as PNG);
+  tkGUI: "Export" in its settings (the figure as PNG); console: `export <id> csv|table|json|txt <file>` (txt is the
+  drawing as text)
+- Every plot has "Update every" (blocks): a heavy one (see Benchmark) set to 4 renders every 4th block and skips the
+  blocks in between, so the rest of a layout stays live. A change while stopped still redraws it at once
+
 ## Scope
 The "Scope" plot is an oscilloscope: samples against time, with a trigger (auto, normal, single) and up
 to `overlay` triggered sweeps from each block drawn together. `roll` mode is an untriggered strip chart

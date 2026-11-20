@@ -337,3 +337,15 @@ def test_ctrl_c_quits(app):
             break
         time.sleep(0.01)
     assert not app.running
+
+def test_export_writes_files(app, tmp_path):
+    pid = ids(app)["PSD"]
+    pane = app.panels.panes[pid]
+    app.command("next")
+    wait_for(app, lambda: pane.keep.get("frame") is not None and not pane.dirty)
+    pane.export("csv", str(tmp_path / "psd.csv"))
+    pane.export("png", str(tmp_path / "psd.png"))
+    assert (tmp_path / "psd.csv").read_text().startswith("axis,label,trace,x,y")
+    assert (tmp_path / "psd.png").read_bytes()[:4] == b"\x89PNG"
+    pane.export("table", str(tmp_path / "t.csv")) # no markers: says so, writes nothing
+    assert not (tmp_path / "t.csv").exists()

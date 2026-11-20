@@ -62,6 +62,7 @@ class Controller(_Controller):
             (("move", "mv"), "move <id> <where> [target]", "left|right|above|below <target>, or end for a new row at the bottom", self.cmd_move),
             (("marker", "mk"), "marker <id> add|set|del|act|kinds ...", "markers and measurements: add <kind> [key=value ...], set <marker> <key> <value>, del <marker>, act <marker> next|prev|left|right (peak)", self.cmd_marker),
             (("set",), "set <id> <key> <value>", "change a plot setting, e.g. set p1 vbw 5", self.cmd_set),
+            (("export",), "export <id> csv|table|json|txt <file>", "save a plot's latest frame: its traces or table as CSV, all of it as JSON, its drawing as text", self.cmd_export),
             (("act",), "act <id> <action>", "a plot's action, like a PSD's: act p1 store ref (see plots for each one's actions)", self.cmd_act),
             (("link",), "link <id> <target>", "link two plots: they share ref level, scale, vbw, window, unit and markers", self.cmd_link),
             (("unlink",), "unlink <id>", "take a plot out of its link", self.cmd_unlink),
@@ -361,6 +362,20 @@ class Controller(_Controller):
             self.marker_action(pid, rest[0], rest[1].lower())
         else:
             raise ValueError("usage: marker <id> add|set|del|act|kinds ...")
+
+    def cmd_export(self, args):
+        self._need(args, 3, "export <id> csv|table|json|txt <file>")
+        pid, what, path = args[0], args[1].lower(), pathlib.Path(" ".join(args[2:])).expanduser()
+        if what == "txt": # the drawing, as this console shows it (without colors)
+            if pid not in self.frames:
+                raise ValueError(f"{pid} has drawn nothing yet: step or play first")
+            frame, images = self.frames[pid]
+            width, height = self.view.size()
+            text = "\n".join(draw_frame(frame, images, width, height, use_color=False)) + "\n"
+        else:
+            text = self.export(pid, what)
+        path.write_text(text, encoding="utf-8")
+        print(f"  saved {path}")
 
     def cmd_act(self, args):
         self._need(args, 2, "act <id> <action>")

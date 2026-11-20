@@ -1,4 +1,6 @@
 """Controller core, model block sizing and the console renderer, against a real file sink"""
+import json
+
 import numpy as np
 import pytest
 
@@ -377,3 +379,27 @@ def test_state_groups_the_plot_types(capture):
     assert [n for _, names in groups for n in names] == [n for cat, _ in groups for n in s["plot_types"]
                                                          if s["plot_info"][n]["category"] == cat] # by category, in order
     assert sorted(n for _, names in groups for n in names) == sorted(s["plot_types"]) # each once
+
+def test_export_through_the_controller_and_console(capture, tmp_path):
+    from pyspecan.controller.CUI.base import Controller as Console
+    class Both(Recorder):
+        cmd_export = Console.cmd_export
+        _need = Console._need
+    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256)
+    c = Both(GetModel(Sink.FILE)(**kw), **kw)
+    pid = c.plots.layout[0][0]
+    with pytest.raises(ValueError, match="drawn nothing yet"):
+        c.export(pid, "csv")
+    c.command("next")
+    assert c.export(pid, "csv").startswith("axis,label,trace,x,y")
+    with pytest.raises(ValueError, match="no table"):
+        c.export(pid, "table") # no markers
+    with pytest.raises(ValueError, match="one of"):
+        c.export(pid, "xls")
+    out = tmp_path / "psd.json"
+    c.cmd_export([pid, "json", str(out)]) # the console's "export p1 json psd.json"
+    assert json.loads(out.read_text())["axes"]
+    c.del_plot(pid)
+    c.add_plot("Scope")
+    c.command("next")
+    assert pid not in c.latest # a removed plot's frame is let go

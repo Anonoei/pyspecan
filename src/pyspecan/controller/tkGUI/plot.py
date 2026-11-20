@@ -5,7 +5,7 @@ return Frames. This is the only place the tk view draws them, so a new plot
 in `pyspecan.plots` shows up here without any tk code.
 """
 import tkinter as tk
-from tkinter import simpledialog, ttk
+from tkinter import filedialog, simpledialog, ttk
 
 import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -38,6 +38,8 @@ def _hz_tick(v: float) -> str:
         if abs(v) >= scale:
             return f"{v / scale:.4g}{suffix}"
     return f"{v:.4g}"
+
+EXPORTS = (("csv", "Traces (CSV)"), ("table", "Table (CSV)"), ("json", "Frame (JSON)"), ("png", "Image (PNG)"))
 
 MARK_TOP_PX = 22 # a point marker's triangle stays this far below the top, so its label shows
 
@@ -108,11 +110,16 @@ class PlotPane:
         values = self.plot.settings()
         linked = self.plot.link is not None
         self._link_picker(parent)
-        if self.plot.ACTIONS: # the plot's actions (store a reference trace)
-            row = ttk.Frame(parent)
-            row.pack(side=tk.TOP, fill=tk.X, pady=(2, 0))
-            for action in self.plot.ACTIONS:
-                ttk.Button(row, text=action, command=lambda a=action: self._plot_action(a)).pack(side=tk.LEFT)
+        row = ttk.Frame(parent) # the plot's actions (store a reference trace), and export
+        row.pack(side=tk.TOP, fill=tk.X, pady=(2, 0))
+        for action in self.plot.ACTIONS:
+            ttk.Button(row, text=action, command=lambda a=action: self._plot_action(a)).pack(side=tk.LEFT)
+        exp = ttk.Menubutton(row, text="Export ▾")
+        menu = tk.Menu(exp, tearoff=0)
+        for what, label in EXPORTS:
+            menu.add_command(label=label, command=lambda w=what: self.export(w))
+        exp.config(menu=menu)
+        exp.pack(side=tk.LEFT)
         groups: dict[str, list[dict]] = {}
         for f in self.plot.fields():
             groups.setdefault(f["group"], []).append(f)
@@ -224,6 +231,29 @@ class PlotPane:
         draw.grid(row=row + 2, column=1)
         draw.bind("<<ComboboxSelected>>", lambda _e: self.keep.__setitem__("tool", tool.get()))
         self.vars["_tool"] = tool
+
+    def export(self, what: str, path: str | None = None):
+        """Save the latest frame: "csv" its traces, "table" its marker table, "json" all of it, "png" the figure.
+        Asks where unless `path` is given"""
+        ext = {"csv": ".csv", "table": ".csv", "json": ".json", "png": ".png"}[what]
+        if path is None:
+            stem = "".join(ch if ch.isalnum() else "-" for ch in self.plot.NAME.lower()).strip("-")
+            path = filedialog.asksaveasfilename(parent=self.pane.master, defaultextension=ext,
+                                                initialfile=f"pyspecan-{stem}{'-table' if what == 'table' else ''}{ext}")
+            if not path:
+                return
+        try:
+            if what == "png":
+                if self.plotter is None:
+                    raise ValueError("nothing drawn yet")
+                self.plotter.fig.savefig(path, facecolor=self.plotter.fig.get_facecolor())
+            else:
+                text = self.ctrl.export(self.pid, what) # first: nothing is written when there is nothing to export
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(text)
+            self.ctrl.show_message(f"Saved {path}")
+        except (ValueError, OSError) as e:
+            self.ctrl.show_message(str(e))
 
     def _plot_action(self, action: str):
         try:

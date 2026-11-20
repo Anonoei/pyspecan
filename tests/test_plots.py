@@ -1306,3 +1306,46 @@ def test_about_of_a_plot_that_says_nothing():
     assert about_text("Bare", a) == "Bare (Other)\nShows: Something an extension added" # no empty lines
     assert (cost_text(None), cost_text(0.5), cost_text(3), cost_text(16)) == ("", "light, about 0.5x a PSD",
                                                                                 "medium, about 3x a PSD", "heavy, about 16x a PSD")
+
+# --- update every N blocks --- #
+def test_update_every_skips_blocks_but_not_redraws():
+    from pyspecan.plots import layout
+    model = FakeModel(nfft=256)
+    src = Source(model)
+    p = PLOTS.get("PSD")(src, every=3)
+    drawn = []
+    for i in range(7):
+        feed(src, model, _two_tones(1024, nfft=256, seed=i))
+        drawn.append(p.update() is not None)
+    assert drawn == [True, False, False, True, False, False, True] # the 1st, 4th and 7th block
+    feed(src, model, _two_tones(1024, nfft=256))
+    assert p.update() is None # skipped...
+    p.markers.add("peak")
+    assert p.update() is not None # ...but the same block again (a redraw after an edit) renders
+    assert all(any(s.key == "every" for s in PLOTS.get(n).SETTINGS) for n in PLOTS.names()) # every plot has it
+    layout.validate(layout.parse_inline(["Persistence every=4"]))
+
+# --- export --- #
+def test_export_traces_table_and_json():
+    import csv
+    import io
+
+    from pyspecan.plots.export import frame_json, table_csv, traces_csv
+    model = FakeModel(nfft=256)
+    src = Source(model)
+    p = PLOTS.get("PSD")(src, unit="dBFS", points=0, show_min=False, show_max=False)
+    p.markers.add("peak")
+    feed(src, model, _two_tones(1024, nfft=256))
+    f = p.update()
+    rows = list(csv.reader(io.StringIO(traces_csv(f))))
+    assert rows[0] == ["axis", "label", "trace", "x", "y"] and len(rows) == 1 + 256 # one row a point, no z column in 2d
+    xs = [float(r[3]) for r in rows[1:]]
+    np.testing.assert_allclose(xs, p.bin_freqs(256)) # x as views draw it: the bins' frequencies
+    assert {r[2] for r in rows[1:]} == {"psd"}
+    t = list(csv.reader(io.StringIO(table_csv(f))))
+    assert t[0] == f.table.columns and t[1][1] == "peak"
+    assert json.loads(frame_json(f))["axes"][0]["traces"][0]["name"] == "psd"
+    iq = PLOTS.get("IQ 3D")(src).update()
+    rows = list(csv.reader(io.StringIO(traces_csv(iq))))
+    assert rows[0][-1] == "z" and all(r[5] for r in rows[1:]) # 3d: z on every row
+    assert table_csv(iq) == ""

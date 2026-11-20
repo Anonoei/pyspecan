@@ -117,6 +117,30 @@ function applyStatus(s) {
     }
 }
 
+// --- export: a plot's latest frame as a file (traces / table / everything from the server, the picture from its canvas) --- //
+const EXPORTS = [["csv", "Traces (CSV)"], ["table", "Table (CSV)"], ["json", "Frame (JSON)"], ["png", "Image (PNG)"]];
+function exportMenu(id, p) {
+    const sel = el("select", {id: `export-${id}`, className: "export-menu", title: "save this plot's latest frame"},
+        new Option("⤓", ""), ...EXPORTS.map(([v, label]) => new Option(label, v)));
+    sel.onchange = () => { const what = sel.value; sel.value = ""; if (what) exportPlot(id, p.name, what); };
+    return sel;
+}
+
+function download(href, name) {
+    const a = el("a", {href, download: name});
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+function exportPlot(id, name, what) {
+    if (what !== "png") { download(`/api/export/${id}?what=${what}`, ""); return; } // the server names the file
+    const rt = runtime[id];
+    if (!rt || !rt.canvas) return;
+    const stem = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    download(rt.canvas.toDataURL("image/png"), `pyspecan-${stem}.png`);
+}
+
 // --- the plot picker: plot types grouped by category, what each does in a card beside the list --- //
 let addMenuSig = null;
 function buildAddMenu(s) {
@@ -324,6 +348,7 @@ function buildPlot(id, p) {
         $(`settings-${id}`).hidden = !settingsOpen.has(id);
     }});
     const del = el("button", {textContent: "✕", title: "remove plot", onclick: () => plotOp("del", {id})});
+    const exp = exportMenu(id, p);
     const actions = (p.actions || []).map((a) => el("button", {textContent: a, title: a, className: "plot-action",
         onclick: () => plotOp("act", {id, action: a})}));
     const ptime = el("span", {id: `ptime-${id}`, className: "muted"});
@@ -336,7 +361,7 @@ function buildPlot(id, p) {
         el("span", {className: "grip", textContent: "⠿"}),
         el("b", {textContent: p.name, className: "plot-name", title: aboutText(p.name, ((state && state.plot_info) || {})[p.name])}),
         ...linkChip(p), ptime,
-        el("span", {className: "right"}, ...(p.marker_kinds ? [toolMenu(id), markerMenu(id, p)] : []), ...linkMenu(id, p), ...actions, pause, gear, del));
+        el("span", {className: "right"}, ...(p.marker_kinds ? [toolMenu(id), markerMenu(id, p)] : []), ...linkMenu(id, p), ...actions, exp, pause, gear, del));
     rt.readout = el("div", {className: "readout", hidden: true});
     rt.table = el("div", {className: "mtable", hidden: true});
     rt.editor = el("div", {className: "marker-editor", id: `markers-${id}`, hidden: true});

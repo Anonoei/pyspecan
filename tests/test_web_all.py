@@ -249,3 +249,25 @@ def test_store_ref_button_and_trace_math(page):
     page.wait_for_function("(id) => runtime[id].frame.axes.length === 1", arg=pid)
     assert "rror" not in _message(page)
     _clear(page)
+
+def test_export_menu_downloads_csv_and_png(page, tmp_path):
+    _clear(page)
+    add_plot(page, "PSD")
+    page.wait_for_function("Object.keys(state.plots).length === 1")
+    pid = _ids(page)[0]
+    page.click("#btn-next")
+    page.wait_for_function("(id) => runtime[id].frame", arg=pid)
+    with page.expect_download() as dl:
+        page.select_option(f"#export-{pid}", "csv")
+    d = dl.value
+    assert d.suggested_filename == "pyspecan-psd.csv"
+    path = tmp_path / d.suggested_filename
+    d.save_as(path)
+    assert path.read_text().startswith("axis,label,trace,x,y")
+    with page.expect_download() as dl:
+        page.select_option(f"#export-{pid}", "png")
+    path = tmp_path / dl.value.suggested_filename
+    dl.value.save_as(path)
+    assert path.name == "pyspecan-psd.png" and path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    assert page.evaluate(f"document.getElementById('export-{pid}').value") == "" # back to the icon
+    _clear(page)

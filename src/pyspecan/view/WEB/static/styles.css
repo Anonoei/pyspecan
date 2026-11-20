@@ -204,3 +204,4 @@ dialog .dlg-actions { text-align: right; }
 .pyspecan .about-cat { margin-bottom: 6px; font-size: 0.8rem; }
 .pyspecan .about-label { font-weight: 600; font-size: 0.8rem; color: var(--info); margin-top: 4px; }
 .pyspecan .plot-header .plot-name { cursor: help; }
+.pyspecan .plot-header select.export-menu { width: 2.4em; }

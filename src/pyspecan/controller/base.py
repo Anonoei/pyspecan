@@ -51,6 +51,7 @@ class Controller:
         self.plots.apply(spec)
 
         self.lock = threading.RLock() # guards model + plots
+        self.latest: dict[str, Frame] = {} # each plot's last frame, what export writes
         self.playing = False
         self.running = True
         self.message = ""
@@ -138,6 +139,28 @@ class Controller:
             self._markers(pid).set(mid, key, value)
             self.redraw()
 
+    def render(self) -> dict:
+        """The plots' frames for the current block, kept as each one's latest"""
+        frames = self.plots.update(self.log)
+        self.latest.update(frames)
+        for pid in [p for p in self.latest if p not in self.plots.plots]: # removed plots
+            del self.latest[pid]
+        return frames
+
+    def export(self, pid: str, what: str = "csv") -> str:
+        """Plot `pid`'s latest frame as text: "csv" its traces, "table" its marker table, "json" all of it"""
+        from ..plots.export import FORMATS
+        if what not in FORMATS:
+            raise ValueError(f"export as {what!r}? one of {', '.join(FORMATS)}")
+        self.plots.get(pid) # an unknown plot raises
+        frame = self.latest.get(pid)
+        if frame is None:
+            raise ValueError(f"{pid} has drawn nothing yet: step or play first")
+        text = FORMATS[what](frame)
+        if not text:
+            raise ValueError(f"{pid} has no {what} to export")
+        return text
+
     def plot_action(self, pid: str, action: str):
         """One of a plot's ACTIONS (a PSD's "store ref")"""
         with self.lock:
@@ -168,7 +191,7 @@ class Controller:
         with self.lock:
             if self.playing or self.source.seq == 0: # playing: the next block shows it, nothing read yet: nothing to draw
                 return
-            self.deliver(self.plots.update(self.log), self.get_status())
+            self.deliver(self.render(), self.get_status())
 
     def reset_plots(self):
         with self.lock:
@@ -382,7 +405,7 @@ class Controller:
             self.plots.reset()
             self.state_changed()
         self.source.tick()
-        self.deliver(self.plots.update(self.log), self.get_status())
+        self.deliver(self.render(), self.get_status())
         return True
 
     def tick(self) -> bool:
