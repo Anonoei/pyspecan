@@ -1,4 +1,4 @@
-"""The synthetic capture the dev tools (screenshots.py, profile_plots.py) run on: the same signals every time, numpy only
+"""The synthetic capture the dev tools (screenshots.py, benchmark.py) run on: the same signals every time, numpy only
 
 a QPSK signal with an echo, an FM carrier, a clean carrier with phase noise, two tones with their third order products,
 a bursty signal, a slow chirp, and noise, at 1 MS/s

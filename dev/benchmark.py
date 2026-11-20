@@ -1,11 +1,11 @@
-"""Profile the plots: how long each takes to render a block, measured in PSDs (a PSD on the same blocks is 1.0)
+"""Benchmark the plots: how long each takes to render a block, measured in PSDs (a PSD on the same blocks is 1.0)
 
-    python dev/profile_plots.py                            # every plot, the analyzer's defaults (1 MS/s, 1024 FFT, 50 ms blocks)
-    python dev/profile_plots.py --nfft 4096 --sweep 20     # other FFT size / block length
-    python dev/profile_plots.py --plots psd,scope,scalogram
-    python dev/profile_plots.py --markers                  # also what each marker kind adds to a PSD
-    python dev/profile_plots.py --set "Scope trig_mode=roll" --set "PSD points=0"
-    python dev/profile_plots.py --json profile.json        # the numbers, to compare runs
+    python dev/benchmark.py                            # every plot, the analyzer's defaults (1 MS/s, 1024 FFT, 50 ms blocks)
+    python dev/benchmark.py --nfft 4096 --sweep 20     # other FFT size / block length
+    python dev/benchmark.py --plots psd,scope,scalogram
+    python dev/benchmark.py --markers                  # also what each marker kind adds to a PSD
+    python dev/benchmark.py --set "Scope trig_mode=roll" --set "PSD points=0"
+    python dev/benchmark.py --json benchmark.json        # the numbers, to compare runs
 
 Each plot runs alone on its own source, so it pays for everything it needs (in a layout, plots share the source's
 FFT frames and the DSP plots one signal search and lock). The first blocks are a warm-up (caches, the DSP plots' full

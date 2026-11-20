@@ -33,7 +33,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 
-from demo import FS, SECONDS, capture # noqa: E402 (the synthetic capture, shared with profile_plots.py)
+from demo import FS, SECONDS, capture # noqa: E402 (the synthetic capture, shared with benchmark.py)
 
 # --- scenes --- #
 @dataclass
