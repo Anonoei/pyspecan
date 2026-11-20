@@ -104,6 +104,13 @@ def track_timing(x: np.ndarray, sps: float, beta: float) -> tuple[float, float]:
     tau, _ = best_tau(x, sps, beta, SPAN, end)
     return sps, tau
 
+def _strength(s) -> float:
+    """How strong a found signal is: its total in-band power (a tone's SNR in its own narrow band is large, its power
+    is not)"""
+    if s.power is not None:
+        return float(s.power)
+    return (s.snr if s.snr is not None else s.height) + 10*np.log10(max(s.width, 1.0))
+
 class Analyzer:
     def __init__(self, source):
         self.source = source
@@ -157,7 +164,7 @@ class Analyzer:
         if f is not None:
             s = min(sv, key=lambda s: abs(s.freq - f))
             return Selection(s.freq, s.width, False, s)
-        best = max(sv, key=lambda s: (s.snr if s.snr is not None else s.height) + 10*np.log10(max(s.width, 1.0)))
+        best = max(sv, key=_strength)
         old = self._auto
         if old is not None and abs(best.freq - old.freq) < old.width/2 and 0.75 < best.width/old.width < 1.33:
             return old # the same signal: keep the channel (and what was locked on it)

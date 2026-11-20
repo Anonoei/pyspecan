@@ -388,6 +388,9 @@ class PlotPane:
 
     def _draw_axis(self, i: int, ax: Axis):
         mpl = self.plotter.ax(i) # type: ignore
+        if self.lim.setdefault(i, {}).get("xlog") != ax.xlog: # before the limits: a new scale resets the ticks
+            self.lim[i] = {"xlog": ax.xlog}
+            mpl.ax.set_xscale("log" if ax.xlog else "linear")
         # x / y limits
         traces = ax.traces
         if ax.image is not None:
@@ -425,7 +428,8 @@ class PlotPane:
             names.add(name)
             x = np.asarray(t.x) if t.x is not None else (np.linspace(xmin, xmax, len(t.y), endpoint=False) if xmin is not None and xmax is not None else np.arange(len(t.y)))
             if ax.projection == "3d":
-                mpl.plot3d(x, t.y, t.z, name=name, color=t.color, linestyle="solid", linewidth=t.width, alpha=t.alpha)
+                style = dict(linestyle="none", marker=".", markersize=3) if t.kind == "scatter" else dict(linestyle="solid", linewidth=t.width)
+                mpl.plot3d(x, t.y, t.z, name=name, color=t.color, alpha=t.alpha, **style)
             elif t.kind == "scatter":
                 mpl.scatter(x, t.y, name=name, color=t.color, marker=".", linestyle="none", linewidth=0)
             else:
@@ -740,6 +744,8 @@ class PlotPane:
 
     def _x_ticks(self, ax: Axis, mpl):
         """What to do with the x ticks when the x range changes"""
+        if ax.xfmt == "freq" and ax.xlog: # decades where the log scale puts them, labeled as frequencies
+            return lambda lo, hi: mpl.ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: fmt_hz(v)))
         if ax.xfmt == "freq":
             return lambda lo, hi: self._freq_ticks(mpl, lo, hi)
         if ax.xfmt == "time": # one unit for every tick, picked from the span

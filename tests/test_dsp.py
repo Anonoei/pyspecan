@@ -239,3 +239,51 @@ def test_network_analyzer_is_flat_for_a_clean_link():
     assert float(dict(f.readout)["Ripple"].split()[0]) < 0.5
     assert np.max(np.abs(phase.traces[0].y)) < 3.0 # degrees
     assert all(a.xfmt == "freq" for a in f.axes) and mag.xmin < 150e3 < mag.xmax
+
+# --- the VSA plots --- #
+EIGHT = np.exp(2j * np.pi * np.arange(8) / 8)
+
+@need_rpps
+def test_impulse_response_finds_an_echo():
+    for taper in ("hann", "blackman"):
+        model, src, (ir,) = setup("Impulse Response")
+        ir.set("taper", taper)
+        (f,) = run(model, src, [ir], capture(tone=False, channel=np.r_[1.0, np.zeros(79), 0.1]), blocks=6) # 80 us, -20 dB
+        echo = dict(f.readout)["Echo"]
+        assert echo.startswith("-20") or echo.startswith("-19"), f.readout
+        assert echo.endswith("80 µs"), f.readout
+        assert f.axes[0].xfmt == "time"
+    model, src, (ir,) = setup("Impulse Response")
+    (f,) = run(model, src, [ir], capture(tone=False), blocks=6)
+    assert "Echo" not in dict(f.readout) # a clean link: the taper's sidelobes are not echoes
+
+@need_rpps
+def test_error_vector_and_summary():
+    model, src, (ev, evs, con) = setup("Error Vector", "Error Vector Spectrum", "Constellation")
+    frames = run(model, src, [ev, evs, con], capture(EIGHT, tone=False))
+    r = dict(frames[0].readout)
+    assert float(r["EVM"].split("%")[0]) < 2.5 and float(r["MER"].split()[0]) > 30
+    assert abs(float(r["Gain imb"].split()[0])) < 0.3 and abs(float(r["Quad err"].rstrip("°"))) < 1
+    assert [a.ylabel for a in frames[0].axes] == ["EVM (%)", "Mag err (%)", "Phase err (deg)"]
+    assert float(dict(frames[1].readout)["Error / signal"].split()[0]) < -30 # a clean signal's error is far down
+    assert "MER" in dict(frames[2].readout) # the constellation carries the summary too
+
+@need_rpps
+def test_cyclic_spectrum_finds_the_rate_blind():
+    model, src, (cs,) = setup("Cyclic Spectrum")
+    (f,) = run(model, src, [cs], capture(tone=False, baud=40e3))
+    assert dict(f.readout)["Baud"].startswith("40 kBd")
+    assert np.allclose([m.x for m in f.axes[0].markers], [-40e3, 40e3], atol=5) and f.axes[1].image is not None
+
+@need_rpps
+def test_symbol_table_and_3d_constellation():
+    model, src, (st, c3) = setup("Symbol Table", "3D Constellation")
+    st.set("count", 64)
+    frames = run(model, src, [st, c3], capture(EIGHT, tone=False))
+    table = frames[0].table
+    assert table.columns[0] == "Symbol" and len(table.rows) == 8 and all(len(r.cells) == 9 for r in table.rows)
+    assert {c for r in table.rows for c in r.cells[1:]} <= set("01234567")
+    ax = frames[1].axes[0]
+    assert ax.projection == "3d" and [t.name for t in ax.traces] == ["path", "syms"]
+    syms = ax.traces[1]
+    assert len(syms.x) == 48 and syms.kind == "scatter" and np.allclose(np.abs(syms.y + 1j * syms.z), 1, atol=0.1)

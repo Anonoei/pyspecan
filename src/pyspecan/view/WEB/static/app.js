@@ -490,8 +490,11 @@ function pointerPos(rt, ev) {
 function axisAt(rt, py) {
     return (rt.geom || []).findIndex((g) => g && py >= g.y0 && py <= g.y0 + g.h);
 }
-const dataX = (g, px) => g.xmin + ((px - g.x0) / g.w) * (g.xmax - g.xmin);
-const pixX = (g, v) => g.x0 + ((v - g.xmin) / (g.xmax - g.xmin)) * g.w;
+// data x <-> pixel x of an axis' geometry (on a log axis, see Axis.xlog, in log10 of the values)
+const dataX = (g, px) => g.xlog ? 10 ** (Math.log10(g.xmin) + ((px - g.x0) / g.w) * Math.log10(g.xmax / g.xmin))
+    : g.xmin + ((px - g.x0) / g.w) * (g.xmax - g.xmin);
+const pixX = (g, v) => g.xlog ? g.x0 + (Math.log10(v / g.xmin) / Math.log10(g.xmax / g.xmin)) * g.w
+    : g.x0 + ((v - g.xmin) / (g.xmax - g.xmin)) * g.w;
 const dataY = (g, py) => g.ymax - ((py - g.y0) / g.h) * (g.ymax - g.ymin);
 const pixY = (g, v) => g.y0 + (1 - (v - g.ymin) / (g.ymax - g.ymin)) * g.h;
 const hasLevels = (g, axis) => !g.isImage || axis.ymin != null;
@@ -508,6 +511,7 @@ function hitTest(rt, px, py) {
     const i = axisAt(rt, py);
     if (i < 0 || !rt.frame) return null;
     const g = rt.geom[i], axis = rt.frame.axes[i];
+    if (!g || g.is3d) return null;
     for (const m of axis.markers || []) { // points first: they sit on top of the bands
         if (!m.edit || m.kind === "hline" || Math.abs(pixX(g, m.x) - px) > EDGE_PX) continue;
         const ym = Math.min(Math.max(g.y0 + (1 - (m.y - g.ymin) / (g.ymax - g.ymin)) * g.h, g.y0 + 26), g.y0 + g.h); // as drawMarkers places the triangle
@@ -563,10 +567,18 @@ function bindCanvas(id, canvas) {
         const rt = runtime[id];
         [rt.hover_x, rt.hover_y] = pointerPos(rt, ev);
         rt.hover = true;
+        if (rt.turn) { // turning a 3d axis
+            const t = rt.turn, v = view3d(rt, t.i);
+            v.az = t.az - (rt.hover_x - t.px) * 0.5;
+            v.el = Math.min(90, Math.max(-90, t.el + (rt.hover_y - t.py) * 0.5));
+            drawPlot(id);
+            return;
+        }
         if (!rt.drag) {
             drawPlot(id);
             const [px, py] = pointerPos(rt, ev), hit = hitTest(rt, px, py);
             const i = axisAt(rt, py);
+            if (i >= 0 && rt.geom[i] && rt.geom[i].is3d) { canvas.style.cursor = "grab"; return; }
             canvas.style.cursor = hit ? (hit.mode === "move" ? "grab" : hit.mode === "level" ? "ns-resize" : "ew-resize")
                 : (canDraw(id, rt, i) ? "crosshair" : "");
             return;
@@ -592,6 +604,15 @@ function bindCanvas(id, canvas) {
         const rt = runtime[id];
         if (ev.button !== 0 || !rt.frame) return;
         const [px, py] = pointerPos(rt, ev);
+        const at = axisAt(rt, py);
+        if (at >= 0 && rt.geom[at] && rt.geom[at].is3d) { // turn the view
+            const v = view3d(rt, at);
+            rt.turn = {i: at, px, py, az: v.az, el: v.el};
+            canvas.setPointerCapture(ev.pointerId);
+            canvas.style.cursor = "grabbing";
+            ev.preventDefault();
+            return;
+        }
         let d = hitTest(rt, px, py);
         if (!d) {
             const i = axisAt(rt, py);
@@ -606,7 +627,9 @@ function bindCanvas(id, canvas) {
         ev.preventDefault();
     });
     const finish = (ev, cancel) => {
-        const rt = runtime[id], d = rt.drag;
+        const rt = runtime[id];
+        if (rt.turn) { rt.turn = null; canvas.style.cursor = "grab"; return; }
+        const d = rt.drag;
         if (!d) return;
         // a plain click on a marker does nothing, on a box of the plot's (a found signal) it applies the box
         if (cancel || !(d.moved || d.mode === "new" || (["move", "left", "right"].includes(d.mode) && !d.owner && Array.isArray(d.edit)))) rt.drag = null;
@@ -614,6 +637,10 @@ function bindCanvas(id, canvas) {
         drawPlot(id);
     };
     canvas.addEventListener("pointerup", (ev) => finish(ev, false));
+    canvas.addEventListener("dblclick", (ev) => { // a 3d axis back to its first view
+        const rt = runtime[id], i = axisAt(rt, pointerPos(rt, ev)[1]);
+        if (i >= 0 && rt.geom[i] && rt.geom[i].is3d) { rt.view3d[i] = {...VIEW3D}; drawPlot(id); }
+    });
     canvas.addEventListener("pointercancel", (ev) => finish(ev, true));
 }
 
@@ -674,7 +701,7 @@ function drawPlot(id) {
     const axes = rt.frame.axes, ah = ch / axes.length;
     rt.geom = [];
     axes.forEach((axis, i) => {
-        const out = {};
+        const out = {view: view3d(rt, i)};
         drawAxis(ctx, dragged(rt, axis, i), rt.images[i], 0, i * ah, cw, ah, out);
         rt.geom[i] = out.geom;
     });
@@ -686,7 +713,7 @@ function drawHover(ctx, id, rt) {
     if (!rt.hover && !rt.drag) return;
     const i = rt.drag ? rt.drag.i : axisAt(rt, rt.hover_y);
     const g = rt.geom[i], axis = i >= 0 && rt.frame.axes[i];
-    if (!g || !axis) return;
+    if (!g || !axis || g.is3d) return;
     const px = Math.min(Math.max(rt.hover_x, g.x0), g.x0 + g.w), py = Math.min(Math.max(rt.hover_y, g.y0), g.y0 + g.h);
     const inside = rt.hover_x >= g.x0 && rt.hover_x <= g.x0 + g.w && rt.hover_y >= g.y0 && rt.hover_y <= g.y0 + g.h;
     if (!inside && !rt.drag) return;
@@ -748,21 +775,26 @@ function drawTraces(ctx, axis, xOf, yOf) {
 }
 
 function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
+    if (axis.projection === "3d") return drawAxis3d(ctx, axis, ox, oy, W, H, out);
     let x0 = ox + MARGIN.l, y0 = oy + MARGIN.t, w = W - MARGIN.l - MARGIN.r, h = H - MARGIN.t - MARGIN.b;
     if (w <= 10 || h <= 10) return;
+    const isImage = !!axis.image;
+    const bar = isImage && axis.ymin != null && w > 160; // a level axis image gets a color bar (relative hits)
+    if (bar) w -= 44;
     if (axis.square) {
         const side = Math.min(w, h);
         x0 += (w - side) / 2; w = side; h = side;
     }
-    const isImage = !!axis.image;
     const [xmin, xmax] = isImage ? [axis.xmin ?? 0, axis.xmax ?? 1] : extent(axis, "x");
     const [ymin, ymax] = isImage && axis.ymin == null ? [0, 1] : extent(axis, "y");
-    const xOf = (v) => x0 + ((v - xmin) / (xmax - xmin)) * w;
+    const xlog = !!axis.xlog && xmin > 0 && xmax > xmin;
+    const lx0 = xlog ? Math.log10(xmin) : 0, lspan = xlog ? Math.log10(xmax) - lx0 : 1;
+    const xOf = xlog ? (v) => x0 + ((Math.log10(v) - lx0) / lspan) * w : (v) => x0 + ((v - xmin) / (xmax - xmin)) * w;
     const yOf = (v) => y0 + (1 - (v - ymin) / (ymax - ymin)) * h;
     const fmtX = fmtXOf(axis, xmin, xmax, false);
     const fmtY = axis.yfmt === "log10" ? fmtLog10 : axis.yfmt === "freq" ? fmtHz : fmtNum;
     const labelY = !isImage || axis.ymin != null; // a scrolling image has no y values to label
-    out.geom = {x0, y0, w, h, xmin, xmax, ymin, ymax, isImage};
+    out.geom = {x0, y0, w, h, xmin, xmax, ymin, ymax, isImage, xlog};
 
     ctx.font = "12px sans-serif";
     ctx.lineWidth = 1;
@@ -775,11 +807,25 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
         ctx.textAlign = "right";
         ctx.fillText(fmtY(ymax - (i / ny) * (ymax - ymin)), x0 - 6, y + 4);
     }
-    for (let i = 0; i <= nx; i++) {
-        const x = x0 + (i / nx) * w;
-        if (!isImage) { ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + h); ctx.stroke(); }
-        ctx.textAlign = i === 0 ? "left" : i === nx ? "right" : "center";
-        ctx.fillText(fmtX(xmin + (i / nx) * (xmax - xmin)), x, y0 + h + 16);
+    if (xlog) { // a line at every decade (labeled) and its 2..9 (faint)
+        for (let d = Math.floor(lx0); d <= Math.ceil(lx0 + lspan); d++) {
+            for (let m = 1; m < 10; m++) {
+                const v = m * 10 ** d;
+                if (v < xmin || v > xmax) continue;
+                const x = xOf(v);
+                ctx.globalAlpha = m === 1 ? 1 : 0.35;
+                ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + h); ctx.stroke();
+                ctx.globalAlpha = 1;
+                if (m === 1) { ctx.textAlign = "center"; ctx.fillText(fmtX(v), x, y0 + h + 16); }
+            }
+        }
+    } else {
+        for (let i = 0; i <= nx; i++) {
+            const x = x0 + (i / nx) * w;
+            if (!isImage) { ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + h); ctx.stroke(); }
+            ctx.textAlign = i === 0 ? "left" : i === nx ? "right" : "center";
+            ctx.fillText(fmtX(xmin + (i / nx) * (xmax - xmin)), x, y0 + h + 16);
+        }
     }
     ctx.strokeRect(x0, y0, w, h);
 
@@ -788,6 +834,7 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(image.canvas, x0, y0, w, h);
         }
+        if (bar) drawColorbar(ctx, axis.image.cmap, x0 + w + 8, y0, 10, h);
         drawBands(ctx, axis, xOf, isImage && axis.ymin == null ? null : yOf, x0, y0, w, h);
         if (axis.ymin != null && axis.traces.length) { // traces over a level axis image (persistence)
             ctx.save();
@@ -806,6 +853,111 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
     ctx.restore(); // also restores globalAlpha
     drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h);
     drawOffscale(ctx, axis, x0, y0, w, h);
+}
+
+// the color map of a level image, 0 (bottom) to 1 (top): the share of the brightest pixel's hits, as tk's color bar
+function drawColorbar(ctx, cmap, x, y, w, h) {
+    const lut = lutFor(cmap);
+    for (let r = 0; r < h; r++) {
+        const c = lut[Math.round((1 - r / Math.max(h - 1, 1)) * 255)];
+        ctx.fillStyle = `rgb(${c & 255},${(c >> 8) & 255},${(c >> 16) & 255})`;
+        ctx.fillRect(x, y + r, w, 1);
+    }
+    ctx.strokeStyle = GRID; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = TEXT; ctx.textAlign = "left"; ctx.font = "11px sans-serif";
+    for (const v of [0, 0.5, 1]) ctx.fillText(v.toFixed(1), x + w + 3, y + (1 - v) * (h - 8) + 8);
+}
+
+// --- 3d axes: an orthographic view of the data box, turned by dragging, a double click resets it --- //
+const VIEW3D = {az: -60, el: 28};
+function view3d(rt, i) {
+    rt.view3d = rt.view3d || {};
+    return rt.view3d[i] || (rt.view3d[i] = {...VIEW3D});
+}
+
+// data (x, y, z) -> pixel [px, py] in the box (x0, y0, w, h), for the axis' ranges, box aspect and the view
+function projector(axis, view, x0, y0, w, h) {
+    const r = {x: extent(axis, "x"), y: extent(axis, "y"), z: extent(axis, "z")};
+    const asp = axis.aspect || [1, 1, 1], am = Math.max(...asp);
+    const a = asp.map((v) => v / am);
+    const az = view.az * Math.PI / 180, el = view.el * Math.PI / 180;
+    const ca = Math.cos(az), sa = Math.sin(az), ce = Math.cos(el), se = Math.sin(el);
+    const unit = (x, y, z) => [((x - r.x[0]) / (r.x[1] - r.x[0]) - 0.5) * a[0], ((y - r.y[0]) / (r.y[1] - r.y[0]) - 0.5) * a[1],
+                                ((z - r.z[0]) / (r.z[1] - r.z[0]) - 0.5) * a[2]];
+    const raw = (x, y, z) => { // screen x, screen y (up), depth (away from the viewer)
+        const [X, Y, Z] = unit(x, y, z);
+        const depth = X * sa + Y * ca;
+        return [X * ca - Y * sa, Z * ce + depth * se, depth * ce - Z * se];
+    };
+    const corners = [];
+    for (const x of r.x) for (const y of r.y) for (const z of r.z) corners.push([x, y, z]);
+    const pr = corners.map((c) => raw(...c));
+    const sx = pr.map((p) => p[0]), sy = pr.map((p) => p[1]);
+    const lo = [Math.min(...sx), Math.min(...sy)], hi = [Math.max(...sx), Math.max(...sy)];
+    const s = 0.86 * Math.min(w / (hi[0] - lo[0] || 1), h / (hi[1] - lo[1] || 1));
+    const cx = x0 + w / 2 - s * (lo[0] + hi[0]) / 2, cy = y0 + h / 2 + s * (lo[1] + hi[1]) / 2;
+    const P = (x, y, z) => { const p = raw(x, y, z); return [cx + s * p[0], cy - s * p[1]]; };
+    P.depth = (x, y, z) => raw(x, y, z)[2];
+    P.r = r;
+    return P;
+}
+
+function drawAxis3d(ctx, axis, ox, oy, W, H, out) {
+    const x0 = ox + 8, y0 = oy + 8, w = W - 16, h = H - 16;
+    if (w <= 20 || h <= 20) return;
+    const P = projector(axis, out.view || VIEW3D, x0, y0, w, h), r = P.r;
+    out.geom = {x0: ox, y0: oy, w: W, h: H, is3d: true};
+    const line = (a, b) => { const p = P(...a), q = P(...b); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); };
+    ctx.lineWidth = 1; ctx.strokeStyle = GRID; ctx.font = "11px sans-serif"; ctx.fillStyle = TEXT;
+    // the floor's grid and the box: the edges at the back are drawn, the ones in front would hide the data
+    const [xa, xb] = r.x, [ya, yb] = r.y, [za, zb] = r.z;
+    for (let k = 0; k <= 4; k++) {
+        const x = xa + (k / 4) * (xb - xa), y = ya + (k / 4) * (yb - ya);
+        line([x, ya, za], [x, yb, za]); line([xa, y, za], [xb, y, za]);
+    }
+    const backX = P.depth(xa, 0, 0) > P.depth(xb, 0, 0) ? xa : xb, backY = P.depth(0, ya, 0) > P.depth(0, yb, 0) ? ya : yb;
+    for (let k = 0; k <= 4; k++) { // the two back walls
+        const z = za + (k / 4) * (zb - za);
+        line([backX, ya, z], [backX, yb, z]); line([xa, backY, z], [xb, backY, z]);
+    }
+    line([backX, backY, za], [backX, backY, zb]);
+    // labels on the front edges of the floor, z up the back corner
+    const frontY = backY === ya ? yb : ya, frontX = backX === xa ? xb : xa;
+    const fx = fmtXOf(axis, xa, xb, false), fy = axis.yfmt === "freq" ? fmtHz : fmtNum;
+    ctx.textAlign = "center";
+    for (let k = 0; k <= 4; k += 2) {
+        const x = xa + (k / 4) * (xb - xa), p = P(x, frontY, za);
+        ctx.fillText(fx(x), p[0], p[1] + 14);
+        const y = ya + (k / 4) * (yb - ya), q = P(frontX, y, za);
+        ctx.fillText(fy(y), q[0] + (q[0] > x0 + w / 2 ? 18 : -18), q[1] + 12);
+        const z = za + (k / 4) * (zb - za), t = P(backX, backY, z);
+        ctx.fillText(fmtNum(z), t[0] + (t[0] > x0 + w / 2 ? 22 : -22), t[1] + 4);
+    }
+    if (axis.ylabel) { const q = P(frontX, (ya + yb) / 2, za); ctx.fillText(axis.ylabel, q[0] + (q[0] > x0 + w / 2 ? 40 : -40), q[1] + 26); }
+    // bands lie on the floor
+    for (const b of axis.bands || []) {
+        const lo = Math.max(b.lo, xa), hi = Math.min(b.hi, xb), yl = b.ylo ?? ya, yh = b.yhi ?? yb;
+        if (hi <= lo) continue;
+        const pts = [[lo, yl], [hi, yl], [hi, yh], [lo, yh]].map(([x, y]) => P(x, y, za));
+        ctx.globalAlpha = b.alpha ?? 0.15; ctx.fillStyle = b.color;
+        ctx.beginPath(); pts.forEach((p, k) => (k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+    for (const s of axis.traces || []) {
+        const n = s.y.length;
+        ctx.strokeStyle = ctx.fillStyle = s.color; ctx.globalAlpha = s.alpha ?? 1; ctx.lineWidth = s.width ?? 1.5;
+        const z = (k) => (s.z ? s.z[k] : za);
+        if (s.kind === "scatter") {
+            for (let k = 0; k < n; k++) { const p = P(traceX(s, k, axis), s.y[k], z(k)); ctx.fillRect(p[0] - 1, p[1] - 1, 2, 2); }
+        } else {
+            ctx.beginPath();
+            for (let k = 0; k < n; k++) { const p = P(traceX(s, k, axis), s.y[k], z(k)); if (k) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); }
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = TEXT; ctx.textAlign = "left";
+    ctx.fillText("drag to turn", ox + 6, oy + H - 6);
 }
 
 // shaded x spans (channels), or boxes when they have a y span (`yOf` null: no levels, y spans are ignored), under the traces

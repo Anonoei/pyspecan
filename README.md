@@ -50,6 +50,17 @@ load one back ("Load layout", `load <file>`). Launch with it using `--layout <fi
 ```
 Settings left out keep their defaults. Linked plots take the first one's shared (level, processing) values.
 
+## Plots and measurements
+Every view lists the plots it can draw (the web view and tkGUI draw them all, 3D included: drag a 3D plot to turn it,
+double click to reset it; the console draws all but 3D).
+- Spectrum: PSD (max / min hold, averaging, detector), Spectrogram, RT Spectrogram, 3D Spectrogram, Persistence, FFT
+- Time domain: IQ, IQ 3D, PMF, Phasor, IQ Density, Scope (triggered / roll), Frequency vs Time
+- Measurements: CCDF, Power vs Time, Occupancy, Phase Noise (L(f) on a log offset axis, integrated phase noise and
+  jitter), Analog Demod (AM / FM / PM against time and its spectrum, depth / deviation, modulating frequency, SINAD)
+- Markers on any spectrum (`+ Marker`, or `marker=<kind>` in a layout): point, peak (with a threshold line to drag),
+  delta, peaks (peak table), channel power, ACPR, OBW (and -x dB bandwidth), harmonics (dBc and THD), TOI (third order
+  intercept from two tones), limit (a line to drag, pass / fail with the margin), and with RPPS signals (below)
+
 ## Scope
 The "Scope" plot is an oscilloscope: samples against time, with a trigger (auto, normal, single) and up
 to `overlay` triggered sweeps from each block drawn together. `roll` mode is an untriggered strip chart
@@ -68,7 +79,13 @@ Without it everything else works the same, and these plots are not listed.
   modulation, symbol rate, roll-off, Es/N0, EVM and carrier offset
 - "Eye Diagram": its matched filter output over two symbols, I and Q
 - "Network Analyzer": the link's frequency response across the signal (magnitude, phase, group delay), measured blind
-  from the decided symbols, no stimulus needed
+  from the decided symbols, no stimulus needed; "Impulse Response": the same inverse transformed, echoes by delay and level
+- "3D Constellation": I and Q against time, the symbols on the matched filter's path
+- "Error Vector": EVM, magnitude and phase error per symbol, with the error summary (peak EVM, MER, IQ offset, gain
+  imbalance, quadrature error); "Error Vector Spectrum": where in the band the errors are
+- "Cyclic Spectrum": the spectral correlation against cycle frequency and the spectral coherence image, with the symbol
+  rate and carrier symmetry found blind (no lock needed)
+- "Symbol Table": the decided symbols
 - The "Analysis" globals (`--dsp_freq`, `--dsp_bw`, `--dsp_mod`, `--dsp_baud`) pick the signal and, when known, its
   modulation and symbol rate. Blank picks the strongest signal and finds the rest
 ```

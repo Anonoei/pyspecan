@@ -1044,3 +1044,102 @@ def test_iq_density_puts_symbols_in_their_quadrants():
     feed(src, model, one)
     img = p.update().axes[0].image.data
     assert img[:16, 16:].max() == 255 and img[16:, :16].max() == 0 # decay 0: only the latest block
+
+# --- measurement markers: peak table, harmonics, TOI, limit --- #
+def _tones_psd(**markers):
+    fs, n = 1000.0, 8192
+    t = np.arange(n) / fs
+    # tones at 100 / 120 Hz, their third order products at 80 / 140 Hz (-40 dBc), a 200 Hz tone at -30 dBc
+    x = (np.exp(2j*np.pi*100*t) + np.exp(2j*np.pi*120*t) + 0.01*(np.exp(2j*np.pi*80*t) + np.exp(2j*np.pi*140*t))
+         + 0.0316*np.exp(2j*np.pi*200*t) + 1e-4*np.random.default_rng(0).standard_normal(n)).astype(np.complex64)
+    model = FakeModel(fs=fs, nfft=1024)
+    src = Source(model)
+    p = PLOTS.get("PSD")(src, unit="dBFS", vbw=0, window="flattop")
+    for kind, params in markers.items():
+        p.markers.add(kind, **params)
+    feed(src, model, x)
+    return p.update()
+
+def _rows(frame, mid):
+    out, cur = {}, None
+    for r in frame.table.rows:
+        cur = r.id or cur
+        if cur == mid:
+            out.setdefault(mid, []).append(r.cells[2:])
+    return out[mid]
+
+def test_peak_table_lists_the_strongest():
+    f = _tones_psd(peaks={"count": 5})
+    rows = _rows(f, "M1")
+    freqs = sorted(round(float(r[0].split()[1])) for r in rows)
+    assert freqs == [80, 100, 120, 140, 200]
+    assert len([m for m in f.axes[0].markers if m.label.startswith("M1.")]) == 5
+
+def test_toi_from_two_tones_and_their_products():
+    f = _tones_psd(toi={})
+    rows = _rows(f, "M1")
+    toi = [r for r in rows if r[0] == "TOI"][0][1]
+    assert abs(float(toi.split()[0]) - 20.0) < 0.5 # tones at 0 dBFS, IM3 at -40 dBc: 0 + 40 / 2
+
+def test_harmonics_of_a_given_fundamental():
+    f = _tones_psd(harmonics={"freq": "100", "count": 3})
+    rows = {r[0].split()[0]: r[1] for r in _rows(f, "M1")}
+    assert abs(float(rows["H2"].split()[0]) + 30.0) < 0.5 # 200 Hz at -30 dBc
+    assert "THD" in rows and float(rows["THD"].split("%")[0]) > 3.0
+
+def test_limit_line_pass_fail_and_drag():
+    ok = _tones_psd(limit={"level": -20.0, "freq": "200", "span": "50"})
+    assert _rows(ok, "M1")[0][1].startswith("PASS, 10")
+    bad = _tones_psd(limit={"level": -35.0, "freq": "200", "span": "50"})
+    verdict = _rows(bad, "M1")[0][1]
+    assert verdict.startswith("FAIL by") and abs(float(verdict.split()[2]) - 5.0) < 0.2
+    line = next(m for m in bad.axes[0].markers if m.kind == "hline")
+    assert (line.owner, line.edit, line.y) == ("M1", "level", -35.0) # drag it to move the limit
+    low = _tones_psd(limit={"level": -10.0, "side": "lower", "freq": "100", "span": "4"})
+    assert _rows(low, "M1")[0][1].startswith("PASS")
+
+# --- phase noise, analog demod --- #
+def test_phase_noise_follows_a_random_walk_phase():
+    fs, n, sig = 1e6, 65536, 2e-3
+    model = FakeModel(fs=fs, nfft=4096)
+    src = Source(model)
+    p = PLOTS.get("Phase Noise")(src, pn_nfft=16384, avg_count=200)
+    rng = np.random.default_rng(0)
+    ph = 0.0
+    for i in range(8):
+        pn = ph + np.cumsum(rng.standard_normal(n)) * sig
+        ph = pn[-1]
+        t = (np.arange(n) + i * n) / fs
+        feed(src, model, np.exp(1j * (2*np.pi*100e3*t + pn)).astype(np.complex64))
+        f = p.update()
+    ax = f.axes[0]
+    assert ax.xlog and ax.xfmt == "freq" and ax.xmin > 0
+    for off in (1e3, 1e4, 1e5): # L(f) of a random walk phase: sig^2 / fs / (2 sin(pi f / fs))^2
+        theory = 10 * np.log10(sig**2 / fs / (2 * np.sin(np.pi * off / fs))**2)
+        assert abs(np.interp(off, ax.traces[0].x, ax.traces[0].y) - theory) < 1.5, off
+    r = dict(f.readout)
+    assert abs(float(r["Carrier"].split()[0]) - 100) < 0.1 and "° rms" in r["Integrated"]
+
+@pytest.mark.parametrize("demod, check", [
+    ("FM", lambda r: r["Deviation"].startswith("5") and r["Mod freq"] == "1 kHz"),
+    ("PM", lambda r: abs(float(r["Deviation"].split()[0]) - 2.0) < 0.1 and r["Mod freq"] == "1 kHz"),
+    ("AM", lambda r: r["Mod freq"] == "1 kHz" and r["Depth"].startswith("+50")),
+])
+def test_analog_demod(demod, check):
+    fs, n = 1e6, 50000
+    t = np.arange(n) / fs
+    m = np.sin(2 * np.pi * 1e3 * t)
+    if demod == "FM":
+        x = np.exp(1j * (2*np.pi*100e3*t + 5e3 / 1e3 * (1 - np.cos(2*np.pi*1e3*t)))) # 5 kHz deviation
+    elif demod == "PM":
+        x = np.exp(1j * (2*np.pi*100e3*t + 2.0 * m)) # 2 rad
+    else:
+        x = (1 + 0.5 * m) * np.exp(2j*np.pi*100e3*t) # 50 %
+    model = FakeModel(fs=fs, nfft=4096)
+    src = Source(model)
+    p = PLOTS.get("Analog Demod")(src, demod=demod, demod_bw="50k")
+    feed(src, model, x.astype(np.complex64))
+    f = p.update()
+    r = dict(f.readout)
+    assert r["Carrier"] == "100 kHz" and check(r), r
+    assert f.axes[0].xfmt == "time" and f.axes[1].xfmt == "freq"

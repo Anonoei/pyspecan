@@ -12,7 +12,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from ...utils import args
 from ...model.model import Model
 from ...plots import colormap
-from ...plots.frame import Frame, LINE, SCATTER, IMAGE
+from ...plots.frame import Frame, LINE, SCATTER, IMAGE, THREE_D
 from ...view.WEB.base import View as GUI
 from ..base import Controller as _Controller
 
@@ -28,7 +28,7 @@ def args_ctrl(parser):
 
 class Controller(_Controller):
     """WEB Controller"""
-    FEATURES = {LINE, SCATTER, IMAGE}
+    FEATURES = {LINE, SCATTER, IMAGE, THREE_D} # 3d: drawn by app.js, turned with the mouse
 
     def __init__(self, model: Model, view: GUI, **kwargs):
         super().__init__(model, view, **kwargs)

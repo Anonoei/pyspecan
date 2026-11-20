@@ -117,8 +117,9 @@ def test_plot_types_follow_the_views_features(capture):
     c = make(capture)
     c.FEATURES = {"line"}
     from pyspecan.plots.settings import HAVE_RPPS
-    dsp = ["Network Analyzer"] if HAVE_RPPS else [] # the optional DSP plots
-    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "Scope", "Frequency vs Time", "CCDF", "Power vs Time", "Occupancy", *dsp]
+    dsp = ["Error Vector", "Error Vector Spectrum", "Network Analyzer", "Impulse Response"] if HAVE_RPPS else [] # the optional DSP plots
+    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "Scope", "Frequency vs Time", "CCDF", "Power vs Time", "Occupancy",
+                            "Phase Noise", "Analog Demod", *dsp]
     with pytest.raises(ValueError):
         c.add_plot("Spectrogram")
 
@@ -320,3 +321,10 @@ def test_a_client_gone_mid_send_is_dropped_quietly():
         assert await ws.send(cid, {"type": "state"}) is False and cid not in ws.connections
         assert await ws.send(cid, {"type": "error"}) is False # already dropped: no KeyError
     asyncio.run(run())
+
+def test_draw_frame_log_x_axis():
+    import re
+    ax = Axis(xmin=10.0, xmax=1e5, xlog=True, xfmt="freq", ymin=-100, ymax=0,
+              traces=[Trace(np.linspace(-20, -80, 50), np.geomspace(10, 1e5, 50))])
+    lines = [re.sub(r"\x1b\[[0-9;]*m", "", l) for l in draw_frame(Frame([ax]), [None], 60, 12, False)]
+    assert lines[-1].split()[0] == "10" and lines[-1].split()[-1] == "100k" and "1k" in lines[-1] # 10 .. 1k .. 100k evenly

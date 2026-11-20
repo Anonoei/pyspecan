@@ -14,7 +14,7 @@ import numpy as np
 
 from ..measure import channel, peaks, units
 from ..utils.registry import Registry
-from .frame import BLUE, GREEN, YELLOW, Band, Marker, Table, TableRow
+from .frame import BLUE, GREEN, RED, YELLOW, Band, Marker, Table, TableRow
 from .freq import DENSITY_UNIT, POWER_UNIT, fmt_hz, freq_list_text, freq_text, hz, hz_list, optional_float
 from .settings import Setting
 
@@ -236,6 +236,157 @@ class OBW(_Band):
             rows += [["centroid", f"{fmt_hz(centroid - c)} from center"], [f"-{p['xdb']:g} dB", fmt_hz(x_hi - x_lo)]]
         rows.append(["total", f"{units.lin_to_db(total):.2f} {POWER_UNIT[ctx.unit]}"])
         return Result(rows, marks, bands)
+
+def _power(ctx, lvl: float) -> float:
+    """A tone's level in the plot's power unit: a density unit reads a tone low by the RBW"""
+    if units.is_density(ctx.unit):
+        return lvl + 10 * np.log10(ctx.plot.rbw(ctx.n))
+    return lvl
+
+def _strongest(ctx, n: int, excursion: float = 6.0) -> list[tuple[float, float]]:
+    """(freq, level) of the n strongest peaks, refined between bins, strongest first"""
+    out = []
+    for i in peaks.find_peaks(ctx.trace, n, None, excursion):
+        pos, lvl = peaks.interp(ctx.trace, int(i))
+        out.append((float(ctx.freqs[0] + pos * ctx.df), float(lvl)))
+    return out
+
+def _level_near(ctx, freq: float, bins: int = 3) -> tuple[float, float]:
+    """(freq, level) of the highest point within `bins` of freq (a harmonic or product a little off its ideal place)"""
+    i = int(np.clip(round((freq - ctx.freqs[0]) / ctx.df), 0, ctx.n - 1))
+    lo, hi = max(0, i - bins), min(ctx.n, i + bins + 1)
+    k = lo + int(np.argmax(ctx.trace[lo:hi]))
+    pos, lvl = peaks.interp(ctx.trace, k)
+    return float(ctx.freqs[0] + pos * ctx.df), float(lvl)
+
+@marker_kind("peaks")
+class PeakTable(MarkerKind):
+    """Peak table: the strongest peaks, strongest first"""
+    COLOR = GREEN
+    PARAMS = (
+        Setting("count", "Peaks", "int", default=5, min=1, max=50),
+        Setting("threshold", "Threshold", "text", default="", coerce=optional_float, hint="off", help="minimum peak level"),
+        Setting("excursion", "Excursion (dB)", "number", default=6.0, min=0, step=1, help="how far a peak must rise above its surroundings"),
+    )
+
+    def evaluate(self, ctx, mid, p):
+        thr = float(p["threshold"]) if p["threshold"] else None
+        found = peaks.find_peaks(ctx.trace, p["count"], thr, p["excursion"])
+        if not len(found):
+            return Result([["-", "no peaks"]])
+        rows, marks, at = [], [], None
+        for k, i in enumerate(found, 1):
+            pos, lvl = peaks.interp(ctx.trace, int(i))
+            f = float(ctx.freqs[0] + pos * ctx.df)
+            at = at or (f, lvl)
+            rows.append([f"P{k} {fmt_hz(f)}", ctx.level_text(lvl)])
+            marks.append(Marker(f, lvl, f"{mid}.{k}", self.COLOR))
+        return Result(rows, marks, at=at)
+
+@marker_kind("harmonics")
+class Harmonics(MarkerKind):
+    """Harmonic distortion: the fundamental and its harmonics in dBc, and the total (THD)"""
+    COLOR = YELLOW
+    PARAMS = (
+        Setting("freq", "Fundamental", "text", default="", coerce=freq_text, hint="strongest", help="the fundamental, blank for the strongest peak"),
+        Setting("count", "Harmonics", "int", default=5, min=2, max=20, help="up to this harmonic"),
+    )
+
+    def evaluate(self, ctx, mid, p):
+        if p["freq"]:
+            f0, l0 = _level_near(ctx, hz(p["freq"], ctx.cf))
+        else:
+            top = _strongest(ctx, 1)
+            if not top:
+                return Result([["-", "no peak"]])
+            f0, l0 = top[0]
+        if f0 == 0:
+            return Result([[fmt_hz(f0), "the fundamental is at 0 Hz: no harmonics"]])
+        lo, hi = ctx.edges
+        rows = [[f"H1 {fmt_hz(f0)}", ctx.level_text(l0)]]
+        marks = [Marker(f0, l0, "H1", self.COLOR, owner=mid)]
+        total = 0.0
+        for n in range(2, p["count"] + 1):
+            want = n * f0
+            if not lo <= want <= hi:
+                rows.append([f"H{n} {fmt_hz(want)}", "outside span"])
+                continue
+            f, lvl = _level_near(ctx, want)
+            total += 10 ** ((lvl - l0) / 10)
+            rows.append([f"H{n} {fmt_hz(f)}", f"{lvl - l0:+.2f} dBc"])
+            marks.append(Marker(f, lvl, f"H{n}", self.COLOR))
+        if total:
+            rows.append(["THD", f"{100 * np.sqrt(total):.3g}% ({10 * np.log10(total):.2f} dBc)"])
+        return Result(rows, marks, at=(f0, l0))
+
+@marker_kind("toi")
+class TOI(MarkerKind):
+    """Third order intercept from two tones and their third order products (2f1-f2, 2f2-f1)"""
+    COLOR = BLUE
+    PARAMS = (
+        Setting("f1", "Tone 1", "text", default="", coerce=freq_text, hint="strongest", help="lower tone, blank: the two strongest peaks"),
+        Setting("f2", "Tone 2", "text", default="", coerce=freq_text, hint="2nd strongest"),
+    )
+
+    def evaluate(self, ctx, mid, p):
+        if p["f1"] and p["f2"]:
+            tones = [_level_near(ctx, hz(p["f1"], ctx.cf)), _level_near(ctx, hz(p["f2"], ctx.cf))]
+        else:
+            tones = _strongest(ctx, 2)
+            if len(tones) < 2:
+                return Result([["-", "needs two tones"]])
+        (f1, l1), (f2, l2) = sorted(tones)
+        lo, hi = ctx.edges
+        u = POWER_UNIT[ctx.unit]
+        rows = [[f"{fmt_hz(f1)}, {fmt_hz(f2)}", f"{_power(ctx, l1):.2f}, {_power(ctx, l2):.2f} {u}"]]
+        marks = [Marker(f1, l1, "T1", self.COLOR, owner=mid), Marker(f2, l2, "T2", self.COLOR)]
+        ips = []
+        for name, want, tone in (("IM3 low", 2*f1 - f2, l1), ("IM3 high", 2*f2 - f1, l2)):
+            if not lo <= want <= hi:
+                rows.append([name, "outside span"])
+                continue
+            f, lvl = _level_near(ctx, want)
+            delta = tone - lvl
+            ip = _power(ctx, tone) + delta / 2
+            ips.append(ip)
+            rows.append([f"{name} {fmt_hz(f)}", f"{-delta:+.2f} dBc, TOI {ip:.2f} {u}"])
+            marks.append(Marker(f, lvl, name.replace("IM3 ", "I"), self.COLOR))
+        if ips:
+            rows.append(["TOI", f"{min(ips):.2f} {u}"])
+        return Result(rows, marks)
+
+@marker_kind("limit")
+class Limit(MarkerKind):
+    """A limit line, pass / fail: the trace must stay under (upper) or over (lower) the level, over the whole span or
+    a part of it. The line can be dragged up and down"""
+    COLOR = RED
+    PARAMS = (
+        Setting("level", "Level", "number", default=-50.0, step=1, help="the limit, in the plot's unit"),
+        Setting("side", "Kind", "select", default="upper", options=("upper", "lower"), help="upper: the trace must stay under it"),
+        SETTING_FREQ.with_(hint="whole span", help="center of the part tested, blank for the whole span"),
+        Setting("span", "Span", "text", default="", coerce=freq_text, hint="whole span", help="width of the part tested"),
+    )
+
+    def evaluate(self, ctx, mid, p):
+        lo, hi = ctx.edges
+        bands = []
+        if p["freq"] or p["span"]:
+            c, half = hz(p["freq"], ctx.cf), hz(p["span"], hi - lo) / 2
+            lo, hi = max(lo, c - half), min(hi, c + half)
+            bands.append(Band(lo, hi, self.COLOR, 0.06, owner=mid, edit=("freq", "span")))
+        sel = (ctx.freqs >= lo) & (ctx.freqs <= hi)
+        line = [Marker(0.0, p["level"], f"{mid} {p['side']}", self.COLOR, kind="hline", owner=mid, edit="level")]
+        if not sel.any():
+            return Result([["-", "outside span"]], line, bands)
+        tr = ctx.trace[sel]
+        k = int(np.argmax(tr) if p["side"] == "upper" else np.argmin(tr))
+        worst, f = float(tr[k]), float(ctx.freqs[sel][k])
+        margin = (p["level"] - worst) if p["side"] == "upper" else (worst - p["level"])
+        ok = margin >= 0
+        if not ok and bands:
+            bands[0] = Band(lo, hi, self.COLOR, 0.18, owner=mid, edit=("freq", "span"))
+        verdict = f"PASS, {margin:.2f} dB margin" if ok else f"FAIL by {-margin:.2f} dB"
+        return Result([[fmt_hz(f), verdict]], line + [Marker(f, worst, "worst", self.COLOR)], bands)
 
 class MarkerSet:
     """The markers of one plot, or of every plot of a link, M1, M2, ... in the order they were added.

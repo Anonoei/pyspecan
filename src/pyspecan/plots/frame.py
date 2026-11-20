@@ -103,6 +103,7 @@ class Axis:
     yfmt: str = "num"            # "freq" | "num" | "log10" (y is log10 of the value, labeled like 1e-3)
     xlabel: str = ""
     ylabel: str = ""
+    xlog: bool = False           # x on a log scale (offsets in a phase noise plot), its range must be positive
     square: bool = False
     projection: str = "2d"       # "2d" | "3d"
     aspect: tuple | None = None  # 3d box aspect
@@ -153,7 +154,7 @@ def _opt(v):
 
 def _axis_dict(ax: Axis, digits) -> dict:
     d = {k: getattr(ax, k) for k in (
-        "xmin", "xmax", "ymin", "ymax", "zmin", "zmax", "xfmt", "yfmt", "xlabel", "ylabel",
+        "xmin", "xmax", "ymin", "ymax", "zmin", "zmax", "xfmt", "yfmt", "xlabel", "ylabel", "xlog",
         "square", "projection", "aspect", "offscale")}
     d["traces"] = []
     for t in ax.traces:

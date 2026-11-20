@@ -278,8 +278,20 @@ def _draw_image_marks(cells: list[list[str]], ax: Axis, xr, yr, use_color: bool)
         above = row > 0
         put(row - 1 if above else row + 1, col(m.x), ("▼" if above else "▲") + m.label, m.color)
 
+def _log_x(ax: Axis) -> Axis:
+    """The axis with every x as its log10 (a log x axis is then drawn like a linear one)"""
+    from dataclasses import replace
+    lg = lambda v: float(np.log10(max(v, 1e-300)))
+    traces = [replace(t, x=np.log10(np.maximum(np.asarray(t.x, dtype=np.float64), 1e-300))) if t.x is not None else t for t in ax.traces]
+    return replace(ax, xmin=None if ax.xmin is None else lg(ax.xmin), xmax=None if ax.xmax is None else lg(ax.xmax), traces=traces,
+                   markers=[replace(m, x=lg(m.x)) for m in ax.markers],
+                   bands=[replace(b, lo=lg(b.lo), hi=lg(b.hi)) for b in ax.bands])
+
 def draw_axis(ax: Axis, image_data, width: int, height: int, use_color=True) -> list[str]:
     """One axis in a width x height box of text"""
+    xlog = ax.xlog
+    if xlog:
+        ax = _log_x(ax)
     is_image = ax.image is not None
     show_y = not is_image or ax.ymin is not None
     arrays_y = [np.asarray(t.y, dtype=np.float64) for t in ax.traces]
@@ -329,6 +341,10 @@ def draw_axis(ax: Axis, image_data, width: int, height: int, use_color=True) -> 
             return fmt_time(v, xr[1] - xr[0])
     else:
         fmt = fmt_num
+    if xlog: # the ticks are log10 of the values
+        lin = fmt
+        def fmt(v):
+            return lin(10.0 ** v)
     n = 5 if cols >= 50 else 3
     axis_row = [" "] * (lw + cols)
     for i in range(n):
