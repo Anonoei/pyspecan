@@ -206,6 +206,29 @@ def test_draw_frame_shows_marks_on_images():
     text = "\n".join(draw_frame(Frame([pst]), [data], 60, 12, False))
     assert "▼M1" in text
 
+def test_draw_frame_shows_level_lines_boxes_and_time():
+    import re
+    from pyspecan.plots.frame import Band, Image, Marker
+    strip = lambda ls: [re.sub(r"\x1b\[[0-9;]*m", "", l) for l in ls]
+    ax = Axis(xmin=-1e-3, xmax=1e-3, xfmt="time", ymin=-1, ymax=1, traces=[Trace(np.zeros(50))],
+              markers=[Marker(0.0, 0.5, "T", kind="hline")], bands=[Band(-5e-4, 5e-4, ylo=-0.5, yhi=0.0)])
+    lines = strip(draw_frame(Frame([ax]), [None], 60, 20, True))
+    assert "ms" in lines[-1] and "-1 ms" in lines[-1] # ticks in the unit of the span
+    assert any(l.rstrip().endswith("T") for l in lines) # the level's label at the right edge
+    data = np.full((20, 100), 128, dtype=np.uint8)
+    pst = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", ymin=-100, ymax=0, image=Image(data),
+               markers=[Marker(0.0, -50.0, "thr", kind="hline")], bands=[Band(-2e3, 2e3, ylo=-80.0, yhi=-20.0)])
+    text = "\n".join(strip(draw_frame(Frame([pst]), [data], 60, 14, False)))
+    assert "╌" in text and "thr" in text and "─" in text # level line, its label, the box's top / bottom
+    spg = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", image=Image(data), markers=[Marker(0.0, -50.0, "thr", kind="hline")])
+    assert "thr" not in "\n".join(draw_frame(Frame([spg]), [data], 60, 14, False)) # no levels to draw it at
+
+def test_trace_points_are_one_per_bin():
+    from pyspecan.view.CUI.draw import _trace_x
+    ax = Axis(xmin=0.0, xmax=100.0)
+    np.testing.assert_allclose(_trace_x(Trace(np.zeros(4)), ax), [0, 25, 50, 75]) # as markers place bins, as tk draws them
+    np.testing.assert_allclose(_trace_x(Trace(np.zeros(3)), Axis()), [0, 1, 2])
+
 # --- markers edited by the mouse --- #
 def test_marker_edits_redraw_the_current_block_while_stopped(capture):
     c = make(capture)

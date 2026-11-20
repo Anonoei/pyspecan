@@ -121,10 +121,16 @@ class Peak(MarkerKind):
         thr = float(p["threshold"]) if p["threshold"] else None
         found = peaks.find_peaks(ctx.trace, p["rank"], thr, p["excursion"])
         if len(found) < p["rank"]:
-            return Result([["-", "no peak"]])
+            return Result([["-", "no peak"]], self.threshold(mid, thr))
         pos, lvl = peaks.interp(ctx.trace, int(found[p["rank"] - 1]))
         f = float(ctx.freqs[0] + pos * ctx.df)
-        return Result([[fmt_hz(f), ctx.level_text(lvl, p["noise"])]], [Marker(f, lvl, mid, self.COLOR)], at=(f, lvl))
+        return Result([[fmt_hz(f), ctx.level_text(lvl, p["noise"])]], [Marker(f, lvl, mid, self.COLOR), *self.threshold(mid, thr)], at=(f, lvl))
+
+    def threshold(self, mid: str, thr: float | None) -> list[Marker]:
+        """The threshold as a line to drag, when there is one"""
+        if thr is None:
+            return []
+        return [Marker(0.0, thr, f"{mid} thr", self.COLOR, kind="hline", owner=mid, edit="threshold")]
 
 @marker_kind("delta")
 class Delta(MarkerKind):

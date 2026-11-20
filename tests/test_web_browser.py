@@ -255,6 +255,26 @@ def test_hover_shows_frequency_and_level_under_the_cursor(page):
     page.wait_for_timeout(200)
     assert readout_pixels() == base
 
+def test_scope_trigger_level_is_dragged_along_y(page):
+    if page.locator("#btn-stop").is_enabled():
+        page.click("#btn-stop")
+    page.select_option("#sel-add-plot", "Scope")
+    page.wait_for_function("Object.values(state.plots).some((p) => p.name === 'Scope')")
+    sid = page.evaluate("Object.keys(state.plots).find((k) => state.plots[k].name === 'Scope')")
+    page.click("#btn-next")
+    page.wait_for_function("(id) => runtime[id].geom && runtime[id].geom[0] && runtime[id].frame.axes[0].markers.some((m) => m.kind === 'hline')", arg=sid)
+    assert page.evaluate("(id) => runtime[id].frame.axes[0].xfmt", sid) == "time"
+    def at(level):
+        return page.evaluate("""([id, v]) => { const rt = runtime[id], g = rt.geom[0], r = rt.canvas.getBoundingClientRect();
+            return [r.left + g.x0 + g.w * 0.6, r.top + g.y0 + (1 - (v - g.ymin) / (g.ymax - g.ymin)) * g.h]; }""", [sid, level])
+    page.mouse.move(*at(0.0))
+    assert page.evaluate("(id) => runtime[id].canvas.style.cursor", sid) == "ns-resize"
+    level = page.evaluate("(id) => { const g = runtime[id].geom[0]; return g.ymin + (g.ymax - g.ymin) * 0.7; }", sid)
+    _drag(page, at(0.0), at(level))
+    page.wait_for_function("([id, v]) => Math.abs(state.plots[id].settings.trig_level - v) < 0.05 * Math.abs(v) + 0.01", arg=[sid, level])
+    plot(page, "Scope").locator("button[title='remove plot']").click()
+    page.wait_for_function("!Object.values(state.plots).some((p) => p.name === 'Scope')")
+
 def test_settings_sections_links_and_globals(page):
     """Settings are grouped in collapsible sections, linked plots share level settings and markers, cal is global"""
     if page.locator("#btn-stop").is_enabled():

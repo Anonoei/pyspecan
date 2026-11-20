@@ -45,6 +45,17 @@ function fmtHzFull(v) {
     return `${v.toFixed(1).replace(/\.0$/, "")} Hz`;
 }
 const fmtLog10 = (v) => { const [m, e] = (10 ** v).toExponential(0).split("e"); return `${m}e${+e}`; }; // y holds log10 of the value
+// seconds, in the unit that shows `span` (default: v itself), as plots.frame.fmt_time
+function fmtTime(v, span) {
+    const a = Math.abs(span ?? v);
+    const [scale, name] = a >= 1 ? [1, "s"] : a >= 1e-3 ? [1e-3, "ms"] : a >= 1e-6 ? [1e-6, "µs"] : [1e-9, "ns"];
+    return `${+(v / scale).toPrecision(4)} ${name}`;
+}
+// the x formatter of an axis over [xmin, xmax]
+const fmtXOf = (axis, xmin, xmax, full) => axis.xfmt === "freq" ? (full ? fmtHzFull : fmtHz)
+    : axis.xfmt === "time" ? (v) => fmtTime(v, xmax - xmin) : fmtNum;
+// trace point i's x: its own, or one point per bin across the axis' x range, or i without one (see plots.frame.Trace)
+const traceX = (s, i, axis) => (s.x ? s.x[i] : axis.xmin != null && axis.xmax != null ? axis.xmin + (i * (axis.xmax - axis.xmin)) / s.y.length : i);
 const fmtNum = (v) => (Math.abs(v) >= 1000 || (v !== 0 && Math.abs(v) < 0.01) ? v.toExponential(1) : +v.toFixed(2) + "");
 
 // --- connection --- //
@@ -481,19 +492,35 @@ function axisAt(rt, py) {
 }
 const dataX = (g, px) => g.xmin + ((px - g.x0) / g.w) * (g.xmax - g.xmin);
 const pixX = (g, v) => g.x0 + ((v - g.xmin) / (g.xmax - g.xmin)) * g.w;
+const dataY = (g, py) => g.ymax - ((py - g.y0) / g.h) * (g.ymax - g.ymin);
+const pixY = (g, v) => g.y0 + (1 - (v - g.ymin) / (g.ymax - g.ymin)) * g.h;
+const hasLevels = (g, axis) => !g.isImage || axis.ymin != null;
+// is pixel row py inside a band's y span (always for a band without one), as plots.drag._in_y
+function inBandY(g, axis, b, py) {
+    if ((b.ylo == null && b.yhi == null) || !hasLevels(g, axis)) return true;
+    const a = pixY(g, b.yhi ?? g.ymax), z = pixY(g, b.ylo ?? g.ymin);
+    return py >= Math.min(a, z) - EDGE_PX && py <= Math.max(a, z) + EDGE_PX;
+}
 
-// the marker or band edge under the pointer: {i, mode: "marker" | "left" | "right" | "move", owner, edit, lo, hi}
+// the marker, level line or band edge under the pointer: {i, mode: "marker" | "level" | "left" | "right" | "move", owner, edit, lo, hi}
+// (for "level" lo / hi are its y), as plots.drag.hit_test
 function hitTest(rt, px, py) {
     const i = axisAt(rt, py);
     if (i < 0 || !rt.frame) return null;
     const g = rt.geom[i], axis = rt.frame.axes[i];
     for (const m of axis.markers || []) { // points first: they sit on top of the bands
-        if (!m.edit || Math.abs(pixX(g, m.x) - px) > EDGE_PX) continue;
+        if (!m.edit || m.kind === "hline" || Math.abs(pixX(g, m.x) - px) > EDGE_PX) continue;
         const ym = Math.min(Math.max(g.y0 + (1 - (m.y - g.ymin) / (g.ymax - g.ymin)) * g.h, g.y0 + 26), g.y0 + g.h); // as drawMarkers places the triangle
         if (m.kind === "vline" || g.isImage || Math.abs(py - (ym - 7)) <= 10)
             return {i, mode: "marker", owner: m.owner, edit: m.edit, lo: m.x, hi: m.x};
     }
-    const bands = (axis.bands || []).filter((b) => b.edit);
+    if (hasLevels(g, axis)) {
+        for (const m of axis.markers || []) {
+            if (m.edit && m.kind === "hline" && Math.abs(pixY(g, m.y) - py) <= EDGE_PX)
+                return {i, mode: "level", owner: m.owner, edit: m.edit, lo: m.y, hi: m.y};
+        }
+    }
+    const bands = (axis.bands || []).filter((b) => b.edit && inBandY(g, axis, b, py));
     for (const b of [...bands].reverse()) {
         const a = pixX(g, b.lo), z = pixX(g, b.hi);
         const near = (v) => Math.abs(v - px) <= EDGE_PX;
@@ -515,8 +542,12 @@ function dragged(rt, axis, i) {
     if (d.mode === "new") {
         return {...axis, bands: [...(axis.bands || []), {lo, hi, color: "#5cb85c", alpha: 0.15, label: "", edit: ["freq", "bw"]}]};
     }
+    const same = (m) => m.edit && m.owner === d.owner && m.edit === d.edit;
     if (d.mode === "marker") {
-        return {...axis, markers: (axis.markers || []).map((m) => (m.owner === d.owner && m.edit ? {...m, x: d.lo} : m))};
+        return {...axis, markers: (axis.markers || []).map((m) => (same(m) && m.kind !== "hline" ? {...m, x: d.lo} : m))};
+    }
+    if (d.mode === "level") {
+        return {...axis, markers: (axis.markers || []).map((m) => (same(m) && m.kind === "hline" ? {...m, y: d.lo} : m))};
     }
     return {...axis, bands: (axis.bands || []).map((b) => (b.owner === d.owner && b.edit && b.edit[1] === d.edit[1] ? {...b, lo, hi} : b))};
 }
@@ -532,11 +563,19 @@ function bindCanvas(id, canvas) {
             drawPlot(id);
             const [px, py] = pointerPos(rt, ev), hit = hitTest(rt, px, py);
             const i = axisAt(rt, py);
-            canvas.style.cursor = hit ? (hit.mode === "move" ? "grab" : "ew-resize")
+            canvas.style.cursor = hit ? (hit.mode === "move" ? "grab" : hit.mode === "level" ? "ns-resize" : "ew-resize")
                 : (rt.tool !== "off" && i >= 0 && rt.frame && rt.frame.axes[i].xfmt === "freq" ? "crosshair" : "");
             return;
         }
-        const g = rt.geom[rt.drag.i], x = dataX(g, Math.min(Math.max(pointerPos(rt, ev)[0], g.x0), g.x0 + g.w)), d = rt.drag;
+        const [qx, qy] = pointerPos(rt, ev), d = rt.drag, g = rt.geom[d.i];
+        const x = dataX(g, Math.min(Math.max(qx, g.x0), g.x0 + g.w));
+        if (d.mode === "level") {
+            const y = dataY(g, Math.min(Math.max(qy, g.y0), g.y0 + g.h));
+            d.lo = d.hi = y;
+            d.moved = d.moved || Math.abs(pixY(g, y) - pixY(g, d.startY)) > 2;
+            drawPlot(id);
+            return;
+        }
         if (d.mode === "left") d.lo = Math.min(x, d.hi);
         else if (d.mode === "right") d.hi = Math.max(x, d.lo);
         else if (d.mode === "move") { const dx = x - d.startX; d.lo = d.lo0 + dx; d.hi = d.hi0 + dx; }
@@ -557,7 +596,7 @@ function bindCanvas(id, canvas) {
             d = {i, mode: "new", lo: x, hi: x};
         }
         const g = rt.geom[d.i], x = dataX(g, px);
-        rt.drag = {...d, startX: x, lo0: d.lo, hi0: d.hi, startPx: px, moved: false};
+        rt.drag = {...d, startX: x, startY: d.mode === "level" ? d.lo : dataY(g, py), lo0: d.lo, hi0: d.hi, startPx: px, moved: false};
         canvas.setPointerCapture(ev.pointerId);
         canvas.style.cursor = d.mode === "move" ? "grabbing" : canvas.style.cursor;
         ev.preventDefault();
@@ -584,10 +623,12 @@ function commitDrag(id, rt, d, g) {
             const params = rt.tool === "obw" ? {freq: hz_((lo + hi) / 2), span: hz_(hi - lo)} : {freq: hz_((lo + hi) / 2), bw: hz_(hi - lo)};
             plotOp("marker_add", {id, kind: rt.tool, params});
         } else sent = false;
-    } else if (d.mode === "marker") {
-        plotOp("marker_set", {id, marker: d.owner, params: {[d.edit]: hz_(d.lo)}});
     } else {
-        plotOp("marker_set", {id, marker: d.owner, params: {[d.edit[0]]: hz_((lo + hi) / 2), [d.edit[1]]: hz_(Math.max(hi - lo, 1))}});
+        const params = d.mode === "level" ? {[d.edit]: +d.lo.toPrecision(6) + ""}
+            : d.mode === "marker" ? {[d.edit]: hz_(d.lo)}
+            : {[d.edit[0]]: hz_((lo + hi) / 2), [d.edit[1]]: hz_(Math.max(hi - lo, 1))};
+        if (d.owner) plotOp("marker_set", {id, marker: d.owner, params});
+        else for (const [key, value] of Object.entries(params)) plotOp("set", {id, key, value}); // a mark of the plot itself
     }
     if (!sent) { rt.drag = null; return; }
     // keep showing the dropped position until the server's state arrives (or a moment passes)
@@ -644,14 +685,15 @@ function drawHover(ctx, id, rt) {
     const px = Math.min(Math.max(rt.hover_x, g.x0), g.x0 + g.w), py = Math.min(Math.max(rt.hover_y, g.y0), g.y0 + g.h);
     const inside = rt.hover_x >= g.x0 && rt.hover_x <= g.x0 + g.w && rt.hover_y >= g.y0 && rt.hover_y <= g.y0 + g.h;
     if (!inside && !rt.drag) return;
-    const fx = axis.xfmt === "freq" ? fmtHzFull : fmtNum, x = dataX(g, px);
+    const fx = fmtXOf(axis, g.xmin, g.xmax, true), x = dataX(g, px);
+    const xname = axis.xfmt === "freq" ? "f" : axis.xfmt === "time" ? "t" : "x";
     const lines = [];
     const unit = (state.plots[id] && state.plots[id].settings.unit) || "";
-    if (rt.drag && rt.drag.mode !== "marker") {
+    if (rt.drag && rt.drag.mode !== "marker" && rt.drag.mode !== "level") {
         const lo = Math.min(rt.drag.lo, rt.drag.hi), hi = Math.max(rt.drag.lo, rt.drag.hi);
         lines.push(`${fx(lo)} – ${fx(hi)}`, `width ${fx(hi - lo)}   center ${fx((lo + hi) / 2)}`);
     } else {
-        lines.push(`f ${fx(x)}`);
+        lines.push(`${xname} ${fx(x)}`);
     }
     if (!g.isImage) {
         const y = g.ymax - ((py - g.y0) / g.h) * (g.ymax - g.ymin);
@@ -660,7 +702,7 @@ function drawHover(ctx, id, rt) {
         const t = (axis.traces || [])[axis.traces.length - 1]; // the plot's own trace is the last one
         if (t && t.y.length && !rt.drag) {
             const k = t.x ? t.x.reduce((b, v, n) => (Math.abs(v - x) < Math.abs(t.x[b] - x) ? n : b), 0)
-                          : Math.round(((x - g.xmin) / (g.xmax - g.xmin)) * (t.y.length - 1));
+                          : Math.round(((x - g.xmin) / (g.xmax - g.xmin)) * t.y.length);
             lines.push(`trace  ${fy(t.y[Math.min(Math.max(k, 0), t.y.length - 1)])} ${unit}`.trim());
         }
     }
@@ -680,7 +722,7 @@ function drawHover(ctx, id, rt) {
     ctx.restore();
 }
 
-function drawTraces(ctx, axis, xOf, yOf, x0, w) {
+function drawTraces(ctx, axis, xOf, yOf) {
     for (const s of axis.traces) {
         const n = s.y.length;
         ctx.strokeStyle = ctx.fillStyle = s.color;
@@ -692,7 +734,7 @@ function drawTraces(ctx, axis, xOf, yOf, x0, w) {
         }
         ctx.beginPath();
         for (let i = 0; i < n; i++) {
-            const x = s.x ? xOf(s.x[i]) : x0 + (i / (n - 1)) * w;
+            const x = xOf(traceX(s, i, axis));
             const y = yOf(s.y[i]);
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
@@ -712,7 +754,7 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
     const [ymin, ymax] = isImage && axis.ymin == null ? [0, 1] : extent(axis, "y");
     const xOf = (v) => x0 + ((v - xmin) / (xmax - xmin)) * w;
     const yOf = (v) => y0 + (1 - (v - ymin) / (ymax - ymin)) * h;
-    const fmtX = axis.xfmt === "freq" ? fmtHz : fmtNum;
+    const fmtX = fmtXOf(axis, xmin, xmax, false);
     const fmtY = axis.yfmt === "log10" ? fmtLog10 : fmtNum;
     const labelY = !isImage || axis.ymin != null; // a scrolling image has no y values to label
     out.geom = {x0, y0, w, h, xmin, xmax, ymin, ymax, isImage};
@@ -741,11 +783,11 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(image.canvas, x0, y0, w, h);
         }
-        drawBands(ctx, axis, xOf, x0, y0, w, h);
+        drawBands(ctx, axis, xOf, isImage && axis.ymin == null ? null : yOf, x0, y0, w, h);
         if (axis.ymin != null && axis.traces.length) { // traces over a level axis image (persistence)
             ctx.save();
             ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
-            drawTraces(ctx, axis, xOf, yOf, x0, w);
+            drawTraces(ctx, axis, xOf, yOf);
             ctx.restore();
         }
         drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h);
@@ -754,45 +796,58 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
     }
     ctx.save();
     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
-    drawBands(ctx, axis, xOf, x0, y0, w, h);
-    drawTraces(ctx, axis, xOf, yOf, x0, w);
+    drawBands(ctx, axis, xOf, isImage && axis.ymin == null ? null : yOf, x0, y0, w, h);
+    drawTraces(ctx, axis, xOf, yOf);
     ctx.restore(); // also restores globalAlpha
     drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h);
     drawOffscale(ctx, axis, x0, y0, w, h);
 }
 
-// shaded x spans (channels), under the traces
-function drawBands(ctx, axis, xOf, x0, y0, w, h) {
+// shaded x spans (channels), or boxes when they have a y span (`yOf` null: no levels, y spans are ignored), under the traces
+function drawBands(ctx, axis, xOf, yOf, x0, y0, w, h) {
     ctx.save();
     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
     ctx.textAlign = "left";
     for (const b of axis.bands || []) {
         const a = Math.max(xOf(b.lo), x0), z = Math.min(xOf(b.hi), x0 + w);
-        if (z <= a) continue;
+        const boxed = yOf && (b.ylo != null || b.yhi != null);
+        const top = boxed && b.yhi != null ? Math.max(yOf(b.yhi), y0) : y0;
+        const btm = boxed && b.ylo != null ? Math.min(yOf(b.ylo), y0 + h) : y0 + h;
+        if (z <= a || btm <= top) continue;
         ctx.globalAlpha = b.alpha ?? 0.15;
         ctx.fillStyle = b.color;
-        ctx.fillRect(a, y0, z - a, h);
+        ctx.fillRect(a, top, z - a, btm - top);
         ctx.globalAlpha = 1;
-        if (b.edit) { // a band the mouse can move / resize: show its edges
+        if (b.edit || boxed) { // a band the mouse can move / resize, or a box: show its edges
             ctx.strokeStyle = b.color; ctx.globalAlpha = 0.7; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(a, y0); ctx.lineTo(a, y0 + h); ctx.moveTo(z, y0); ctx.lineTo(z, y0 + h); ctx.stroke();
+            if (boxed) ctx.strokeRect(a, top, z - a, btm - top);
+            else { ctx.beginPath(); ctx.moveTo(a, top); ctx.lineTo(a, btm); ctx.moveTo(z, top); ctx.lineTo(z, btm); ctx.stroke(); }
             ctx.globalAlpha = 1;
         }
-        if (b.label) { ctx.fillStyle = b.color; ctx.fillText(b.label, a + 3, y0 + h - 5); }
+        if (b.label) { ctx.fillStyle = b.color; ctx.fillText(b.label, a + 3, btm - 5); }
     }
     ctx.restore();
 }
 
-// markers: a triangle on the point with its label, or a vertical line
+// markers: a triangle on the point with its label, a vertical line, or a dashed level line (not on an image without levels)
 function drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h) {
     ctx.save();
     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
     ctx.lineWidth = 1;
     ctx.textAlign = "left";
     for (const m of axis.markers || []) {
+        ctx.strokeStyle = ctx.fillStyle = m.color;
+        if (m.kind === "hline") {
+            const y = yOf(m.y);
+            if ((axis.image && axis.ymin == null) || y < y0 || y > y0 + h) continue;
+            ctx.setLineDash([6, 3]);
+            ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke();
+            ctx.setLineDash([]);
+            if (m.label) { ctx.textAlign = "right"; ctx.fillText(m.label, x0 + w - 3, y - 3); ctx.textAlign = "left"; }
+            continue;
+        }
         const x = xOf(m.x);
         if (x < x0 || x > x0 + w) continue;
-        ctx.strokeStyle = ctx.fillStyle = m.color;
         if (m.kind === "vline") {
             ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + h); ctx.stroke();
             if (m.label) ctx.fillText(m.label, x + 3, y0 + 12);

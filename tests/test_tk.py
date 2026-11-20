@@ -199,6 +199,27 @@ def test_markers_are_drawn_moved_and_resized_with_the_mouse(app):
     _gesture(app, pane, -4500, -4000)
     assert len(markers) == 2
 
+def test_the_scope_trigger_level_is_dragged_along_y(app):
+    add(app, "Scope")
+    pid = ids(app)["Scope"]
+    pane = app.panels.panes[pid]
+    app.command("next")
+    wait_for(app, lambda: pane.keep.get("frame") is not None and not pane.dirty and pane.plotter is not None)
+    ax = pane.keep["frame"].axes[0]
+    assert ax.xfmt == "time" and any(m.kind == "hline" for m in ax.markers)
+    t = (ax.xmin + ax.xmax) / 2
+    _mouse(pane, "motion_notify_event", t, 0.0)
+    assert str(pane.canvas_widget.cget("cursor")) == "sb_v_double_arrow"
+    assert "t " in pane.plotter.ax(0).art("hov_t").get_text() and "s\n" in pane.plotter.ax(0).art("hov_t").get_text()
+    _mouse(pane, "button_press_event", t, 0.0)
+    _mouse(pane, "motion_notify_event", t, 0.25)
+    _mouse(pane, "motion_notify_event", t, 0.5)
+    _mouse(pane, "button_release_event", t, 0.5)
+    assert app.plots.get(pid).trig_level == pytest.approx(0.5, abs=0.02)
+    assert float(pane.vars["trig_level"].get()) == pytest.approx(0.5, abs=0.02) # the settings panel follows
+    app.command("next")
+    wait_for(app, lambda: pane.drag is None and not pane.dirty)
+
 def test_hover_readout_follows_the_pointer(app):
     pid = ids(app)["PSD"]
     pane = app.panels.panes[pid]

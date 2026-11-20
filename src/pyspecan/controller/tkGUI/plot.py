@@ -12,6 +12,7 @@ import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.ticker import ScalarFormatter
 from matplotlib.patches import Rectangle
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.ticker import FuncFormatter
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
@@ -21,7 +22,7 @@ from ...obj import Frequency
 from ...plots import Scroller
 from ...plots.drag import MIN_DRAG_PX, TOOLS, Drag, commit, hit_test, preview, settled
 from ...plots.freq import fmt_hz
-from ...plots.frame import Axis, Frame, Image
+from ...plots.frame import Axis, Frame, Image, fmt_time
 from ...view.tkGUI.panels import Panel
 
 def _signature(frame: Frame):
@@ -394,7 +395,7 @@ class PlotPane:
         else:
             xmin, xmax = ax.xmin, ax.xmax
         if xmin is not None and xmax is not None:
-            self._set_lim(i, "x", xmin, xmax, mpl.set_xlim, (lambda lo, hi, ax=ax, mpl=mpl: self._freq_ticks(mpl, lo, hi)) if ax.xfmt == "freq" else None)
+            self._set_lim(i, "x", xmin, xmax, mpl.set_xlim, self._x_ticks(ax, mpl))
         elif traces:
             xs = [np.asarray(t.x) for t in traces if t.x is not None]
             if xs:
@@ -442,20 +443,47 @@ class PlotPane:
     def _draw_marks(self, ax: Axis, mpl) -> set:
         """Bands and markers as named artists, reused between frames (blitting only draws registered artists)"""
         names = set()
+        if ax.projection == "3d":
+            return self._draw_bands_3d(ax, mpl)
+        level = ax.image is None or ax.ymin is not None # a y span means something
         for n, b in enumerate(ax.bands):
             name = f"band{n}"
             art = mpl.art(name)
             if art is None:
-                art = Rectangle((b.lo, 0), b.hi - b.lo, 1, transform=mpl.ax.get_xaxis_transform(), zorder=1)
+                art = Rectangle((b.lo, 0), b.hi - b.lo, 1, zorder=1)
                 mpl.ax.add_patch(art)
                 mpl.add_artist(name, art)
-            art.set_xy((b.lo, 0))
+            if level and (b.ylo is not None or b.yhi is not None):
+                lo, hi = sorted(mpl.ax.get_ylim())
+                y0 = lo if b.ylo is None else b.ylo
+                y1 = hi if b.yhi is None else b.yhi
+                art.set_transform(mpl.ax.transData)
+            else: # the whole height
+                y0, y1 = 0.0, 1.0
+                art.set_transform(mpl.ax.get_xaxis_transform())
+            art.set_xy((b.lo, y0))
             art.set_width(b.hi - b.lo)
+            art.set_height(y1 - y0)
             art.set_facecolor(b.color)
             art.set_alpha(b.alpha)
             art.set_edgecolor("none")
             names.add(name)
         for n, m in enumerate(ax.markers):
+            if m.kind == "hline":
+                name, tname = f"hl{n}", f"hlt{n}"
+                tr = mpl.ax.get_yaxis_transform() # x in axes fractions, y in data
+                if mpl.art(name) is None:
+                    mpl.plot([0, 1], [m.y, m.y], name=name, color=m.color, linewidth=1, linestyle=(0, (6, 3)), transform=tr)
+                    mpl.add_artist(tname, mpl.ax.text(0.995, m.y, m.label, color=m.color, fontsize=8, ha="right", va="bottom",
+                                                      transform=tr, clip_on=True))
+                mpl.art(name).set_data([0, 1], [m.y, m.y])
+                mpl.art(name).set_color(m.color)
+                txt = mpl.art(tname)
+                txt.set_position((0.995, m.y))
+                txt.set_text(m.label)
+                txt.set_color(m.color)
+                names.update((name, tname))
+                continue
             if m.kind == "vline":
                 name = f"vl{n}"
                 art = mpl.art(name)
@@ -482,6 +510,28 @@ class PlotPane:
             names.update((name, f"mkt{n}"))
         return names
 
+    def _draw_bands_3d(self, ax: Axis, mpl) -> set:
+        """Bands on a 3d axis: boxes on the x / y floor (at zmin), the y span defaulting to the y range"""
+        names = set()
+        ylo, yhi = (ax.ymin, ax.ymax) if ax.ymin is not None else sorted(mpl.ax.get_ylim())
+        z = ax.zmin if ax.zmin is not None else min(mpl.ax.get_zlim()) # type: ignore
+        for n, b in enumerate(ax.bands):
+            name = f"band3d{n}"
+            y0 = ylo if b.ylo is None else b.ylo
+            y1 = yhi if b.yhi is None else b.yhi
+            verts = [[(b.lo, y0, z), (b.hi, y0, z), (b.hi, y1, z), (b.lo, y1, z)]]
+            art = mpl.art(name)
+            if art is None:
+                art = Poly3DCollection(verts)
+                mpl.ax.add_collection3d(art) # type: ignore
+                mpl.add_artist(name, art)
+            art.set_verts(verts)
+            art.set_facecolor(b.color)
+            art.set_edgecolor(b.color)
+            art.set_alpha(b.alpha)
+            names.add(name)
+        return names
+
     # --- mouse: draw, move and resize markers (the logic is plots/drag.py, shared in spirit with the web view) --- #
     def _mouse_axis(self, event) -> int:
         """Index of the 2d axis under the pointer, -1 for none"""
@@ -493,9 +543,16 @@ class PlotPane:
                 return i
         return -1
 
-    def _editable(self, i: int) -> bool:
+    def _can_draw(self, i: int) -> bool:
+        """Can new markers be drawn on axis i (a frequency axis of a plot with markers)"""
         frame = self.keep.get("frame")
         return i >= 0 and frame is not None and self.plot.MARKERS and frame.axes[i].xfmt == "freq"
+
+    def _hit(self, i: int, event) -> Drag | None:
+        """The draggable mark under the pointer on axis i"""
+        if i < 0:
+            return None
+        return hit_test(self.keep["frame"].axes[i], i, self._to_px(i), event.x, event.y, self._to_py(i), self._level_py(i))
 
     def _to_px(self, i: int):
         tr = self.plotter.ax(i).ax.transData # type: ignore
@@ -507,6 +564,14 @@ class PlotPane:
             return None
         ax = self.plotter.ax(i).ax # type: ignore
         return lambda v: float(ax.transData.transform((0.0, _mark_y(ax, v)))[1]) # where the triangle is drawn
+
+    def _level_py(self, i: int):
+        """data y -> pixel y, None on an axis without levels"""
+        frame = self.keep["frame"]
+        if frame.axes[i].image is not None and frame.axes[i].ymin is None:
+            return None
+        tr = self.plotter.ax(i).ax.transData # type: ignore
+        return lambda v: float(tr.transform((0.0, v))[1])
 
     def _data_xy(self, i: int, px: float, py: float) -> tuple[float, float]:
         """Pixel -> data, clamped to the axis"""
@@ -523,16 +588,15 @@ class PlotPane:
         if event.button != 1 or self.drag is not None:
             return
         i = self._mouse_axis(event)
-        if not self._editable(i):
+        if i < 0:
             return
-        frame = self.keep["frame"]
-        d = hit_test(frame.axes[i], i, self._to_px(i), event.x, event.y, self._to_py(i))
-        x = self._data_xy(i, event.x, event.y)[0]
+        d = self._hit(i, event)
+        x, y = self._data_xy(i, event.x, event.y)
         if d is None:
-            if self.keep["tool"] == "off":
+            if self.keep["tool"] == "off" or not self._can_draw(i):
                 return
             d = Drag(i, "new", x, x)
-        d.start = x
+        d.start = y if d.mode == "level" else x
         self.drag = d
         if d.mode == "move":
             self._cursor("fleur")
@@ -540,20 +604,22 @@ class PlotPane:
     def _on_motion(self, event):
         d = self.drag
         if d is not None and not d.committed:
-            x, _ = self._data_xy(d.i, event.x, event.y)
-            d.to(x, event.x - self._to_px(d.i)(d.start))
+            x, y = self._data_xy(d.i, event.x, event.y)
+            if d.mode == "level":
+                d.to(x, event.y - self._level_py(d.i)(d.start), y) # type: ignore[misc]
+            else:
+                d.to(x, event.x - self._to_px(d.i)(d.start))
             self.hover = (d.i, event.x, event.y)
             self._redraw()
             return
         i = self._mouse_axis(event)
         self.hover = (i, event.x, event.y) if i >= 0 else None
         cursor = ""
-        if self._editable(i):
-            hit = hit_test(self.keep["frame"].axes[i], i, self._to_px(i), event.x, event.y, self._to_py(i))
-            if hit is not None:
-                cursor = "fleur" if hit.mode == "move" else "sb_h_double_arrow"
-            elif self.keep["tool"] != "off":
-                cursor = "crosshair"
+        hit = self._hit(i, event)
+        if hit is not None:
+            cursor = {"move": "fleur", "level": "sb_v_double_arrow"}.get(hit.mode, "sb_h_double_arrow")
+        elif self._can_draw(i) and self.keep["tool"] != "off":
+            cursor = "crosshair"
         self._cursor(cursor)
         self._redraw()
 
@@ -571,6 +637,8 @@ class PlotPane:
             op, what, params = action
             if op == "add":
                 ok = self._marker_op(lambda: self.ctrl.add_marker(self.pid, what, **params))
+            elif op == "plot":
+                ok = self._marker_op(lambda: self._set_plot(params))
             else:
                 ok = self._marker_op(lambda: self.ctrl.set_marker_params(self.pid, what, params))
             if not ok:
@@ -579,6 +647,12 @@ class PlotPane:
                 self.pane.master.after(1500, lambda: self._expire(d))
         self._cursor("")
         self._redraw()
+
+    def _set_plot(self, params: dict):
+        """A dragged mark of the plot itself: its settings, the settings panel follows"""
+        for key, value in params.items():
+            self.ctrl.set_plot(self.pid, key, value)
+        self.ctrl.panels.refresh()
 
     def _expire(self, d: Drag):
         if self.drag is d:
@@ -603,13 +677,19 @@ class PlotPane:
 
     def _hover_text(self, frame: Frame, i: int, x: float, y: float) -> str:
         ax = frame.axes[i]
-        fx = fmt_hz if ax.xfmt == "freq" else (lambda v: f"{v:.4g}")
+        if ax.xfmt == "freq":
+            fx, name = fmt_hz, "f"
+        elif ax.xfmt == "time":
+            x0, x1 = self.plotter.ax(i).ax.get_xlim() # type: ignore
+            fx, name = (lambda v: fmt_time(v, x1 - x0)), "t"
+        else:
+            fx, name = (lambda v: f"{v:.4g}"), "x"
         d = self.drag
-        if d is not None and d.i == i and d.mode != "marker":
+        if d is not None and d.i == i and d.mode not in ("marker", "level"):
             lo, hi = d.span
             lines = [f"{fx(lo)} – {fx(hi)}", f"width {fx(hi - lo)}   center {fx((lo + hi) / 2)}"]
         else:
-            lines = [f"f {fx(x)}"]
+            lines = [f"{name} {fx(x)}"]
         if ax.image is None:
             unit = str(getattr(self.plot, "unit", "") or "")
             fy = _log10_label if ax.yfmt == "log10" else (lambda v: f"{v:.2f}")
@@ -654,6 +734,14 @@ class PlotPane:
             v.set_visible(True)
             h.set_visible(ax.image is None)
             t.set_visible(True)
+
+    def _x_ticks(self, ax: Axis, mpl):
+        """What to do with the x ticks when the x range changes"""
+        if ax.xfmt == "freq":
+            return lambda lo, hi: self._freq_ticks(mpl, lo, hi)
+        if ax.xfmt == "time": # one unit for every tick, picked from the span
+            return lambda lo, hi: mpl.ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: fmt_time(v, hi - lo)))
+        return None
 
     def _freq_ticks(self, mpl, lo, hi):
         ticks = np.linspace(lo, hi, 5)

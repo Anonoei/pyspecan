@@ -351,6 +351,37 @@ def test_average_and_detector_points():
     psd.set("avg_count", 8)
     assert psd._avg.n == 0
 
+def test_reduced_traces_sit_on_the_bin_frequencies():
+    """The detector's groups are drawn at the frequency of their center, so markers (at bin frequencies) sit on the line"""
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    psd = PLOTS.get("PSD")(src, points=10, detector="peak", vbw=0, show_max=False, show_min=False)
+    psd.markers.add("peak")
+    feed(src, model, _two_tones(4096, nfft=64))
+    ax = psd.update().axes[0]
+    t = ax.traces[-1]
+    freqs = psd.bin_freqs(64)
+    edges = np.linspace(0, 64, 11).astype(int)
+    np.testing.assert_allclose(t.x, freqs[0] + (edges[:-1] + edges[1:] - 1) / 2 * (1000.0 / 64))
+    peak = next(m for m in ax.markers if m.label == "M1")
+    k = int(np.argmax(t.y))
+    assert abs(t.x[k] - peak.x) <= (edges[k + 1] - edges[k]) / 2 * (1000.0 / 64) # within its own group
+    full = PLOTS.get("PSD")(src, points=0)
+    feed(src, model, _two_tones(4096, nfft=64))
+    assert full.update().axes[0].traces[-1].x is None # one point per bin: spaced by the axis
+
+def test_peak_threshold_is_a_level_line_to_drag():
+    model = FakeModel(nfft=256)
+    src = Source(model)
+    psd, spg = PLOTS.get("PSD")(src), PLOTS.get("Spectrogram")(src)
+    for p in (psd, spg):
+        p.markers.add("peak", threshold="-40")
+        p.markers.add("peak")
+    feed(src, model, _two_tones(4096, nfft=256))
+    lines = [m for m in psd.update().axes[0].markers if m.kind == "hline"]
+    assert [(m.y, m.owner, m.edit) for m in lines] == [(-40.0, "M1", "threshold")] # only the marker with a threshold
+    assert not any(m.kind == "hline" for m in spg.update().axes[0].markers) # no levels on a spectrogram
+
 def test_channel_marker_matches_tone_power():
     model = FakeModel(nfft=1024)
     src = Source(model)
@@ -517,7 +548,7 @@ def test_scope_trigger_locks_phase_across_ticks():
     model = FakeModel(fs=1000.0, nfft=64)
     src = Source(model)
     scope = PLOTS.get("Scope")(src, overlay=1)
-    grid = np.linspace(-5, 50, 40) # ms, inside the 64 sample screen
+    grid = np.linspace(-5e-3, 50e-3, 40) # seconds, inside the 64 sample screen
     seen = []
     for i in range(4):
         feed(src, model, clean(400, start=400*i + 7*i)) # blocks need not hold whole periods
@@ -525,10 +556,24 @@ def test_scope_trigger_locks_phase_across_ticks():
         t = _trace(frame, "i0")
         assert dict(frame.readout)["Trig"] == "triggered"
         assert abs(np.interp(0.0, t.x, t.y)) < 1e-3       # crosses the level at x = 0
-        assert np.interp(1.0, t.x, t.y) > 0                # rising
+        assert np.interp(1e-3, t.x, t.y) > 0               # rising
         seen.append(np.interp(grid, t.x, t.y))
     for s in seen[1:]:
         np.testing.assert_allclose(s, seen[0], atol=1e-3)
+
+def test_scope_axis_is_in_seconds_with_a_trigger_level_line():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    scope = PLOTS.get("Scope")(src, overlay=1, trig_level=0.25, trig_pos=10.0)
+    feed(src, model, clean(400))
+    ax = scope.update().axes[0]
+    assert ax.xfmt == "time" and ax.xlabel == "Time"
+    assert ax.xmin == pytest.approx(-6 / 1000) and ax.xmax == pytest.approx(58 / 1000) # 64 samples, 10% before
+    level = next(m for m in ax.markers if m.kind == "hline")
+    assert (level.y, level.owner, level.edit) == (0.25, "", "trig_level") # dragged, it sets the plot's trigger level
+    phase = PLOTS.get("Scope")(src, overlay=1, channel="Phase")
+    feed(src, model, clean(400))
+    assert not any(m.kind == "hline" for m in phase.update().axes[0].markers) # the level is not in radians
 
 def test_scope_overlay_draws_older_sweeps_faded():
     model = FakeModel(fs=1000.0, nfft=64)
@@ -827,6 +872,17 @@ def test_missing_extension_hint():
     with pytest.raises(ValueError, match="unknown marker kind 'nope'.*need their package installed"):
         layout.validate(layout.parse_inline(["PSD marker=nope"]))
 
+def test_frame_dict_carries_level_lines_box_bands_and_time_axes():
+    from pyspecan.plots.frame import Axis, Band, Frame, Marker, Trace, fmt_time
+    ax = Axis(xmin=0, xmax=1e-3, xfmt="time", markers=[Marker(0, 0.5, "T", kind="hline", edit="trig_level")],
+              bands=[Band(1, 2), Band(1, 2, ylo=-3, yhi=None)])
+    d = json.loads(json.dumps(Frame([ax]).to_dict()))["axes"][0]
+    assert d["xfmt"] == "time" and d["markers"][0]["kind"] == "hline" and d["markers"][0]["owner"] == ""
+    assert (d["bands"][0]["ylo"], d["bands"][0]["yhi"]) == (None, None) and (d["bands"][1]["ylo"], d["bands"][1]["yhi"]) == (-3.0, None)
+    scope = Axis(xmin=-1e-5, xmax=1e-5, traces=[Trace(np.zeros(3), np.array([-1e-5, 1.23e-7, 1e-5]))])
+    assert Frame([scope]).to_dict()["axes"][0]["traces"][0]["x"][1] == pytest.approx(1.23e-7) # x keeps its precision relative to the span
+    assert fmt_time(2.5e-4, 1e-3) == "0.25 ms" and fmt_time(2.5e-4) == "250 µs" and fmt_time(2.0) == "2 s"
+
 # --- mouse drags (plots/drag.py, what tk uses) --- #
 def _drag_axis():
     from pyspecan.plots.frame import Axis, Band, Marker
@@ -876,3 +932,35 @@ def test_drag_preview_and_commit():
     assert commit("point", new, True) is None and commit("channel", new, False) is None
     assert commit("point", Drag(0, "new", 200.0, 200.0), False) == ("add", "point", {"freq": "200.0"})
     assert commit("off", new, True) is None
+
+def test_level_lines_drag_along_y_and_plot_marks_set_plot_settings():
+    from pyspecan.plots.drag import Drag, commit, hit_test, preview, settled
+    from pyspecan.plots.frame import Axis, Marker
+    ax = Axis(xmin=0, xmax=1000, ymin=-1, ymax=1, markers=[Marker(0.0, kind="vline"), Marker(0.0, 0.2, "T", kind="hline", edit="trig_level"),
+                                                         Marker(0.0, -0.5, "M1 thr", kind="hline", owner="M1", edit="threshold")])
+    px, level = (lambda x: x), (lambda y: 100 - 100 * y) # 100 px per unit, y up
+    assert hit_test(ax, 0, px, 500, 87, None, level) is None and hit_test(ax, 0, px, 500, 70) is None # off the line / no levels
+    d = hit_test(ax, 0, px, 500, 78, None, level)
+    assert (d.mode, d.owner, d.edit, d.lo) == ("level", "", "trig_level", 0.2)
+    d.start = 0.2
+    d.to(123.0, -30, 0.5)
+    shown = preview(ax, d, 0)
+    assert shown.markers[1].y == 0.5 and shown.markers[2].y == -0.5 and ax.markers[1].y == 0.2
+    assert settled(shown, d) and not settled(ax, d)
+    assert commit("channel", d, False) == ("plot", "", {"trig_level": "0.5"}) # narrow in x, still a drag
+    thr = hit_test(ax, 0, px, 10, 151, None, level)
+    thr.to(0.0, 20, -0.25)
+    assert commit("off", thr, True) == ("set", "M1", {"threshold": "-0.25"})
+    still = Drag(0, "level", 0.2, 0.2, "", "trig_level")
+    assert commit("off", still, True) is None
+
+def test_bands_with_a_y_span_are_hit_inside_it():
+    from pyspecan.plots.drag import hit_test
+    from pyspecan.plots.frame import Axis, Band
+    ax = Axis(xmin=0, xmax=1000, ymin=-100, ymax=0, bands=[Band(400.0, 600.0, owner="M2", edit=("freq", "bw"), ylo=-60.0, yhi=-20.0),
+                                                           Band(700.0, 800.0, owner="M3", edit=("freq", "bw"), ylo=-50.0)])
+    px, level = (lambda x: x), (lambda y: -y) # 1 px per dB, pixels grow downwards
+    assert hit_test(ax, 0, px, 500, 40, None, level).mode == "move"
+    assert hit_test(ax, 0, px, 500, 10, None, level) is None and hit_test(ax, 0, px, 500, 90, None, level) is None
+    assert hit_test(ax, 0, px, 500).mode == "move" # no levels: x only
+    assert hit_test(ax, 0, px, 750, 90, None, level) is None and hit_test(ax, 0, px, 750, 5, None, level).mode == "move" # up to the top

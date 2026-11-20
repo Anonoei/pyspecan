@@ -13,7 +13,7 @@ import numpy as np
 
 from ..measure import trigger
 from .base import Plot, plot
-from .frame import Axis, Frame, Marker, Trace, YELLOW, BLUE, GREEN, RED
+from .frame import Axis, Frame, Marker, Trace, YELLOW, BLUE, GREEN, RED, fmt_time
 from .settings import Setting
 
 COLS = 500          # screen columns: traces longer than 2*COLS points are drawn as a min / max envelope
@@ -51,16 +51,6 @@ def _per_div(value) -> str:
     if float(s) <= 0:
         raise ValueError("per division must be positive")
     return s
-
-def time_unit(span: float) -> tuple[float, str]:
-    for scale, name in ((1.0, "s"), (1e-3, "ms"), (1e-6, "µs")):
-        if span >= scale:
-            return scale, name
-    return 1e-9, "ns"
-
-def fmt_time(v: float) -> str:
-    scale, name = time_unit(abs(v))
-    return f"{v/scale:.4g} {name}"
 
 def components(x: np.ndarray, channel: str) -> list[tuple[str, np.ndarray, str]]:
     """(name, values, color) of what `channel` shows"""
@@ -168,10 +158,9 @@ class Scope(Plot):
             keep = n + hold # what a trigger not complete yet may still need
             self.buf = np.concatenate((self.buf[-keep:], new)) if len(self.buf) else new
         buf = self.buf
-        scale, unit = time_unit(n / fs)
         span = [("Span", fmt_time(n / fs))]
         if len(buf) < n:
-            return self._frame(Axis(xmin=-pre/fs/scale, xmax=(n-pre)/fs/scale, xlabel=f"Time ({unit})"),
+            return self._frame(Axis(xmin=-pre/fs, xmax=(n-pre)/fs, xfmt="time", xlabel="Time"),
                                [("Trig", "filling"), *span])
 
         post = n - pre
@@ -184,7 +173,7 @@ class Scope(Plot):
         if not len(trigs):
             if self.trig_mode != "auto":
                 if self.last is None:
-                    return self._frame(Axis(xmin=-pre/fs/scale, xmax=post/fs/scale, xlabel=f"Time ({unit})"),
+                    return self._frame(Axis(xmin=-pre/fs, xmax=post/fs, xfmt="time", xlabel="Time"),
                                        [("Trig", "armed"), *span])
                 return replace(self.last, readout=[("Trig", "armed"), *span])
             trigs, state = np.array([float(len(buf) - post)]), "auto"
@@ -194,7 +183,7 @@ class Scope(Plot):
         traces, shown = [], []
         for age, t in enumerate(trigs[::-1]): # newest first, drawn last
             i0 = int(np.ceil(t - pre))
-            x = (np.arange(i0, i0 + n) - t) / fs / scale
+            x = (np.arange(i0, i0 + n) - t) / fs
             alpha = 1.0 if age == 0 else max(0.08, 0.5 * (1 - age / len(trigs)))
             for name, y, color in components(buf[i0:i0 + n], self.channel):
                 shown.append(y)
@@ -203,25 +192,24 @@ class Scope(Plot):
         ymin, ymax = self._y_range(shown)
         markers = [Marker(0.0, kind="vline", color=RED)]
         if self.channel != "Phase":
-            markers.append(Marker(0.0, self.trig_level, label="T", color=RED))
+            markers.append(Marker(0.0, self.trig_level, label="T", color=RED, kind="hline", edit="trig_level"))
         if self.trig_mode == "single" and state == "triggered":
             self.frozen = True
             state = "stopped"
         self.last = self._frame(Axis(
-            xmin=-pre/fs/scale, xmax=post/fs/scale, ymin=ymin, ymax=ymax, xlabel=f"Time ({unit})",
+            xmin=-pre/fs, xmax=post/fs, ymin=ymin, ymax=ymax, xfmt="time", xlabel="Time",
             traces=traces, markers=markers,
         ), [("Trig", state), *span, ("Sweeps", str(len(trigs)))])
         return self.last
 
     def _roll(self, new):
         fs, n, _, _ = self.geometry()
-        scale, unit = time_unit(n / fs)
         spc = n / COLS # samples per column
         if spc <= 1: # fine timebase: the last screen as it is
             if new is not None:
                 self.buf = np.concatenate((self.buf, new))[-n:]
             comps = components(self.buf, self.channel)
-            x = (np.arange(len(self.buf)) - (len(self.buf) - 1)) / fs / scale
+            x = (np.arange(len(self.buf)) - (len(self.buf) - 1)) / fs
             traces = [Trace(y, x, color=c, name=name) for name, y, c in comps if len(y)]
             shown = [y for _, y, _ in comps]
         else:
@@ -245,7 +233,7 @@ class Scope(Plot):
                 else:
                     self.pending = data.copy()
             f = self.filled
-            x = (np.arange(COLS - f, COLS) - (COLS - 1)) * spc / fs / scale
+            x = (np.arange(COLS - f, COLS) - (COLS - 1)) * spc / fs
             traces, shown = [], []
             for name, _, color in components(np.zeros(1, np.complex64), self.channel):
                 env = self.env.get(name)
@@ -255,5 +243,5 @@ class Scope(Plot):
                 traces.append(Trace(env[:, -f:].T.ravel(), np.repeat(x, 2), color=color, name=name))
         ymin, ymax = self._y_range(shown)
         return self._frame(Axis(
-            xmin=-n/fs/scale, xmax=0.0, ymin=ymin, ymax=ymax, xlabel=f"Time ({unit})", traces=traces,
+            xmin=-n/fs, xmax=0.0, ymin=ymin, ymax=ymax, xfmt="time", xlabel="Time", traces=traces,
         ), [("Trig", "roll"), ("Span", fmt_time(n / fs))])

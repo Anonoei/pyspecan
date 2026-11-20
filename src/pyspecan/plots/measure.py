@@ -87,7 +87,7 @@ class PowerVsTime(FreqPlot):
         u = POWER_UNIT[self.unit]
         return Frame([Axis(
             xmin=-(self.history - 1) * dt, xmax=0, ymin=btm, ymax=top, offscale=self.offscale(h, btm, top), # type: ignore
-            xlabel="time (s)", ylabel=u, traces=[Trace(h, x, name="pvt")],
+            xfmt="time", xlabel="Time", ylabel=u, traces=[Trace(h, x, name="pvt")],
         )], title=self.TITLE, readout=[
             ("Band", "wideband" if bw <= 0 else f"{fmt_hz(c)}, {fmt_hz(bw)}"), # type: ignore
             ("Average", f"{_db(lin_mean):.2f} {u}"), ("Peak", f"{h.max():.2f} {u}"), ("Min", f"{h.min():.2f} {u}"),

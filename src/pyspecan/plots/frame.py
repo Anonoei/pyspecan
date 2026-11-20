@@ -25,8 +25,10 @@ THREE_D = "3d"
 
 @dataclass
 class Trace:
+    """A line or scatter. With `x` None, point i is at xmin + i * (xmax - xmin) / len(y) (one point per
+    bin, at the bin's frequency), or at i on an axis without an x range"""
     y: np.ndarray
-    x: np.ndarray | None = None  # None -> evenly spaced across the x range
+    x: np.ndarray | None = None
     z: np.ndarray | None = None  # only for 3d axes
     color: str = YELLOW
     kind: str = LINE             # LINE or SCATTER
@@ -36,18 +38,24 @@ class Trace:
 
 @dataclass
 class Marker:
-    """A labeled mark in data coordinates. kind "point": a triangle at (x, y) with the label, "vline": a vertical line at x"""
+    """A labeled mark in data coordinates. kind "point": a triangle at (x, y) with the label, "vline": a vertical
+    line at x, "hline": a horizontal line at y (a level: trigger, threshold).
+
+    `edit` is the setting dragging it changes: x for points and vlines, y for hlines. It belongs to marker
+    `owner`, or to the plot itself when `owner` is "" (the scope's trigger level)"""
     x: float
     y: float = 0.0
     label: str = ""
     color: str = YELLOW
-    kind: str = "point"          # "point" | "vline"
-    owner: str = ""              # id of the marker it belongs to
-    edit: str = ""               # the setting dragging it changes (its x), "" when it can not be dragged
+    kind: str = "point"          # "point" | "vline" | "hline"
+    owner: str = ""              # id of the marker it belongs to, "" for the plot
+    edit: str = ""               # the setting dragging it changes, "" when it can not be dragged
 
 @dataclass
 class Band:
-    """A shaded x span (channel, adjacent channel, occupied bandwidth edges)"""
+    """A shaded x span (channel, adjacent channel, occupied bandwidth edges), or a box when it has a y span.
+    ylo / yhi left None reach the edge of the axis; on an image axis without a y range they are ignored.
+    On a 3d axis the box is drawn on the x / y floor"""
     lo: float
     hi: float
     color: str = BLUE
@@ -55,6 +63,8 @@ class Band:
     label: str = ""
     owner: str = ""              # id of the marker it belongs to
     edit: tuple[str, str] | None = None # the (center, width) settings dragging its body / edges change, None when fixed
+    ylo: float | None = None
+    yhi: float | None = None
 
 @dataclass
 class TableRow:
@@ -89,7 +99,7 @@ class Axis:
     ymax: float | None = None
     zmin: float | None = None
     zmax: float | None = None
-    xfmt: str = "num"            # "freq" | "num"
+    xfmt: str = "num"            # "freq" | "time" (seconds) | "num"
     yfmt: str = "num"            # "freq" | "num" | "log10" (y is log10 of the value, labeled like 1e-3)
     xlabel: str = ""
     ylabel: str = ""
@@ -131,6 +141,16 @@ class Frame:
 def _list(arr, digits):
     return np.round(np.asarray(arr, dtype=np.float64), digits).tolist()
 
+def _x_digits(ax: Axis, x, digits: int) -> int:
+    """Decimals to keep of x values: relative to the axis span (seconds on a scope are tiny, Hz are large)"""
+    span = (ax.xmax - ax.xmin) if ax.xmin is not None and ax.xmax is not None else float(np.ptp(x)) if len(x) else 0.0
+    if not np.isfinite(span) or span <= 0:
+        return digits + 2
+    return max(0, digits + 2 - int(np.floor(np.log10(span))))
+
+def _opt(v):
+    return None if v is None else float(v)
+
 def _axis_dict(ax: Axis, digits) -> dict:
     d = {k: getattr(ax, k) for k in (
         "xmin", "xmax", "ymin", "ymax", "zmin", "zmax", "xfmt", "yfmt", "xlabel", "ylabel",
@@ -139,12 +159,13 @@ def _axis_dict(ax: Axis, digits) -> dict:
     for t in ax.traces:
         td = {"y": _list(t.y, digits), "color": t.color, "kind": t.kind, "alpha": t.alpha, "width": t.width}
         if t.x is not None:
-            td["x"] = _list(t.x, digits + 2)
+            td["x"] = _list(t.x, _x_digits(ax, t.x, digits))
         if t.z is not None:
             td["z"] = _list(t.z, digits)
         d["traces"].append(td)
     d["markers"] = [{"x": float(m.x), "y": float(m.y), "label": m.label, "color": m.color, "kind": m.kind, "owner": m.owner, "edit": m.edit} for m in ax.markers]
-    d["bands"] = [{"lo": float(b.lo), "hi": float(b.hi), "color": b.color, "alpha": b.alpha, "label": b.label, "owner": b.owner, "edit": list(b.edit) if b.edit else None} for b in ax.bands]
+    d["bands"] = [{"lo": float(b.lo), "hi": float(b.hi), "ylo": _opt(b.ylo), "yhi": _opt(b.yhi), "color": b.color, "alpha": b.alpha,
+                   "label": b.label, "owner": b.owner, "edit": list(b.edit) if b.edit else None} for b in ax.bands]
     if ax.image is not None:
         im = ax.image
         data = np.ascontiguousarray(im.data, dtype=np.uint8)
@@ -153,6 +174,18 @@ def _axis_dict(ax: Axis, digits) -> dict:
             "cmap": im.cmap, "scroll": im.scroll, "rows": im.rows, "clear": im.clear,
         }
     return d
+
+def time_unit(span: float) -> tuple[float, str]:
+    """(scale, name) of the unit that shows times up to `span` seconds, for xfmt "time" """
+    for scale, name in ((1.0, "s"), (1e-3, "ms"), (1e-6, "µs")):
+        if span >= scale:
+            return scale, name
+    return 1e-9, "ns"
+
+def fmt_time(v: float, span: float | None = None) -> str:
+    """Seconds as text, in the unit of `span` (default: of v itself)"""
+    scale, name = time_unit(abs(v) if span is None else abs(span))
+    return f"{v/scale:.4g} {name}"
 
 class Scroller:
     """Keeps the history of a scrolling Image for views that draw whole images"""

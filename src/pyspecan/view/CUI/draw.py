@@ -7,7 +7,7 @@ blocks (two pixels per cell) in 24-bit color, or a character ramp without color.
 import numpy as np
 
 from ...plots import colormap
-from ...plots.frame import Axis, Frame, Trace
+from ...plots.frame import Axis, Band, Frame, Trace, fmt_time
 
 RESET = "\x1b[0m"
 DIM = "\x1b[2m"
@@ -117,17 +117,23 @@ def _scale(v, lo, hi, n):
     """data -> dot coordinate in 0..n-1"""
     return np.clip(np.round((np.asarray(v, dtype=np.float64) - lo) / ((hi - lo) or 1.0) * (n - 1)), 0, n - 1).astype(int)
 
-def _draw_trace(cv: Canvas, t: Trace, xr, yr, use_color):
+def _trace_x(t: Trace, ax: Axis) -> np.ndarray:
+    """A trace's x values, see Trace: one point per bin across the x range, or the index"""
+    if t.x is not None:
+        return np.asarray(t.x, dtype=np.float64)
+    n = len(t.y)
+    if ax.xmin is None or ax.xmax is None:
+        return np.arange(n, dtype=np.float64)
+    return ax.xmin + np.arange(n) * ((ax.xmax - ax.xmin) / max(n, 1))
+
+def _draw_trace(cv: Canvas, t: Trace, x, xr, yr, use_color):
     y = np.asarray(t.y, dtype=np.float64)
     ok = np.isfinite(y)
     if not ok.any():
         return
     py = (cv.h - 1) - _scale(np.where(ok, y, yr[0]), yr[0], yr[1], cv.h)
     n = len(y)
-    if t.x is None:
-        px = _scale(np.arange(n), 0, max(n - 1, 1), cv.w)
-    else:
-        px = _scale(t.x, xr[0], xr[1], cv.w)
+    px = _scale(x, xr[0], xr[1], cv.w)
     if t.kind == "scatter":
         for a, b, k in zip(px, py, ok, strict=True):
             if k:
@@ -150,17 +156,37 @@ def _draw_trace(cv: Canvas, t: Trace, xr, yr, use_color):
 
 EDGE = "#6b6b6b"
 
+def _band_rows(b: Band, yr, n: int) -> tuple[int, int]:
+    """The (top, bottom) dot / pixel rows of a band's y span out of n, the whole height without one"""
+    top = 0 if b.yhi is None else (n - 1) - int(_scale(b.yhi, yr[0], yr[1], n))
+    btm = n - 1 if b.ylo is None else (n - 1) - int(_scale(b.ylo, yr[0], yr[1], n))
+    return min(top, btm), max(top, btm)
+
 def _draw_marks(cv: Canvas, ax: Axis, xr, yr):
-    """Band edges and vline markers as dim vertical lines, point markers as a triangle and label"""
+    """Band edges and vline markers as dim vertical lines (a band with a y span as a box), hline markers
+    as a dashed horizontal line, point markers as a triangle and label"""
     def col(v):
         return int(_scale(v, xr[0], xr[1], cv.w))
     for b in ax.bands:
+        top, btm = _band_rows(b, yr, cv.h)
         for v in (b.lo, b.hi):
             if xr[0] <= v <= xr[1]:
-                cv.line(col(v), 0, col(v), cv.h - 1, EDGE)
+                cv.line(col(v), top, col(v), btm, EDGE)
+        if b.ylo is not None or b.yhi is not None:
+            a, z = col(max(b.lo, xr[0])), col(min(b.hi, xr[1]))
+            for r in (top, btm):
+                cv.line(a, r, z, r, EDGE)
         if b.label and xr[0] <= b.lo <= xr[1]:
-            cv.text(cv.rows - 1, col(b.lo) // 2 + 1, b.label, b.color)
+            cv.text(btm // 4, col(b.lo) // 2 + 1, b.label, b.color)
     for m in ax.markers:
+        if m.kind == "hline":
+            if yr[0] <= m.y <= yr[1]:
+                r = (cv.h - 1) - int(_scale(m.y, yr[0], yr[1], cv.h))
+                for c in range(0, cv.w, 3): # dashed
+                    cv.dot(c, r, m.color)
+                if m.label:
+                    cv.text(r // 4, cv.cols - len(m.label), m.label, m.color)
+            continue
         if not xr[0] <= m.x <= xr[1]:
             continue
         c = col(m.x) // 2
@@ -215,17 +241,32 @@ def _draw_image_marks(cells: list[list[str]], ax: Axis, xr, yr, use_color: bool)
         for k, ch in enumerate(text):
             if 0 <= r < rows and 0 <= c + k < cols:
                 cells[r][c + k] = f"{RESET}{_fg(_rgb(color))}{ch}{RESET}" if use_color else ch
-    def vline(v, color):
-        for r in range(rows):
+    def vline(v, color, top=0, btm=rows - 1):
+        for r in range(top, btm + 1):
             put(r, col(v), "│", color)
+    level = ax.ymin is not None # an image without a y range ignores y spans
     for b in ax.bands:
+        top, btm = _band_rows(b, yr, rows * 2) if level else (0, rows * 2 - 1)
+        top, btm = top // 2, btm // 2
         for v in (b.lo, b.hi):
             if xr[0] <= v <= xr[1]:
-                vline(v, EDGE)
+                vline(v, EDGE, top, btm)
+        if level and (b.ylo is not None or b.yhi is not None):
+            for r in (top, btm):
+                for c in range(col(max(b.lo, xr[0])), col(min(b.hi, xr[1])) + 1):
+                    put(r, c, "─", EDGE)
     for b in ax.bands:
         if b.label and xr[0] <= b.lo <= xr[1]:
             put(rows - 1, col(b.lo) + 1, b.label, b.color)
     for m in ax.markers:
+        if m.kind == "hline":
+            if level and yr[0] <= m.y <= yr[1]:
+                r = (rows * 2 - 1 - int(_scale(m.y, yr[0], yr[1], rows * 2))) // 2
+                for c in range(0, cols, 2):
+                    put(r, c, "╌", m.color)
+                if m.label:
+                    put(r, cols - len(m.label), m.label, m.color)
+            continue
         if not xr[0] <= m.x <= xr[1]:
             continue
         if m.kind == "vline" or ax.ymin is None: # no level axis: a point is only a frequency
@@ -242,7 +283,7 @@ def draw_axis(ax: Axis, image_data, width: int, height: int, use_color=True) -> 
     is_image = ax.image is not None
     show_y = not is_image or ax.ymin is not None
     arrays_y = [np.asarray(t.y, dtype=np.float64) for t in ax.traces]
-    arrays_x = [np.asarray(t.x, dtype=np.float64) if t.x is not None else np.arange(len(t.y), dtype=np.float64) for t in ax.traces]
+    arrays_x = [_trace_x(t, ax) for t in ax.traces]
     xr = _extent(ax.xmin, ax.xmax, arrays_x)
     yr = _extent(ax.ymin, ax.ymax, arrays_y) if show_y else (0.0, 1.0)
 
@@ -265,8 +306,8 @@ def draw_axis(ax: Axis, image_data, width: int, height: int, use_color=True) -> 
         body = _join(cells, use_color)
     else:
         cv = Canvas(cols, plot_rows)
-        for t in ax.traces:
-            _draw_trace(cv, t, xr, yr, use_color)
+        for t, x in zip(ax.traces, arrays_x, strict=True):
+            _draw_trace(cv, t, x, xr, yr, use_color)
         _draw_marks(cv, ax, xr, yr)
         body = cv.lines(use_color)
     if ax.offscale:
@@ -280,7 +321,13 @@ def draw_axis(ax: Axis, image_data, width: int, height: int, use_color=True) -> 
         lines.append(f"{label}│{row}")
 
     # x labels
-    fmt = fmt_hz if ax.xfmt == "freq" else fmt_num
+    if ax.xfmt == "freq":
+        fmt = fmt_hz
+    elif ax.xfmt == "time":
+        def fmt(v):
+            return fmt_time(v, xr[1] - xr[0])
+    else:
+        fmt = fmt_num
     n = 5 if cols >= 50 else 3
     axis_row = [" "] * (lw + cols)
     for i in range(n):

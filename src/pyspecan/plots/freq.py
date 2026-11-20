@@ -140,7 +140,10 @@ class FreqPlot(Plot):
             return
         marks, bands, table = self.markers.evaluate(self, self.last, self.bin_freqs(len(self.last)))
         ax = frame.axes[0]
-        ax.markers += [replace(m, y=0.0, kind="vline") if image and m.kind == "point" else m for m in marks]
+        if image:
+            marks = [replace(m, y=0.0, kind="vline") if m.kind == "point" else m for m in marks
+                     if m.kind != "hline" or ax.ymin is not None] # a level needs a level axis
+        ax.markers += marks
         ax.bands += bands
         frame.table = table
 
@@ -235,10 +238,14 @@ class TraceMixin:
         return self._avg.update(rows)
 
     def shrink(self, traces: list[Trace]) -> list[Trace]:
-        """Pass traces through the detector, only what is displayed is reduced"""
+        """Pass traces through the detector, only what is displayed is reduced. A reduced trace gets the
+        frequency of each group's center as x, so it lines up with the markers (which use bin frequencies)"""
         for t in traces:
             if t.x is None:
-                _, t.y = detector.reduce(t.y, self.points, self.detector) # type: ignore
+                n = len(t.y)
+                x, t.y = detector.reduce(t.y, self.points, self.detector) # type: ignore
+                if len(t.y) < n:
+                    t.x = self.bin_freqs(n)[0] + x * (self.source.fs / n) # type: ignore
         return traces
 
     def avg_readout(self) -> list[tuple[str, str]]:
