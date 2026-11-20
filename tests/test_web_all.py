@@ -224,3 +224,20 @@ def test_surface_spectrogram_draws_a_surface(page):
     assert page.evaluate("(id) => runtime[id].frame.axes[0].surface.bytes.length", pid) > 0
     assert _drawn(page, pid) > 5000 # a surface fills a good part of the box
     _clear(page)
+
+def test_store_ref_button_and_trace_math(page):
+    _clear(page)
+    page.select_option("#sel-add-plot", "PSD")
+    page.wait_for_function("Object.keys(state.plots).length === 1")
+    pid = _ids(page)[0]
+    page.evaluate("(id) => plotOp('set', {id, key: 'math', value: 'live - ref'})", pid)
+    page.click("#btn-next")
+    page.wait_for_function("(id) => runtime[id].frame", arg=pid)
+    page.locator("button.plot-action", has_text="store ref").click()
+    page.click("#btn-next")
+    page.wait_for_function("(id) => runtime[id].frame.axes.length === 2 && runtime[id].frame.axes[0].traces[0].name === 'ref'", arg=pid)
+    page.locator("button.plot-action", has_text="clear ref").click()
+    page.click("#btn-next")
+    page.wait_for_function("(id) => runtime[id].frame.axes.length === 1", arg=pid)
+    assert "rror" not in _message(page)
+    _clear(page)

@@ -1209,3 +1209,75 @@ def test_surface_spectrogram_frame():
     assert [(b.lo, b.hi, b.ylo, b.yhi) for b in ax.bands if b.label == "M1"] == [(75.0, 125.0, None, None)] # on the floor
     d = Frame([ax]).to_dict()["axes"][0]["surface"]
     assert (d["rows"], d["cols"]) == (8, 64) and isinstance(d["data"], str)
+
+# --- reference traces and trace math --- #
+def test_reference_trace_and_trace_math():
+    model = FakeModel(nfft=1024)
+    src = Source(model)
+    p = PLOTS.get("PSD")(src, unit="dBFS", vbw=0, points=0, math="live - ref")
+    assert p.ACTIONS == ("store ref", "clear ref")
+    with pytest.raises(ValueError, match="nothing to store"):
+        p.act("store ref")
+    feed(src, model, _two_tones(4096))
+    f = p.update()
+    assert len(f.axes) == 1 and dict(f.readout)["Trace math"].startswith("store") # nothing to subtract yet
+    p.act("store ref")
+    feed(src, model, (_two_tones(4096) * 2).astype(np.complex64)) # 6 dB up everywhere
+    f = p.update()
+    assert [t.name for t in f.axes[0].traces][0] == "ref" and len(f.axes) == 2
+    diff = f.axes[1].traces[0].y
+    np.testing.assert_allclose(diff, 20 * np.log10(2), atol=0.05)
+    assert dict(f.readout)["live - ref"].startswith("mean +6.02")
+    p.set("ref_show", False)
+    assert "ref" not in [t.name for t in p.update().axes[0].traces] and len(p.update().axes) == 2 # hidden, math still on
+    p.set("unit", "dB/Hz") # another unit: the reference no longer compares
+    feed(src, model, _two_tones(4096))
+    assert len(p.update().axes) == 1
+    p.set("unit", "dBFS")
+    feed(src, model, _two_tones(4096))
+    p.update()
+    p.act("store ref")
+    p.act("clear ref")
+    assert len(p.update().axes) == 1
+
+def test_reference_survives_an_fft_size_change():
+    model = FakeModel(nfft=1024)
+    src = Source(model)
+    p = PLOTS.get("PSD")(src, unit="dBFS", vbw=0, points=0, math="live - ref", window="flattop")
+    feed(src, model, _two_tones(4096))
+    p.update()
+    p.act("store ref")
+    model.nfft = 2048 # finer bins: the reference is interpolated onto them
+    p.reset()
+    feed(src, model, _two_tones(8192))
+    f = p.update()
+    d = f.axes[1].traces[0]
+    on = int(np.argmin(np.abs(d.x - 100))) # on the tone's peak both read its level (its skirts and the floor follow the RBW)
+    assert abs(d.y[on]) < 0.5
+
+# --- wavelet scalogram --- #
+def test_scalogram_places_tones_in_time_and_frequency():
+    fs, n = 1e6, 16384
+    t = np.arange(n) / fs
+    x = np.where(t < t[-1] / 2, np.exp(2j*np.pi*20e3*t), np.exp(2j*np.pi*-200e3*t)) # 20 kHz, then -200 kHz
+    model = FakeModel(fs=fs, nfft=1024)
+    src = Source(model)
+    feed(src, model, (x + 1e-3 * np.random.default_rng(0).standard_normal(n)).astype(np.complex64))
+    def peak(side, col):
+        ax = PLOTS.get("Scalogram")(src, side=side).update().axes[0]
+        img = ax.image.data.astype(float)
+        rows = img.shape[0]
+        f = 10 ** (ax.ymax - (np.arange(rows) + 0.5) / rows * (ax.ymax - ax.ymin))
+        return f[np.argmax(img[:, col])], img[:, col].max()
+    f1, _ = peak("upper", 128)
+    assert abs(f1 / 20e3 - 1) < 0.06 # 20 kHz in the first half
+    f2, _ = peak("lower", 384)
+    assert abs(f2 / 200e3 - 1) < 0.06 # -200 kHz (below the tuned frequency) in the second half
+    _, low = peak("upper", 384)
+    assert low < 200 # nothing above the tuned frequency then
+    ax = PLOTS.get("Scalogram")(src).update().axes[0]
+    assert ax.yfmt == "logfreq" and ax.xfmt == "time" and ax.image.data.shape == (128, 512)
+
+def test_plot_actions_through_the_controller():
+    from pyspecan.plots.base import Plot
+    assert Plot.ACTIONS == ()

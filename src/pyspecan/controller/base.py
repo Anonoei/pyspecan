@@ -137,6 +137,15 @@ class Controller:
             self._markers(pid).set(mid, key, value)
             self.redraw()
 
+    def plot_action(self, pid: str, action: str):
+        """One of a plot's ACTIONS (a PSD's "store ref")"""
+        with self.lock:
+            plot = self.plots.get(pid)
+            if action not in plot.ACTIONS:
+                raise ValueError(f"{plot.NAME} has no action {action!r}, it has: {', '.join(plot.ACTIONS) or 'none'}")
+            plot.act(action)
+            self.redraw()
+
     def marker_action(self, pid: str, mid: str, action: str):
         """A marker's action (a peak marker's next / prev peak) on the plot's latest trace"""
         with self.lock:

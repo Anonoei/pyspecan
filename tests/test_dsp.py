@@ -287,3 +287,20 @@ def test_symbol_table_and_3d_constellation():
     assert ax.projection == "3d" and [t.name for t in ax.traces] == ["path", "syms"]
     syms = ax.traces[1]
     assert len(syms.x) == 48 and syms.kind == "scatter" and np.allclose(np.abs(syms.y + 1j * syms.z), 1, atol=0.1)
+
+@need_rpps
+def test_vector_diagram_and_constellation_density():
+    model, src, (vd, cd) = setup("Vector Diagram", "Constellation Density")
+    vd.set("count", 100)
+    frames = run(model, src, [vd, cd], capture(tone=False))
+    ax = frames[0].axes[0]
+    path, syms, ideal = ax.traces
+    assert (path.kind, syms.kind, len(syms.y), len(ideal.y)) == ("line", "scatter", 100, 4)
+    assert len(path.y) > 8 * 90 # the matched filter's path, eight points a symbol
+    assert ax.square and np.max(np.abs(path.x + 1j * path.y)) > 1.0 # it swings past the points between symbols
+    ax = frames[1].axes[0]
+    img = ax.image.data
+    assert img.shape == (160, 160) and img.max() == 255 and ax.traces[0].name == "ideal"
+    q = img.shape[0] // 2
+    assert all(part.max() > 200 for part in (img[:q, :q], img[:q, q:], img[q:, :q], img[q:, q:])) # a cluster per quadrant
+    assert img[q - 10:q + 10, q - 10:q + 10].max() == 0 # nothing at the origin

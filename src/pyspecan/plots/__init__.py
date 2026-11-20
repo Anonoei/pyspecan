@@ -47,7 +47,7 @@ from .layout import LayoutSpec, PlotSpec
 from .source import Source
 
 # registration order is the order views list them in
-from . import psd, spg, pst, fft, iq, scope, measure, analog, markers
+from . import psd, spg, pst, fft, iq, scope, measure, analog, timefreq, markers
 from .freq import FreqPlot
 from .markers import MarkerKind, MARKER_KINDS, marker_kind
 from .settings import HAVE_RPPS

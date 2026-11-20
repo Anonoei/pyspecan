@@ -1,14 +1,14 @@
 from .base import plot
-from .freq import FreqPlot, HoldMixin, TraceMixin
+from .freq import FreqPlot, HoldMixin, RefMixin, TraceMixin
 from .frame import Axis, Frame, Trace
 
 @plot("PSD")
-class PSD(TraceMixin, HoldMixin, FreqPlot):
+class PSD(RefMixin, TraceMixin, HoldMixin, FreqPlot):
     """Power spectral density: the last frame of the block (averaged when asked), the holds see every frame
     (the persistence plot is its realtime view). Holds, markers and measurements use full resolution rows,
     only the displayed traces go through the detector."""
     TITLE = "PSD"
-    SETTINGS = FreqPlot.SETTINGS + HoldMixin.SETTINGS + TraceMixin.SETTINGS
+    SETTINGS = FreqPlot.SETTINGS + HoldMixin.SETTINGS + TraceMixin.SETTINGS + RefMixin.SETTINGS
 
     def reset(self):
         super().reset()
@@ -29,5 +29,6 @@ class PSD(TraceMixin, HoldMixin, FreqPlot):
             xmin=fmin, xmax=fmax, xfmt="freq", ymin=btm, ymax=top, offscale=self.offscale(self.last, btm, top),
             traces=self.shrink(self.hold_traces() + [Trace(trace, name="psd")]),
         )], title=self.TITLE, readout=self.rbw_readout(len(trace)) + self.avg_readout())
+        self.ref_frame(frame, trace)
         self.apply_markers(frame)
         return frame

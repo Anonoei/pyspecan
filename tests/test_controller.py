@@ -346,3 +346,18 @@ def test_marker_actions_through_the_controller_and_console(capture):
     assert c.plots.get(pid).markers.items[mid]["params"]["freq"] != before
     with pytest.raises(ValueError, match="no action"):
         c.marker_action(pid, mid, "sideways")
+
+def test_plot_actions_through_the_controller_and_console(capture):
+    from pyspecan.controller.CUI.base import Controller as Console
+    class Both(Recorder):
+        cmd_act = Console.cmd_act
+        _need = Console._need
+    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256)
+    c = Both(GetModel(Sink.FILE)(**kw), **kw)
+    pid = c.plots.layout[0][0]
+    assert c.get_state()["plots"][pid]["actions"] == ["store ref", "clear ref"]
+    c.command("next")
+    c.cmd_act([pid, "store", "ref"]) # the console's "act p1 store ref"
+    assert c.plots.get(pid).ref is not None
+    with pytest.raises(ValueError, match="no action"):
+        c.plot_action(pid, "sideways")

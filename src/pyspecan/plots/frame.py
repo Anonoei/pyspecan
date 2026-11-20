@@ -107,7 +107,7 @@ class Axis:
     zmin: float | None = None
     zmax: float | None = None
     xfmt: str = "num"            # "freq" | "time" (seconds) | "num"
-    yfmt: str = "num"            # "freq" | "num" | "log10" (y is log10 of the value, labeled like 1e-3)
+    yfmt: str = "num"            # "freq" | "num" | "log10" (y is log10 of the value, labeled like 1e-3) | "logfreq" (log10 of a frequency)
     xlabel: str = ""
     ylabel: str = ""
     xlog: bool = False           # x on a log scale (offsets in a phase noise plot), its range must be positive
@@ -166,7 +166,7 @@ def _axis_dict(ax: Axis, digits) -> dict:
         "square", "projection", "aspect", "offscale")}
     d["traces"] = []
     for t in ax.traces:
-        td = {"y": _list(t.y, digits), "color": t.color, "kind": t.kind, "alpha": t.alpha, "width": t.width}
+        td = {"y": _list(t.y, digits), "color": t.color, "kind": t.kind, "alpha": t.alpha, "width": t.width, "name": t.name}
         if t.x is not None:
             td["x"] = _list(t.x, _x_digits(ax, t.x, digits))
         if t.z is not None:

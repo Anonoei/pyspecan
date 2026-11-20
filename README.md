@@ -27,6 +27,10 @@ Web, with RPPS: the analysed signal's constellation, eye diagram and the link's 
 Web, with RPPS: 3D constellation, error vector, impulse response (the echo at 100 µs), cyclic spectrum
 ![web vsa](/media/web_vsa.png)
 
+Web: a PSD against a stored reference (trace math: live - ref, the burst that has since stopped shows as a dip),
+wavelet scalogram, and with RPPS the vector diagram and constellation density (the echo splits each point in four)
+![web analysis](/media/web_analysis.png)
+
 tkGUI: PSD with peak and occupied bandwidth markers, spectrogram, persistence, 3D waterfall
 ![tk spectrum](/media/tk_spectrum.png)
 
@@ -75,9 +79,11 @@ Settings left out keep their defaults. Linked plots take the first one's shared 
 ## Plots and measurements
 Every view lists the plots it can draw (the web view and tkGUI draw them all, 3D included: drag a 3D plot to turn it,
 double click to reset it; the console draws all but 3D).
-- Spectrum: PSD (max / min hold, averaging, detector), Spectrogram, RT Spectrogram, 3D Spectrogram (a waterfall of
+- Spectrum: PSD (max / min hold, averaging, detector, a stored reference trace and trace math: "store ref" and the
+  `math` setting, live - ref on its own axis), Spectrogram, RT Spectrogram, 3D Spectrogram (a waterfall of
   lines), Surface Spectrogram (a 3D surface spectrogram: the spectrogram as a solid surface colored by level), Persistence, FFT
-- Time domain: IQ, IQ 3D, PMF, Phasor, IQ Density, Scope (triggered / roll), Frequency vs Time
+- Time domain: IQ, IQ 3D, PMF, Phasor, IQ Density, Scope (triggered / roll), Frequency vs Time, Scalogram (a wavelet
+  transform: frequency on a log axis against time, sharp in time at high frequencies, in frequency at low ones)
 - Measurements: CCDF, Power vs Time, Occupancy, Phase Noise (L(f) on a log offset axis, integrated phase noise and
   jitter), Analog Demod (`mode` AM / FM / PM against time and its spectrum, depth / deviation, modulating frequency, SINAD)
 - Markers on any spectrum (`+ Marker`, or `marker=<kind>` in a layout): point, peak (lands on the highest peak and
@@ -105,7 +111,8 @@ Without it everything else works the same, and these plots are not listed.
 - "Eye Diagram": its matched filter output over two symbols, I and Q
 - "Network Analyzer": the link's frequency response across the signal (magnitude, phase, group delay), measured blind
   from the decided symbols, no stimulus needed; "Impulse Response": the same inverse transformed, echoes by delay and level
-- "3D Constellation": I and Q against time, the symbols on the matched filter's path
+- "3D Constellation": I and Q against time, the symbols on the matched filter's path; "Vector Diagram": the
+  constellation with the path between the symbols; "Constellation Density": the symbols as a heat map
 - "Error Vector": EVM, magnitude and phase error per symbol, with the error summary (peak EVM, MER, IQ offset, gain
   imbalance, quadrature error); "Error Vector Spectrum": where in the band the errors are
 - "Cyclic Spectrum": the spectral correlation against cycle frequency and the spectral coherence image, with the symbol

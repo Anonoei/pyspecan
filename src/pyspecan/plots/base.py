@@ -33,6 +33,7 @@ class Plot:
     FEATURES: frozenset = frozenset({LINE}) # drawing features the frames need, see plots.frame
     MARKERS = False                         # carries a `markers` set the user can add markers and measurements to
     LINK_DOMAIN: str | None = None          # plots of the same domain can be linked to share their "link" settings
+    ACTIONS: tuple[str, ...] = ()           # what `act` does (store a reference trace), views offer them as buttons
 
     def __init__(self, source, globals: dict | None = None, **kwargs):
         """`kwargs` may carry initial values for any of this plot's settings, others are ignored, bad ones raise ValueError.
@@ -105,6 +106,10 @@ class Plot:
 
     def changed(self, key):
         """A setting changed, called before the reset it may trigger"""
+
+    def act(self, action: str):
+        """Do one of ACTIONS (on the latest data), raises ValueError for anything else"""
+        raise ValueError(f"{self.NAME} has no action {action!r}, it has: {', '.join(self.ACTIONS) or 'none'}")
 
     # --- compute --- #
     def reset(self):

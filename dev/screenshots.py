@@ -84,6 +84,7 @@ class Scene:
     dsp: bool = False    # needs rpps
     turn: int | None = None  # web: drag this plot's canvas (a 3d plot turned)
     hover: tuple | None = None # web: (plot index, x, y) the cursor rests on, fractions of the canvas
+    store_ref: int | None = None # after this many blocks, press every plot's "store ref" (then step the rest)
     size: tuple = (1600, 1000)
 
 DSP = ["--dsp_freq", "150k", "--dsp_bw", "60k"]
@@ -93,6 +94,8 @@ SCENES = [
     Scene("measurements", "web", ["PSD marker=channel:freq=150k,bw=60k marker=toi:f1=-120k,f2=-100k marker=limit:level=-45",
                                   "Phase Noise carrier=-420k pn_nfft=16384", None,
                                   "Analog Demod mode=FM carrier=-300k demod_bw=40k", "CCDF"], steps=8),
+    Scene("analysis", "web", ['PSD "math=live - ref"', "Scalogram", None, "Vector Diagram", "Constellation Density"], steps=10,
+          store_ref=3, args=DSP, dsp=True),
     Scene("time", "web", ["Scope trig_mode=auto", "Frequency vs Time", None, "IQ Density", "Power vs Time"], steps=6),
     Scene("3d", "web", ["3D Spectrogram", "IQ 3D", None, "Surface Spectrogram cmap=hot max_count=32", "Occupancy"], steps=34, turn=2),
     Scene("dsp", "web", ["PSD marker=signals", "Constellation", None, "Eye Diagram", "Network Analyzer"], steps=6, args=DSP, dsp=True),
@@ -138,7 +141,11 @@ def shoot_web(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.goto(f"http://127.0.0.1:{port}/")
             page.wait_for_selector(".plot")
-            for _ in range(scene.steps):
+            for k in range(scene.steps):
+                if k == scene.store_ref:
+                    for b in page.locator("button.plot-action", has_text="store ref").all():
+                        b.click()
+                    page.wait_for_timeout(300)
                 page.click("#btn-next")
                 page.wait_for_timeout(200)
             page.wait_for_timeout(600)
@@ -187,7 +194,11 @@ def shoot_tk(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
             time.sleep(0.01)
     try:
         pump(1.0)
-        for _ in range(scene.steps):
+        for k in range(scene.steps):
+            if k == scene.store_ref:
+                for pid, plot in list(ctrl.plots.plots.items()):
+                    if "store ref" in plot.ACTIONS:
+                        ctrl.plot_action(pid, "store ref")
             ctrl.command("next")
             pump(0.35)
         pump(0.8)

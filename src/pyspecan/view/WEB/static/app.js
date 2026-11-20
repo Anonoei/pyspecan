@@ -271,6 +271,8 @@ function buildPlot(id, p) {
         $(`settings-${id}`).hidden = !settingsOpen.has(id);
     }});
     const del = el("button", {textContent: "✕", title: "remove plot", onclick: () => plotOp("del", {id})});
+    const actions = (p.actions || []).map((a) => el("button", {textContent: a, title: a, className: "plot-action",
+        onclick: () => plotOp("act", {id, action: a})}));
     const ptime = el("span", {id: `ptime-${id}`, className: "muted"});
 
     const settings = el("div", {id: `settings-${id}`, className: "plot-settings", hidden: !settingsOpen.has(id)},
@@ -279,7 +281,7 @@ function buildPlot(id, p) {
     bindCanvas(id, rt.canvas);
     const header = el("div", {className: "plot-header", title: "drag to move"},
         el("span", {className: "grip", textContent: "⠿"}), el("b", {textContent: p.name}), ...linkChip(p), ptime,
-        el("span", {className: "right"}, ...(p.marker_kinds ? [toolMenu(id), markerMenu(id, p)] : []), ...linkMenu(id, p), pause, gear, del));
+        el("span", {className: "right"}, ...(p.marker_kinds ? [toolMenu(id), markerMenu(id, p)] : []), ...linkMenu(id, p), ...actions, pause, gear, del));
     rt.readout = el("div", {className: "readout", hidden: true});
     rt.table = el("div", {className: "mtable", hidden: true});
     rt.editor = el("div", {className: "marker-editor", id: `markers-${id}`, hidden: true});
@@ -740,7 +742,8 @@ function drawHover(ctx, id, rt) {
     }
     if (!g.isImage) {
         const y = g.ymax - ((py - g.y0) / g.h) * (g.ymax - g.ymin);
-        const fy = axis.yfmt === "log10" ? fmtLog10 : axis.yfmt === "freq" ? fmtHzFull : (v) => v.toFixed(2);
+        const fy = axis.yfmt === "log10" ? fmtLog10 : axis.yfmt === "freq" ? fmtHzFull : axis.yfmt === "logfreq" ? (v) => fmtHzFull(10 ** v)
+            : (v) => v.toFixed(2);
         lines.push(`cursor ${fy(y)} ${unit}`.trim());
         const t = (axis.traces || [])[axis.traces.length - 1]; // the plot's own trace is the last one
         if (t && t.y.length && !rt.drag) {
@@ -803,7 +806,7 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
     const xOf = xlog ? (v) => x0 + ((Math.log10(v) - lx0) / lspan) * w : (v) => x0 + ((v - xmin) / (xmax - xmin)) * w;
     const yOf = (v) => y0 + (1 - (v - ymin) / (ymax - ymin)) * h;
     const fmtX = fmtXOf(axis, xmin, xmax, false);
-    const fmtY = axis.yfmt === "log10" ? fmtLog10 : axis.yfmt === "freq" ? fmtHz : fmtNum;
+    const fmtY = axis.yfmt === "log10" ? fmtLog10 : axis.yfmt === "freq" ? fmtHz : axis.yfmt === "logfreq" ? (v) => fmtHz(10 ** v) : fmtNum;
     const labelY = !isImage || axis.ymin != null; // a scrolling image has no y values to label
     out.geom = {x0, y0, w, h, xmin, xmax, ymin, ymax, isImage, xlog};
 

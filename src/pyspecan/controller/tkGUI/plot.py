@@ -99,6 +99,11 @@ class PlotPane:
         values = self.plot.settings()
         linked = self.plot.link is not None
         self._link_picker(parent)
+        if self.plot.ACTIONS: # the plot's actions (store a reference trace)
+            row = ttk.Frame(parent)
+            row.pack(side=tk.TOP, fill=tk.X, pady=(2, 0))
+            for action in self.plot.ACTIONS:
+                ttk.Button(row, text=action, command=lambda a=action: self._plot_action(a)).pack(side=tk.LEFT)
         groups: dict[str, list[dict]] = {}
         for f in self.plot.fields():
             groups.setdefault(f["group"], []).append(f)
@@ -210,6 +215,12 @@ class PlotPane:
         draw.grid(row=row + 2, column=1)
         draw.bind("<<ComboboxSelected>>", lambda _e: self.keep.__setitem__("tool", tool.get()))
         self.vars["_tool"] = tool
+
+    def _plot_action(self, action: str):
+        try:
+            self.ctrl.plot_action(self.pid, action)
+        except ValueError as e:
+            self.ctrl.show_message(str(e))
 
     def _marker_op(self, fn) -> bool:
         """Run a marker change, showing what went wrong, True when it worked"""
@@ -423,6 +434,8 @@ class PlotPane:
                 mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: _log10_label(v)))
             elif ax.yfmt == "freq":
                 mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: fmt_hz(v)))
+            elif ax.yfmt == "logfreq": # y holds log10 of a frequency
+                mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: fmt_hz(10.0 ** v)))
             else:
                 mpl.ax.yaxis.set_major_formatter(ScalarFormatter())
 
@@ -726,7 +739,8 @@ class PlotPane:
             lines = [f"{name} {fx(x)}"]
         if ax.image is None:
             unit = str(getattr(self.plot, "unit", "") or "")
-            fy = _log10_label if ax.yfmt == "log10" else fmt_hz if ax.yfmt == "freq" else (lambda v: f"{v:.2f}")
+            fy = (_log10_label if ax.yfmt == "log10" else fmt_hz if ax.yfmt == "freq" else (lambda v: fmt_hz(10.0 ** v))
+                  if ax.yfmt == "logfreq" else (lambda v: f"{v:.2f}"))
             lines.append(f"cursor {fy(y)} {unit}".strip())
             if ax.traces and d is None:
                 t = ax.traces[-1] # the plot's own trace is the last one

@@ -162,6 +162,8 @@ class Controller(_Controller):
                 self.add_marker(msg["id"], msg["kind"], **(msg.get("params") or {}))
             elif op == "marker_del":
                 self.del_marker(msg["id"], msg["marker"])
+            elif op == "act":
+                self.plot_action(msg["id"], msg["action"])
             elif op == "marker_act":
                 self.marker_action(msg["id"], msg["marker"], msg["action"])
             elif op == "marker_set" and "params" in msg:

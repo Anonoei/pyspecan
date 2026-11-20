@@ -109,6 +109,77 @@ def error_summary(lk: Lock) -> list[tuple[str, str]]:
     out.append(("Symbols", str(len(s))))
     return out
 
+@plot("Vector Diagram")
+class VectorDiagram(DSPPlot):
+    """The constellation with the path between the symbols: the matched filter's output drawn as a line, so the
+    transitions show (a filtered PSK passing near the origin, an offset QPSK that never does, a timing error smearing
+    the arrivals)"""
+    TITLE = "Vector Diagram"
+    FEATURES = frozenset({LINE, SCATTER})
+    SETTINGS = DSPPlot.SETTINGS + (
+        Setting("count", "Symbols", "int", default=200, min=4, max=5000, step=50, group="Display", help="latest symbols drawn"),
+        Setting("marks", "Mark symbols", "check", default=True, group="Display", help="mark the symbol instants"),
+    )
+
+    def render(self):
+        sel, lk, why = self.analyse()
+        lim = 1.5
+        if lk is None:
+            return self.empty([Axis(xmin=-lim, xmax=lim, ymin=-lim, ymax=lim, square=True, xlabel="I", ylabel="Q")], sel, why)
+        n = min(self.count, len(lk.syms))
+        k0 = len(lk.syms) - n
+        t, z = matched(lk, 8)
+        on = (t >= k0 - 0.5) & (t <= len(lk.syms) - 0.5)
+        path = z[on]
+        lim = max(1.5, 1.1 * float(np.max(np.abs(path))) if len(path) else 1.5)
+        traces = [Trace(path.imag, path.real, color=BLUE, alpha=0.55, width=1.0, name="path")]
+        if self.marks:
+            s = lk.syms[k0:]
+            traces.append(Trace(s.imag, s.real, color=YELLOW, kind=SCATTER, name="syms"))
+        traces.append(Trace(lk.points.imag, lk.points.real, color=RED, kind=SCATTER, name="ideal"))
+        return Frame([Axis(xmin=-lim, xmax=lim, ymin=-lim, ymax=lim, square=True, xlabel="I", ylabel="Q", traces=traces)],
+                     title=self.TITLE, readout=[*self.sel_readout(sel), *self.lock_readout(lk)])
+
+@plot("Constellation Density")
+class ConstellationDensity(DSPPlot):
+    """The symbols as a heat map, built up over blocks, under the ideal points: how the symbols spread around each
+    point (round for noise, stretched along the circle for phase noise, along the radius for compression) shows where
+    a scatter of dots only overlaps"""
+    TITLE = "Constellation Density"
+    FEATURES = frozenset({IMAGE, SCATTER})
+    SETTINGS = DSPPlot.SETTINGS + (
+        Setting("bins", "Bins", "int", default=160, min=32, max=1024, group="Display", help="cells across each axis"),
+        Setting("ideal", "Ideal points", "check", default=True, group="Display", help="the ideal points over the density"),
+        SETTING_DECAY.with_(default=0.9), SETTING_CMAP.with_(default="hot"),
+    )
+
+    def reset(self):
+        super().reset()
+        self.changed_lock()
+
+    def changed_lock(self):
+        self.hist = None
+
+    def changed(self, key):
+        if key == "bins":
+            self.hist = None
+
+    def render(self):
+        sel, lk, why = self.analyse()
+        lim = 1.5
+        if lk is None:
+            return self.empty([Axis(xmin=-lim, xmax=lim, ymin=-lim, ymax=lim, square=True, xlabel="I", ylabel="Q")], sel, why)
+        lim = max(1.5, 1.3 * float(np.max(np.abs(lk.points))))
+        h, _, _ = np.histogram2d(lk.syms.imag, lk.syms.real, self.bins, range=[[-lim, lim], [-lim, lim]]) # type: ignore
+        h = h[::-1] # row 0 is the top: +Q
+        self.hist = h if self.hist is None or self.hist.shape != h.shape else self.hist * self.decay + h # type: ignore
+        top = float(self.hist.max())
+        img = np.rint(np.log1p(self.hist) * (255.0 / np.log1p(top))) if top > 0 else np.zeros_like(self.hist)
+        traces = [Trace(lk.points.imag, lk.points.real, color=BLUE, kind=SCATTER, name="ideal")] if self.ideal else []
+        return Frame([Axis(xmin=-lim, xmax=lim, ymin=-lim, ymax=lim, square=True, xlabel="I", ylabel="Q",
+                           image=Image(img.astype(np.uint8), cmap=self.cmap), traces=traces)], # type: ignore
+                     title=self.TITLE, readout=[*self.sel_readout(sel), *self.lock_readout(lk), *error_summary(lk)[:4]])
+
 @plot("3D Constellation")
 class Constellation3D(DSPPlot):
     """The selected signal's I and Q against time: the matched filter's path between symbols and the symbols on it, a

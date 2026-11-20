@@ -290,7 +290,7 @@ class PlotSet:
                 "globals": {"fields": [s.to_dict() for s in GLOBAL_SETTINGS], "settings": dict(self.globals)},
                 "plots": {pid: {
                     "name": plot.NAME, "title": plot.TITLE,
-                    "fields": plot.fields(), "settings": plot.settings(),
+                    "fields": plot.fields(), "settings": plot.settings(), "actions": list(plot.ACTIONS),
                     "link": plot.link.id if plot.link is not None else None, "linkable": self.linkable(pid),
                     **({"markers": plot.markers.describe(), "marker_kinds": plot.markers.kinds()} if plot.MARKERS else {}),
                 } for pid, plot in self.plots.items()},

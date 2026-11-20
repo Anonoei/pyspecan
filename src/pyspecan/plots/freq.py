@@ -9,7 +9,7 @@ from ..obj import Frequency
 from ..utils.vbw import vbw_rows
 from . import colormap
 from .base import Plot
-from .frame import RED, BLUE, Frame, Trace
+from .frame import BLUE, GREEN, RED, Axis, Frame, Marker, Trace
 from .settings import Setting
 
 def _ref_level(value):
@@ -258,3 +258,62 @@ class TraceMixin:
         if self.avg == "off" or self.avg_count <= 1: # type: ignore
             return []
         return [("Avg", f"{self._avg.n}/{self.avg_count} ({self.avg})")] # type: ignore
+
+
+REF_COLOR = "#a0a0a0"
+FLOOR = -300.0 # where a reference has no value (outside the span it was stored over)
+
+class RefMixin:
+    """A stored reference trace drawn under the live one, and trace math against it (live - ref, in dB, on an axis of
+    its own). "store ref" keeps the live trace (averaged and smoothed, full resolution) with its frequencies, so a
+    retune or another FFT size still lines it up; a change of level unit drops it"""
+    ACTIONS = ("store ref", "clear ref")
+    SETTINGS = (
+        Setting("ref_show", "Show ref", "check", default=True, group="Reference", help="draw the stored reference trace"),
+        Setting("math", "Trace math", "select", default="off", options=("off", "live - ref"), group="Reference",
+                help="live - ref: the difference in dB under the spectrum"),
+    )
+
+    def act(self, action):
+        if action == "store ref":
+            if self.last is None: # type: ignore
+                raise ValueError("nothing to store yet: step or play first")
+            n = len(self.last) # type: ignore
+            self.ref = (self.bin_freqs(n), self.smooth(self.last).copy(), self.unit) # type: ignore
+        elif action == "clear ref":
+            self.ref = None
+        else:
+            super().act(action) # type: ignore
+
+    def ref_on(self, n: int) -> np.ndarray | None:
+        """The reference on the current n bins (FLOOR where it was not stored), None without one"""
+        ref = getattr(self, "ref", None)
+        if ref is None:
+            return None
+        if ref[2] != self.unit: # type: ignore
+            self.ref = None
+            return None
+        return np.interp(self.bin_freqs(n), ref[0], ref[1], left=FLOOR, right=FLOOR) # type: ignore
+
+    def ref_frame(self, frame: Frame, live: np.ndarray):
+        """Add the reference trace to the frame's first axis and, with trace math, the difference axis below it"""
+        rf = self.ref_on(len(live))
+        if rf is None:
+            if self.math != "off": # type: ignore
+                frame.readout.append(("Trace math", "store a reference first"))
+            return
+        ax = frame.axes[0]
+        xr, yr = self.reduced(rf, self.points, self.detector) # type: ignore
+        xr = self.bin_freqs(len(live)) if xr is None else xr # type: ignore
+        keep = yr > FLOOR + 1
+        if self.ref_show: # type: ignore
+            ax.traces.insert(0, Trace(yr[keep], xr[keep], color=REF_COLOR, name="ref", width=1.0))
+        if self.math == "live - ref": # type: ignore
+            _, yl = self.reduced(live, self.points, self.detector) # type: ignore
+            d = (yl - yr)[keep]
+            lim = max(3.0, float(np.ceil(np.max(np.abs(d)) * 1.2))) if len(d) else 3.0
+            frame.axes.append(Axis(xmin=ax.xmin, xmax=ax.xmax, xfmt="freq", ymin=-lim, ymax=lim, ylabel="live - ref (dB)",
+                                   traces=[Trace(d, xr[keep], color=GREEN, name="diff")],
+                                   markers=[Marker(0.0, 0.0, "", REF_COLOR, kind="hline")]))
+            if len(d):
+                frame.readout.append(("live - ref", f"mean {d.mean():+.2f}, max {d.max():+.2f}, min {d.min():+.2f} dB"))
