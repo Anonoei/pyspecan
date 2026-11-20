@@ -156,7 +156,7 @@ def test_markers_menu_table_editor_and_spectrogram(page):
     page.click("#btn-next")
     page.wait_for_function("document.querySelectorAll('.mtable:not([hidden])').length >= 2")
     # remove from the editor
-    psd.locator(".mk-row button").first.click()
+    psd.locator(".mk-row button[title='remove marker']").first.click()
     page.wait_for_function("document.querySelectorAll('.marker-editor .mk-row').length === 2")
     n = psd.locator("canvas").evaluate("""(c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
         let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] === 0x5c && d[i+1] === 0xb8 && d[i+2] === 0x5c) n++; return n; }""")
@@ -184,7 +184,7 @@ def test_markers_are_drawn_moved_and_resized_with_the_mouse(page):
     pid = _psd_id(page)
     page.wait_for_function("(id) => runtime[id].frame && runtime[id].geom && runtime[id].geom[0]", arg=pid)
     while _markers(page, pid):  # start clean, earlier tests leave markers behind
-        plot(page, "PSD").locator(".mk-row button").first.click()
+        plot(page, "PSD").locator(".mk-row button[title='remove marker']").first.click()
         page.wait_for_timeout(250)
     assert page.evaluate("(id) => runtime[id].tool", pid) == "channel"
 

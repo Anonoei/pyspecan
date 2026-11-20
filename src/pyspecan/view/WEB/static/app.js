@@ -309,6 +309,8 @@ function markerMenu(id, p) {
     return sel;
 }
 
+const ACTION_LABELS = {prev: "▲ prev", next: "▼ next", left: "◀ left", right: "▶ right"}; // a marker's actions, see MarkerKind.ACTIONS
+
 // one row of editable settings per marker, rebuilt only when the markers change
 function updateMarkers(id, p) {
     const rt = runtime[id];
@@ -331,8 +333,10 @@ function updateMarkers(id, p) {
             else input.onkeydown = (ev) => { if (ev.key === "Enter") { send_(input.value); input.blur(); } };
             return el("label", {className: "mk-field"}, el("span", {className: "muted", textContent: f.label + " "}), input);
         });
+        const actions = (m.actions || []).map((a) => el("button", {textContent: ACTION_LABELS[a] || a, title: `${a} peak`,
+            onclick: () => plotOp("marker_act", {id, marker: m.id, action: a})}));
         return el("div", {className: "mk-row"}, el("b", {textContent: m.id}), el("span", {className: "muted", textContent: m.kind}), ...fields,
-            el("button", {textContent: "✕", title: "remove marker", onclick: () => plotOp("marker_del", {id, marker: m.id})}));
+            ...actions, el("button", {textContent: "✕", title: "remove marker", onclick: () => plotOp("marker_del", {id, marker: m.id})}));
     }));
 }
 
@@ -423,7 +427,14 @@ function applyFrame(data) {
         const pt = $(`ptime-${id}`);
         const name = state && state.plots[id] ? state.plots[id].name : "";
         if (pt) pt.textContent = `${frame.title && frame.title !== name ? frame.title + "  " : ""}${(frame.ptime * 1000).toFixed(1)} ms`;
-        frame.axes.forEach((axis, i) => { if (axis.image) applyImage(rt, i, axis.image); });
+        frame.axes.forEach((axis, i) => {
+            if (axis.image) applyImage(rt, i, axis.image);
+            if (axis.surface) { // a 3d surface's heights, decoded once
+                const bin = atob(axis.surface.data), b = new Uint8Array(bin.length);
+                for (let k = 0; k < bin.length; k++) b[k] = bin.charCodeAt(k);
+                axis.surface.bytes = b;
+            }
+        });
         applyReadout(rt, frame.readout || []);
         applyTable(rt, frame.table);
         drawPlot(id);
@@ -934,6 +945,7 @@ function drawAxis3d(ctx, axis, ox, oy, W, H, out) {
         ctx.fillText(fmtNum(z), t[0] + (t[0] > x0 + w / 2 ? 22 : -22), t[1] + 4);
     }
     if (axis.ylabel) { const q = P(frontX, (ya + yb) / 2, za); ctx.fillText(axis.ylabel, q[0] + (q[0] > x0 + w / 2 ? 40 : -40), q[1] + 26); }
+    if (axis.surface) drawSurface(ctx, axis.surface, P);
     // bands lie on the floor
     for (const b of axis.bands || []) {
         const lo = Math.max(b.lo, xa), hi = Math.min(b.hi, xb), yl = b.ylo ?? ya, yh = b.yhi ?? yb;
@@ -958,6 +970,38 @@ function drawAxis3d(ctx, axis, ox, oy, W, H, out) {
     }
     ctx.fillStyle = TEXT; ctx.textAlign = "left";
     ctx.fillText("drag to turn", ox + 6, oy + H - 6);
+}
+
+// a height field as a surface of quads colored by height, drawn back to front so the near ones cover the far ones
+function drawSurface(ctx, sf, P) {
+    const rows = sf.rows, cols = sf.cols, b = sf.bytes;
+    if (!b || rows < 2 || cols < 2) return;
+    const [xa, xb] = P.r.x, [ya, yb] = P.r.y, [za, zb] = P.r.z;
+    const pts = new Float32Array(rows * cols * 2);
+    for (let r = 0; r < rows; r++) {
+        const y = ya + (r / (rows - 1)) * (yb - ya);
+        for (let c = 0; c < cols; c++) {
+            const p = P(xa + (c / (cols - 1)) * (xb - xa), y, za + (b[r * cols + c] / 255) * (zb - za));
+            pts[(r * cols + c) * 2] = p[0]; pts[(r * cols + c) * 2 + 1] = p[1];
+        }
+    }
+    const lut = lutFor(sf.cmap), css = new Array(256);
+    for (let v = 0; v < 256; v++) { const c = lut[v]; css[v] = `rgb(${c & 255},${(c >> 8) & 255},${(c >> 16) & 255})`; }
+    const rowsBack = P.depth(0, yb, 0) > P.depth(0, ya, 0), colsBack = P.depth(xb, 0, 0) > P.depth(xa, 0, 0);
+    const order = (n, back) => (back ? [...Array(n - 1).keys()].reverse() : [...Array(n - 1).keys()]);
+    const rOrder = order(rows, rowsBack), cOrder = order(cols, colsBack);
+    ctx.lineWidth = 0.6;
+    for (const r of rOrder) {
+        for (const c of cOrder) {
+            const k = [r * cols + c, r * cols + c + 1, (r + 1) * cols + c + 1, (r + 1) * cols + c];
+            const v = Math.max(b[k[0]], b[k[1]], b[k[2]], b[k[3]]);
+            ctx.fillStyle = ctx.strokeStyle = css[v]; // the edge in the same color hides the seams between quads
+            ctx.beginPath();
+            ctx.moveTo(pts[k[0] * 2], pts[k[0] * 2 + 1]);
+            for (let q = 1; q < 4; q++) ctx.lineTo(pts[k[q] * 2], pts[k[q] * 2 + 1]);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+    }
 }
 
 // shaded x spans (channels), or boxes when they have a y span (`yOf` null: no levels, y spans are ignored), under the traces

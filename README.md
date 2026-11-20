@@ -6,13 +6,35 @@
 
 
 # Examples
-tkGUI, PSD and spectrogram
-![tkGUI_Swept](/media/SWEPT_tkGUI.png)
-![tkGUI_Swept](/media/SWEPT_tkGUI2.png)
+Taken by `python dev/screenshots.py` on a synthetic capture (QPSK with an echo, an FM carrier, a carrier with phase
+noise, two tones and their IM3 products, a bursty signal, a chirp); run it again to refresh them.
 
-tkGUI, persistence and realtime spectrogram
-![tkGUI_RT](/media/RT_tkGUI.png)
-![tkGUI_RT](/media/RT_tkGUI2.png)
+Web: PSD with found signals and a peak marker (the cursor readout over it), spectrogram, persistence, surface spectrogram
+![web spectrum](/media/web_spectrum.png)
+
+Web: channel power, TOI and a limit line, phase noise, FM demodulation, CCDF
+![web measurements](/media/web_measurements.png)
+
+Web: 3D waterfall, IQ 3D, a turned surface spectrogram, occupancy
+![web 3d](/media/web_3d.png)
+
+Web: scope, frequency vs time, IQ density, power vs time
+![web time](/media/web_time.png)
+
+Web, with RPPS: the analysed signal's constellation, eye diagram and the link's response (network analyzer)
+![web dsp](/media/web_dsp.png)
+
+Web, with RPPS: 3D constellation, error vector, impulse response (the echo at 100 µs), cyclic spectrum
+![web vsa](/media/web_vsa.png)
+
+tkGUI: PSD with peak and occupied bandwidth markers, spectrogram, persistence, 3D waterfall
+![tk spectrum](/media/tk_spectrum.png)
+
+tkGUI, with RPPS: found signals, constellation, eye diagram, error vector
+![tk dsp](/media/tk_dsp.png)
+
+Console: PSD and spectrogram drawn as text
+![console](/media/cui_spectrum.png)
 
 # Usage
 - View (-v|--view): specifies which frontend to use (tk, web, cui; any case)
@@ -53,11 +75,14 @@ Settings left out keep their defaults. Linked plots take the first one's shared 
 ## Plots and measurements
 Every view lists the plots it can draw (the web view and tkGUI draw them all, 3D included: drag a 3D plot to turn it,
 double click to reset it; the console draws all but 3D).
-- Spectrum: PSD (max / min hold, averaging, detector), Spectrogram, RT Spectrogram, 3D Spectrogram, Persistence, FFT
+- Spectrum: PSD (max / min hold, averaging, detector), Spectrogram, RT Spectrogram, 3D Spectrogram (a waterfall of
+  lines), Surface Spectrogram (a 3D surface spectrogram: the spectrogram as a solid surface colored by level), Persistence, FFT
 - Time domain: IQ, IQ 3D, PMF, Phasor, IQ Density, Scope (triggered / roll), Frequency vs Time
 - Measurements: CCDF, Power vs Time, Occupancy, Phase Noise (L(f) on a log offset axis, integrated phase noise and
-  jitter), Analog Demod (AM / FM / PM against time and its spectrum, depth / deviation, modulating frequency, SINAD)
-- Markers on any spectrum (`+ Marker`, or `marker=<kind>` in a layout): point, peak (with a threshold line to drag),
+  jitter), Analog Demod (`mode` AM / FM / PM against time and its spectrum, depth / deviation, modulating frequency, SINAD)
+- Markers on any spectrum (`+ Marker`, or `marker=<kind>` in a layout): point, peak (lands on the highest peak and
+  stays there; its ▲ prev / ▼ next buttons step up / down the peaks by level, ◀ left / ▶ right to the nearest peak in
+  frequency, the console's `marker <id> act <marker> next`; `track` follows the peak instead; a threshold line to drag),
   delta, peaks (peak table), channel power, ACPR, OBW (and -x dB bandwidth), harmonics (dBc and THD), TOI (third order
   intercept from two tones), limit (a line to drag, pass / fail with the margin), and with RPPS signals (below)
 

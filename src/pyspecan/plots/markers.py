@@ -86,9 +86,14 @@ class MarkerKind:
     NAME = ""
     PARAMS: tuple[Setting, ...] = ()
     COLOR = YELLOW
+    ACTIONS: tuple[str, ...] = () # what `act` does, views offer them as buttons
 
     def evaluate(self, ctx: Context, mid: str, p: dict) -> Result:
         raise NotImplementedError()
+
+    def act(self, ctx: Context, mid: str, p: dict, action: str):
+        """Change the params `p` by an action (a peak marker's next peak) on the plot's latest trace"""
+        raise ValueError(f"{self.NAME} has no action {action!r}")
 
 SETTING_NOISE = Setting("noise", "Per Hz", "check", default=False, help="show the level per Hz (divided by the RBW)")
 SETTING_FREQ = Setting("freq", "Freq", "text", default="", coerce=freq_text, hint="center", help="frequency, like 1.2M")
@@ -108,29 +113,70 @@ class Point(MarkerKind):
 
 @marker_kind("peak")
 class Peak(MarkerKind):
-    """Tracks the n-th highest peak"""
+    """Lands on the highest peak and stays at that frequency. next / prev step down / up the peaks by level, left /
+    right to the nearest peak below / above in frequency (an analyzer's Next Peak keys); dragging it moves it too.
+    `track` follows the peak every frame instead, `rank` picks which (1 the highest)"""
     COLOR = GREEN
+    ACTIONS = ("prev", "next", "left", "right")
     PARAMS = (
-        Setting("rank", "Peak #", "int", default=1, min=1, max=64),
+        SETTING_FREQ.with_(hint="highest peak", help="where it sits, set by the peak search (or by hand, like 1.2M)"),
+        Setting("track", "Track", "check", default=False, help="follow the peak every frame instead of staying put"),
+        Setting("rank", "Peak #", "int", default=1, min=1, max=64, advanced=True,
+                help="which peak by level it lands on (or tracks): 1 the highest"),
         Setting("threshold", "Threshold", "text", default="", coerce=optional_float, hint="off", help="minimum peak level"),
         Setting("excursion", "Excursion (dB)", "number", default=6.0, min=0, step=1, help="how far a peak must rise above its surroundings"),
         SETTING_NOISE,
     )
 
+    @staticmethod
+    def _peaks(ctx, p) -> list[tuple[float, float]]:
+        """(freq, level) of every peak over the threshold, highest first"""
+        thr = float(p["threshold"]) if p["threshold"] else None
+        out = []
+        for i in peaks.find_peaks(ctx.trace, ctx.n, thr, p["excursion"]):
+            pos, lvl = peaks.interp(ctx.trace, int(i))
+            out.append((float(ctx.freqs[0] + pos * ctx.df), float(lvl)))
+        return out
+
     def evaluate(self, ctx, mid, p):
         thr = float(p["threshold"]) if p["threshold"] else None
-        found = peaks.find_peaks(ctx.trace, p["rank"], thr, p["excursion"])
-        if len(found) < p["rank"]:
-            return Result([["-", "no peak"]], self.threshold(mid, thr))
-        pos, lvl = peaks.interp(ctx.trace, int(found[p["rank"] - 1]))
-        f = float(ctx.freqs[0] + pos * ctx.df)
-        return Result([[fmt_hz(f), ctx.level_text(lvl, p["noise"])]], [Marker(f, lvl, mid, self.COLOR), *self.threshold(mid, thr)], at=(f, lvl))
+        line = [] if thr is None else [Marker(0.0, thr, f"{mid} thr", self.COLOR, kind="hline", owner=mid, edit="threshold")]
+        if p["track"] or not p["freq"]:
+            found = self._peaks(ctx, p)
+            if len(found) < p["rank"]:
+                return Result([["-", "no peak"]], line)
+            f, lvl = found[p["rank"] - 1]
+            if not p["track"]:
+                p["freq"] = f"{f:.1f}" # found once: it stays here
+        else:
+            f = hz(p["freq"], ctx.cf)
+            if ctx.outside(f, f):
+                return Result([[fmt_hz(f), "outside span"]], line)
+            lvl = float(np.interp(f, ctx.freqs, ctx.trace)) # at its frequency, whatever the trace does around it
+        mark = Marker(f, lvl, mid, self.COLOR, owner=mid, edit="" if p["track"] else "freq")
+        return Result([[fmt_hz(f), ctx.level_text(lvl, p["noise"])]], [mark, *line], at=(f, lvl))
 
-    def threshold(self, mid: str, thr: float | None) -> list[Marker]:
-        """The threshold as a line to drag, when there is one"""
-        if thr is None:
-            return []
-        return [Marker(0.0, thr, f"{mid} thr", self.COLOR, kind="hline", owner=mid, edit="threshold")]
+    def act(self, ctx, mid, p, action):
+        found = self._peaks(ctx, p)
+        if not found:
+            raise ValueError(f"{mid}: no peaks")
+        f = hz(p["freq"], ctx.cf) if p["freq"] else found[0][0]
+        here = float(np.interp(f, ctx.freqs, ctx.trace))
+        on = [k for k, (pf, _) in enumerate(found) if abs(pf - f) <= 2 * ctx.df] # the peak it sits on
+        if action in ("next", "prev"):
+            if on:
+                k = on[0] + (1 if action == "next" else -1)
+                pick = found[k] if 0 <= k < len(found) else None
+            elif action == "next": # off a peak: the highest one below where it is
+                pick = next((q for q in found if q[1] < here), None)
+            else:
+                pick = next((q for q in reversed(found) if q[1] > here), None)
+        else:
+            side = [q for q in found if (q[0] < f - ctx.df / 2 if action == "left" else q[0] > f + ctx.df / 2)]
+            pick = min(side, key=lambda q: abs(q[0] - f)) if side else None
+        if pick is None:
+            raise ValueError(f"{mid}: no peak {'lower' if action == 'next' else 'higher' if action == 'prev' else 'to the ' + action}")
+        p["freq"], p["track"] = f"{pick[0]:.1f}", False
 
 @marker_kind("delta")
 class Delta(MarkerKind):
@@ -464,11 +510,20 @@ class MarkerSet:
     def describe(self) -> list[dict]:
         """json-serializable markers with their editable settings, for views"""
         return [{"id": mid, "kind": it["kind"], "params": dict(it["params"]),
-                 "fields": [s.to_dict() for s in MARKER_KINDS.get(it["kind"]).PARAMS]} for mid, it in self.items.items()]
+                 "fields": [s.to_dict() for s in MARKER_KINDS.get(it["kind"]).PARAMS],
+                 "actions": list(MARKER_KINDS.get(it["kind"]).ACTIONS)} for mid, it in self.items.items()]
 
     @staticmethod
     def kinds() -> dict[str, list[dict]]:
         return {name: [s.to_dict() for s in cls.PARAMS] for name, cls in MARKER_KINDS.items()}
+
+    def act(self, mid: str, action: str, plot, trace: np.ndarray, freqs: np.ndarray):
+        """Run marker `mid`'s action on `plot`'s latest trace"""
+        item = self._get(mid)
+        kind = self._kind(item["kind"])
+        if action not in kind.ACTIONS:
+            raise ValueError(f"{item['kind']} has no action {action!r}, it has: {', '.join(kind.ACTIONS) or 'none'}")
+        kind.act(Context(plot, trace, freqs), str(mid).upper(), item["params"], action)
 
     def evaluate(self, plot, trace: np.ndarray, freqs: np.ndarray) -> tuple[list[Marker], list[Band], Table | None]:
         """Markers and bands to draw and the table, for `plot`'s latest trace"""

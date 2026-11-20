@@ -199,6 +199,11 @@ class PlotPane:
         box.bind("<<ComboboxSelected>>", add)
         ttk.Button(parent, text="Edit selected", command=self._edit_marker).grid(row=row + 1, column=0)
         ttk.Button(parent, text="Delete selected", command=lambda: self._marker_op(lambda: self.ctrl.del_marker(self.pid, self._selected()))).grid(row=row + 1, column=1)
+        peaks = ttk.Frame(parent) # the selected marker's actions (a peak marker's next peak)
+        peaks.grid(row=row + 3, column=0, columnspan=2, sticky=tk.W)
+        for action, label in (("prev", "▲ Prev"), ("next", "▼ Next"), ("left", "◀ Left"), ("right", "▶ Right")):
+            ttk.Button(peaks, text=label, width=7,
+                       command=lambda a=action: self._marker_op(lambda: self.ctrl.marker_action(self.pid, self._selected(), a))).pack(side=tk.LEFT)
         ttk.Label(parent, text="Draw").grid(row=row + 2, column=0, sticky=tk.W)
         tool = tk.StringVar(parent, self.keep["tool"])
         draw = ttk.Combobox(parent, textvariable=tool, values=list(TOOLS), state="readonly", width=9)
@@ -437,6 +442,8 @@ class PlotPane:
         if ax.image is not None:
             names.add("img")
             self._draw_image(i, ax, mpl, xmin, xmax)
+        if ax.surface is not None and self._draw_surface(ax, mpl):
+            names.add("surf")
         names |= self._draw_marks(ax, mpl)
         for name in self.drawn.get(i, set()) - names: # e.g. a hold trace that was switched off
             art = mpl.art(name)
@@ -515,6 +522,26 @@ class PlotPane:
             txt.set_color(m.color)
             names.update((name, f"mkt{n}"))
         return names
+
+    def _draw_surface(self, ax: Axis, mpl) -> bool:
+        """A Surface as a matplotlib surface colored by height, made again each frame (it can not be updated).
+        False when there is nothing to draw yet (a single row)"""
+        old = mpl.art("surf")
+        if old is not None:
+            old.remove()
+            del mpl.artists["surf"]
+        data = np.asarray(ax.surface.data) # type: ignore[union-attr]
+        rows, cols = data.shape
+        if rows < 2 or cols < 2:
+            return False
+        x = np.linspace(ax.xmin, ax.xmax, cols) # type: ignore[arg-type]
+        y = np.linspace(ax.ymin, ax.ymax, rows) # type: ignore[arg-type]
+        X, Y = np.meshgrid(x, y)
+        Z = ax.zmin + data / 255.0 * (ax.zmax - ax.zmin) # type: ignore[operator]
+        colors = cmap[ax.surface.cmap](data / 255.0) # type: ignore[union-attr]
+        surf = mpl.ax.plot_surface(X, Y, Z, facecolors=colors, rstride=1, cstride=1, linewidth=0, antialiased=False, shade=False)
+        mpl.add_artist("surf", surf)
+        return True
 
     def _draw_bands_3d(self, ax: Axis, mpl) -> set:
         """Bands on a 3d axis: boxes on the x / y floor (at zmin), the y span defaulting to the y range"""

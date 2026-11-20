@@ -113,7 +113,7 @@ def test_every_plot_type_draws(page):
             continue
         frame = page.evaluate("(id) => runtime[id].frame", pid)
         drawn = _drawn(page, pid)
-        has_data = any(a["traces"] or a.get("image") for a in frame["axes"])
+        has_data = any(a["traces"] or a.get("image") or a.get("surface") for a in frame["axes"])
         readout = dict(frame.get("readout") or [])
         if drawn < 500:
             problems.append(f"{name}: drew {drawn} pixels")
@@ -179,4 +179,48 @@ def test_phase_noise_has_a_log_axis(page):
     # the pixel of a decade sits where log spacing puts it
     x = page.evaluate("([id, v]) => pixX(runtime[id].geom[0], v)", [pid, 10 ** ((np.log10(g["xmin"]) + np.log10(g["xmax"])) / 2)])
     assert x == pytest.approx(g["x0"] + g["w"] / 2, abs=1)
+    _clear(page)
+
+def test_peak_marker_steps_with_its_buttons(page):
+    _clear(page)
+    page.select_option("#sel-add-plot", "PSD")
+    page.wait_for_function("Object.keys(state.plots).length === 1")
+    pid = _ids(page)[0]
+    page.select_option(f"#addmk-{pid}", "peak")
+    page.click("#btn-next")
+    freq = lambda: page.evaluate("(id) => state.plots[id].markers[0].params.freq", pid)
+    page.wait_for_function("(id) => state.plots[id].markers[0] && state.plots[id].markers[0].params.freq !== ''", arg=pid)
+    level = lambda: float(page.evaluate("(id) => runtime[id].frame.table.rows[0].cells[3]", pid).split()[0])
+    first = float(freq()) # landed on the highest peak: the QPSK signal near 150 kHz
+    assert 100e3 < first < 200e3
+    def step(action):
+        f = float(freq())
+        page.locator(".mk-row", has_text="peak").locator("button", has_text=action).click()
+        page.wait_for_function("([id, f]) => parseFloat(state.plots[id].markers[0].params.freq) !== f", arg=[pid, f])
+        page.wait_for_function("([id, f]) => runtime[id].frame.table.rows[0].cells[2].length && state.plots[id].markers[0].params.freq !== String(f)", arg=[pid, f])
+        page.wait_for_timeout(200)
+    top = level()
+    step("next")
+    lower = level()
+    assert lower <= top + 0.5 # next: a peak lower down
+    step("prev")
+    assert level() >= lower - 0.5 # prev: back up
+    here = float(freq())
+    page.click("#btn-next")
+    page.wait_for_timeout(300)
+    assert float(freq()) == here # it stays where it was put, block after block
+    assert "rror" not in _message(page)
+    _clear(page)
+
+def test_surface_spectrogram_draws_a_surface(page):
+    _clear(page)
+    page.select_option("#sel-add-plot", "Surface Spectrogram")
+    page.wait_for_function("Object.keys(state.plots).length === 1")
+    pid = _ids(page)[0]
+    for _ in range(4):
+        page.click("#btn-next")
+        page.wait_for_timeout(200)
+    page.wait_for_function("(id) => runtime[id].frame && runtime[id].frame.axes[0].surface && runtime[id].frame.axes[0].surface.rows >= 2", arg=pid)
+    assert page.evaluate("(id) => runtime[id].frame.axes[0].surface.bytes.length", pid) > 0
+    assert _drawn(page, pid) > 5000 # a surface fills a good part of the box
     _clear(page)

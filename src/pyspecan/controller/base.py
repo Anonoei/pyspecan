@@ -137,6 +137,16 @@ class Controller:
             self._markers(pid).set(mid, key, value)
             self.redraw()
 
+    def marker_action(self, pid: str, mid: str, action: str):
+        """A marker's action (a peak marker's next / prev peak) on the plot's latest trace"""
+        with self.lock:
+            plot = self.plots.get(pid)
+            markers = self._markers(pid)
+            if plot.last is None:
+                raise ValueError("no trace yet: step or play first")
+            markers.act(mid, action, plot, plot.last, plot.bin_freqs(len(plot.last)))
+            self.redraw()
+
     def set_marker_params(self, pid: str, mid: str, values: dict):
         """Several settings of one marker at once, one redraw (a mouse drag edits center and width together)"""
         with self.lock:

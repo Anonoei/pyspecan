@@ -229,11 +229,6 @@ def test_move_noops_and_errors():
     plots.remove(a)
     assert plots.layout == [[b]]
 
-def test_there_is_no_mode_setting_realtime_views_are_their_own_plots():
-    for name in PLOTS.names():
-        assert "mode" not in [s.key for s in PLOTS.get(name).SETTINGS], name
-    assert {"PSD", "Persistence", "Spectrogram", "RT Spectrogram"} <= set(PLOTS.names())
-
 def test_psd_is_the_last_swept_frame():
     model = FakeModel(nfft=64)
     src = Source(model)
@@ -1137,9 +1132,80 @@ def test_analog_demod(demod, check):
         x = (1 + 0.5 * m) * np.exp(2j*np.pi*100e3*t) # 50 %
     model = FakeModel(fs=fs, nfft=4096)
     src = Source(model)
-    p = PLOTS.get("Analog Demod")(src, demod=demod, demod_bw="50k")
+    p = PLOTS.get("Analog Demod")(src, mode=demod, demod_bw="50k")
     feed(src, model, x.astype(np.complex64))
     f = p.update()
     r = dict(f.readout)
     assert r["Carrier"] == "100 kHz" and check(r), r
     assert f.axes[0].xfmt == "time" and f.axes[1].xfmt == "freq"
+
+# --- the peak marker: lands on the highest, stays, steps with next / prev / left / right --- #
+def _three_tones(shift=0.0):
+    fs, n = 1000.0, 8192
+    t = np.arange(n) / fs
+    x = (np.exp(2j*np.pi*(100 + shift)*t) + 0.3*np.exp(2j*np.pi*-200*t) + 0.1*np.exp(2j*np.pi*300*t)
+         + 1e-3*np.random.default_rng(0).standard_normal(n))
+    return x.astype(np.complex64)
+
+def test_peak_marker_stays_and_steps():
+    model = FakeModel(nfft=1024)
+    src = Source(model)
+    p = PLOTS.get("PSD")(src, unit="dBFS", vbw=0)
+    mid = p.markers.add("peak", threshold="-60")
+    feed(src, model, _three_tones())
+    def at():
+        f = p.update()
+        return round(next(m.x for m in f.axes[0].markers if m.label == mid))
+    act = lambda a: p.markers.act(mid, a, p, p.last, p.bin_freqs(len(p.last)))
+    assert at() == 100 # the highest
+    act("next")
+    assert at() == -200
+    act("next")
+    assert at() == 300
+    with pytest.raises(ValueError, match="no peak lower"):
+        act("next") # the threshold keeps it off the noise
+    act("prev")
+    assert at() == -200
+    act("right")
+    assert at() == 100 # the nearest peak above in frequency
+    act("left")
+    assert at() == -200
+    feed(src, model, _three_tones(shift=60.0)) # the tone it is not on moves, and it stays put
+    assert at() == -200
+    p.markers.set(mid, "freq", "")
+    assert at() == 160 # blank: lands on the highest again
+    feed(src, model, _three_tones(shift=20.0))
+    assert at() == 160 # and stays there
+    p.markers.set(mid, "track", True)
+    assert at() == 120 # tracking follows it
+    assert p.markers.describe()[0]["actions"] == ["prev", "next", "left", "right"]
+    with pytest.raises(ValueError, match="no action"):
+        p.markers.act(p.markers.add("point", freq="0"), "next", p, p.last, p.bin_freqs(len(p.last)))
+
+def test_peak_marker_is_dragged_by_frequency():
+    model = FakeModel(nfft=1024)
+    src = Source(model)
+    p = PLOTS.get("PSD")(src)
+    p.markers.add("peak")
+    feed(src, model, _three_tones())
+    m = p.update().axes[0].markers[0]
+    assert (m.owner, m.edit) == ("M1", "freq")
+
+def test_surface_spectrogram_frame():
+    from pyspecan.plots.frame import Frame
+    model = FakeModel(nfft=256)
+    src = Source(model)
+    p = PLOTS.get("Surface Spectrogram")(src, max_count=8, points=64)
+    p.markers.add("channel", freq="100", bw="50")
+    for i in range(10):
+        feed(src, model, _two_tones(1024, nfft=256, seed=i))
+        f = p.update()
+    ax = f.axes[0]
+    assert ax.projection == "3d" and ax.surface is not None and ax.surface.data.shape == (8, 64) and ax.surface.data.dtype == np.uint8
+    assert (ax.ymin, ax.ymax) == (0, 7) and ax.zmin < ax.zmax
+    col = int(round((100 - ax.xmin) / (ax.xmax - ax.xmin) * 63))
+    row = ax.surface.data[0].astype(int)
+    assert row[col - 1:col + 2].max() > np.median(row) + 60 # the strong tone stands up, in the newest row (in front)
+    assert [(b.lo, b.hi, b.ylo, b.yhi) for b in ax.bands if b.label == "M1"] == [(75.0, 125.0, None, None)] # on the floor
+    d = Frame([ax]).to_dict()["axes"][0]["surface"]
+    assert (d["rows"], d["cols"]) == (8, 64) and isinstance(d["data"], str)

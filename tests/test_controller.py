@@ -277,7 +277,7 @@ def test_frames_say_which_markers_the_mouse_can_edit():
         feed(src, model, _two_tones(2048))
         d = json.loads(json.dumps(plot.update().to_dict()))["axes"][0]
         by_owner = {m["owner"]: m for m in d["markers"] if m["owner"]}
-        assert set(by_owner) == {"M1"} and by_owner["M1"]["edit"] == "freq", name # only the point: the peak tracks, the others are bands
+        assert set(by_owner) == {"M1", "M2"} and by_owner["M1"]["edit"] == by_owner["M2"]["edit"] == "freq", name # point and (static) peak, the others are bands
         edits = {b["owner"]: b["edit"] for b in d["bands"] if b["edit"]}
         assert edits == {"M3": ["freq", "bw"], "M4": ["freq", "span"]}, name
 
@@ -328,3 +328,21 @@ def test_draw_frame_log_x_axis():
               traces=[Trace(np.linspace(-20, -80, 50), np.geomspace(10, 1e5, 50))])
     lines = [re.sub(r"\x1b\[[0-9;]*m", "", l) for l in draw_frame(Frame([ax]), [None], 60, 12, False)]
     assert lines[-1].split()[0] == "10" and lines[-1].split()[-1] == "100k" and "1k" in lines[-1] # 10 .. 1k .. 100k evenly
+
+def test_marker_actions_through_the_controller_and_console(capture):
+    from pyspecan.controller.CUI.base import Controller as Console
+    class Both(Recorder): # the console's marker command on a recording controller
+        cmd_marker = Console.cmd_marker
+        _need = Console._need
+    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256)
+    c = Both(GetModel(Sink.FILE)(**kw), **kw)
+    pid = c.plots.layout[0][0]
+    mid = c.add_marker(pid, "peak")
+    with pytest.raises(ValueError, match="no trace yet"):
+        c.marker_action(pid, mid, "next")
+    c.command("next")
+    before = c.plots.get(pid).markers.items[mid]["params"]["freq"]
+    c.cmd_marker([pid, "act", mid, "next"]) # the console's "marker <id> act <marker> next"
+    assert c.plots.get(pid).markers.items[mid]["params"]["freq"] != before
+    with pytest.raises(ValueError, match="no action"):
+        c.marker_action(pid, mid, "sideways")

@@ -92,6 +92,13 @@ class Image:
     clear: bool = False
 
 @dataclass
+class Surface:
+    """A height field over a 3d axis' x / y range, drawn as a solid surface colored by height (a 3d surface
+    spectrogram). data (rows, cols) uint8: 0 is zmin, 255 is zmax. Row 0 is at ymin, column 0 at xmin"""
+    data: np.ndarray
+    cmap: str = "magma"
+
+@dataclass
 class Axis:
     xmin: float | None = None
     xmax: float | None = None
@@ -110,6 +117,7 @@ class Axis:
     offscale: str | None = None  # "above" | "below": the data is outside the y range
     traces: list[Trace] = field(default_factory=list)
     image: Image | None = None
+    surface: Surface | None = None   # 3d axes only
     markers: list[Marker] = field(default_factory=list)
     bands: list[Band] = field(default_factory=list)
 
@@ -167,6 +175,10 @@ def _axis_dict(ax: Axis, digits) -> dict:
     d["markers"] = [{"x": float(m.x), "y": float(m.y), "label": m.label, "color": m.color, "kind": m.kind, "owner": m.owner, "edit": m.edit} for m in ax.markers]
     d["bands"] = [{"lo": float(b.lo), "hi": float(b.hi), "ylo": _opt(b.ylo), "yhi": _opt(b.yhi), "color": b.color, "alpha": b.alpha,
                    "label": b.label, "owner": b.owner, "edit": list(b.edit) if b.edit else None} for b in ax.bands]
+    if ax.surface is not None:
+        data = np.ascontiguousarray(ax.surface.data, dtype=np.uint8)
+        d["surface"] = {"data": base64.b64encode(data.tobytes()).decode(), "rows": data.shape[0], "cols": data.shape[1],
+                        "cmap": ax.surface.cmap}
     if ax.image is not None:
         im = ax.image
         data = np.ascontiguousarray(im.data, dtype=np.uint8)

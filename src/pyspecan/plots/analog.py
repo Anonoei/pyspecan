@@ -113,7 +113,7 @@ class AnalogDemod(Plot):
     deviation, the modulating frequency and the SINAD"""
     TITLE = "Analog Demod"
     SETTINGS = (
-        Setting("demod", "Demod", "select", default="FM", options=MODES, reset=True, group="Demod"),
+        Setting("mode", "Mode", "select", default="FM", options=MODES, reset=True, group="Demod", help="what is demodulated"),
         Setting("carrier", "Carrier", "text", default="", coerce=freq_text, hint="strongest", group="Demod",
                 help="the carrier, blank for the strongest"),
         Setting("demod_bw", "Bandwidth", "text", default="", coerce=freq_text, hint="sample rate", group="Demod",
@@ -142,7 +142,7 @@ class AnalogDemod(Plot):
             Y = np.fft.fft(y)
             Y[np.abs(f) > bw / 2] = 0
             y = np.fft.ifft(Y)
-        mode = self.demod
+        mode = self.mode
         readout = [("Carrier", fmt_hz(self.source.cf + off))]
         if mode == "AM":
             env = np.abs(y)
