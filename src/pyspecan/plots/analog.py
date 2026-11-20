@@ -6,7 +6,7 @@ from ..measure.windows import WindowLUT
 from .base import About, Plot, plot
 from .frame import BLUE, GREEN, YELLOW, Axis, Frame, Trace
 from .freq import fmt_hz, freq_text, hz, to_psd
-from .scope import _zigzag
+from .reduce import envelope
 from .settings import Setting
 
 
@@ -195,7 +195,7 @@ class AnalogDemod(Plot):
         keep = sf <= fmax
         shown = d[-self.count:]
         tt = np.arange(len(shown)) / fs
-        tx, ty = _zigzag(tt, shown)
+        tx, ty = envelope(tt, shown)
         lim = float(np.max(np.abs(shown))) * 1.2 or 1.0
         return Frame([
             Axis(xmin=0.0, xmax=len(shown) / fs, xfmt="time", ymin=-lim, ymax=lim, yfmt=yfmt, xlabel="Time",

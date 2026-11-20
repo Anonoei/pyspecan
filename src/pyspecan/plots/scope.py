@@ -15,9 +15,9 @@ from ..measure import trigger
 from .base import About, Plot, plot
 from .frame import BLUE, GREEN, RED, YELLOW, Axis, Frame, Marker, Trace, fmt_time
 from .freq import fmt_hz, freq_text, hz
+from .reduce import COLS, envelope
 from .settings import Setting
 
-COLS = 500          # screen columns: traces longer than 2*COLS points are drawn as a min / max envelope
 MAX_SPAN = 1 << 22  # most samples one screen holds, bounds the carried history
 
 CHANNELS = ("I/Q", "I", "Q", "Mag", "Phase")
@@ -66,14 +66,6 @@ def components(x: np.ndarray, channel: str) -> list[tuple[str, np.ndarray, str]]
     if channel == "Phase":
         return [("phase", np.angle(x), GREEN)]
     raise ValueError(f"unknown channel {channel!r}")
-
-def _zigzag(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """A long trace as a min / max envelope over COLS columns, drawn as one line"""
-    if len(y) <= 2*COLS:
-        return x, y
-    mn, mx = trigger.envelope(y, COLS)
-    xs = x[(np.arange(COLS) * len(x)) // COLS]
-    return np.repeat(xs, 2), np.column_stack((mn, mx)).ravel()
 
 @plot("Scope")
 class Scope(Plot):
@@ -201,7 +193,7 @@ class Scope(Plot):
             alpha = 1.0 if age == 0 else max(0.08, 0.5 * (1 - age / len(trigs)))
             for name, y, color in components(buf[i0:i0 + n], self.channel):
                 shown.append(y)
-                xs, ys = _zigzag(x, y)
+                xs, ys = envelope(x, y)
                 traces.insert(0, Trace(ys, xs, color=color, name=f"{name}{age}", alpha=alpha, width=1.5 if age == 0 else 1.0))
         ymin, ymax = self._y_range(shown)
         markers = [Marker(0.0, kind="vline", color=RED)]
@@ -290,7 +282,7 @@ class FreqVsTime(Plot):
         if self.smooth > 1 and len(f) > self.smooth:
             f = np.convolve(f, np.full(self.smooth, 1.0 / self.smooth), "valid")
         t = np.arange(len(f)) / fs
-        x, y = _zigzag(t, f) # a long trace as a min / max envelope
+        x, y = envelope(t, f) # a long trace as a min / max envelope
         span = hz(self.fspan, fs) or fs
         return Frame([Axis(
             xmin=0.0, xmax=len(samps) / fs, xfmt="time", ymin=-span / 2, ymax=span / 2, yfmt="freq",
