@@ -740,3 +740,71 @@ def test_cal_db_still_a_cli_flag():
     assert global_kwargs(kw) == {"cal_db": -7.0}
     with pytest.raises(SystemExit): # per plot settings go in --plot / --layout now
         parser.parse_args(["--vbw", "2"])
+
+# --- extensions --- #
+class FakeEntryPoint:
+    def __init__(self, name, load):
+        self.name, self.value, self._load = name, f"fake:{name}", load
+    def load(self):
+        return self._load()
+
+@pytest.fixture
+def extensions(monkeypatch):
+    """Run plots.load_extensions over fake entry points, unregister what they added afterwards"""
+    import pyspecan.plots as plots
+    from pyspecan.plots.markers import MARKER_KINDS
+    before = (set(PLOTS.names()), set(MARKER_KINDS.names()))
+    monkeypatch.delenv("PYSPECAN_NO_EXTENSIONS", raising=False)
+    def run(*eps):
+        monkeypatch.setattr(plots.metadata, "entry_points", lambda group: list(eps) if group == plots.EXTENSION_GROUP else [])
+        monkeypatch.setattr(plots, "_extensions_loaded", False)
+        return plots.load_extensions()
+    yield run
+    for name in set(PLOTS.names()) - before[0]:
+        PLOTS.unregister(name)
+    for name in set(MARKER_KINDS.names()) - before[1]:
+        MARKER_KINDS.unregister(name)
+
+def _register_ext():
+    from pyspecan.plots import Frame, LINE, MarkerKind, Plot, marker_kind, plot
+    @plot("ExtTest")
+    class ExtTest(Plot):
+        FEATURES = frozenset({LINE})
+        def render(self):
+            return Frame()
+    @marker_kind("ext")
+    class Ext(MarkerKind):
+        pass
+
+def test_extension_registers_plot_and_marker(extensions):
+    from pyspecan.plots import layout
+    from pyspecan.plots.markers import MARKER_KINDS
+    assert extensions(FakeEntryPoint("ext", _register_ext)) == ["ext"]
+    assert PLOTS.names()[-1] == "ExtTest"  # after the built in plots
+    assert "ExtTest" in available({"line"}) and "ext" in MARKER_KINDS
+    layout.validate(layout.parse_inline(["ext_test"]))
+
+def test_extension_failures_warn_and_continue(extensions, caplog):
+    def broken():
+        raise ImportError("no module named nope")
+    def clash():
+        from pyspecan.plots import Plot, plot
+        plot("PSD")(type("Clash", (Plot,), {}))
+    psd = PLOTS.get("PSD")
+    with caplog.at_level("WARNING", logger="pyspecan.plots"):
+        loaded = extensions(FakeEntryPoint("a_broken", broken), FakeEntryPoint("b_clash", clash),
+                            FakeEntryPoint("c_ok", _register_ext))
+    assert loaded == ["c_ok"] and "ExtTest" in PLOTS
+    assert PLOTS.get("PSD") is psd
+    assert "a_broken" in caplog.text and "b_clash" in caplog.text and "already registered" in caplog.text
+
+def test_extensions_disabled(extensions, monkeypatch):
+    monkeypatch.setenv("PYSPECAN_NO_EXTENSIONS", "1")
+    assert extensions(FakeEntryPoint("ext", _register_ext)) == [] and "ExtTest" not in PLOTS
+
+def test_missing_extension_hint():
+    from pyspecan.plots import layout
+    with pytest.raises(ValueError, match="need their package installed"):
+        layout.validate(layout.parse_inline(["NotInstalled"]))
+    with pytest.raises(ValueError, match="unknown marker kind 'nope'.*need their package installed"):
+        layout.validate(layout.parse_inline(["PSD marker=nope"]))

@@ -5,11 +5,39 @@
 Importing this package registers every plot. To add a plot, write a `Plot`
 subclass decorated with `@plot("Name")` in this package and import it below, every
 view (web, tk, console) picks it up. Views list the plots whose FEATURES they can draw.
+
+Extensions
+----------
+Another package can add plots and marker kinds without changing pyspecan. Put them in a
+module and name it under the "pyspecan.plots" entry point group:
+
+    # pyproject.toml of the extension
+    [project.entry-points."pyspecan.plots"]
+    mypkg = "mypkg.specan_plots"
+
+    # mypkg/specan_plots.py, importing it registers the plots
+    from pyspecan.plots import Plot, plot, Frame, Axis, Trace, Setting, LINE
+
+    @plot("Hello")
+    class Hello(Plot):
+        TITLE = "Hello"
+        FEATURES = frozenset({LINE})            # what a view must draw to list it
+        SETTINGS = (Setting("gain", "Gain", default=1.0),)
+        def render(self):
+            ...                                 # read self.source, return a Frame
+
+Frequency plots that carry markers subclass `FreqPlot`, new marker kinds subclass `MarkerKind`
+with `@marker_kind("name")`. Extensions load after the built in plots (so pickers list them
+last), in entry point name order. One that fails to import or registers a name already taken
+logs a warning (what it registered before failing stays). Set PYSPECAN_NO_EXTENSIONS=1 to load none.
 """
 import argparse
+import logging
+import os
+from importlib import metadata
 
 from .base import Plot, PLOTS, plot, available
-from .frame import Frame, Axis, Trace, Image, Scroller
+from .frame import Frame, Axis, Trace, Image, Scroller, LINE, SCATTER, IMAGE, THREE_D
 from .plotset import PlotSet, Link
 from .settings import Setting, GLOBAL_SETTINGS
 from . import layout
@@ -18,6 +46,31 @@ from .source import Source
 
 # registration order is the order views list them in
 from . import psd, spg, pst, fft, iq, scope, measure, markers
+from .freq import FreqPlot
+from .markers import MarkerKind, MARKER_KINDS, marker_kind
+
+EXTENSION_GROUP = "pyspecan.plots"
+_log = logging.getLogger(__name__)
+_extensions_loaded = False
+
+def load_extensions() -> list[str]:
+    """Import the modules named in the EXTENSION_GROUP entry points, which registers their plots
+    and marker kinds. Runs once, returns the names of the entry points that loaded"""
+    global _extensions_loaded
+    if _extensions_loaded or os.environ.get("PYSPECAN_NO_EXTENSIONS"):
+        return []
+    _extensions_loaded = True
+    loaded = []
+    for ep in sorted(metadata.entry_points(group=EXTENSION_GROUP), key=lambda ep: ep.name):
+        try:
+            ep.load()
+        except Exception as e: # pylint: disable=broad-exception-caught
+            _log.warning("pyspecan plot extension %r (%s) failed to load: %s", ep.name, ep.value, e)
+        else:
+            loaded.append(ep.name)
+    return loaded
+
+load_extensions()
 
 def args_plots(parser: argparse.ArgumentParser):
     """The global plot settings (calibration) and the launch layout"""

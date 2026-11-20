@@ -41,6 +41,8 @@ class LayoutSpec:
 def default() -> LayoutSpec:
     return LayoutSpec([[PlotSpec("PSD")]])
 
+EXT_HINT = "plots and marker kinds from extensions need their package installed"
+
 def _norm(name: str) -> str:
     return "".join(ch for ch in str(name).lower() if ch.isalnum())
 
@@ -50,7 +52,7 @@ def resolve_type(name: str) -> str:
     for registered in PLOTS.names():
         if _norm(registered) == want:
             return registered
-    raise ValueError(f"unknown plot {name!r}, choose from: {', '.join(PLOTS.names())}")
+    raise ValueError(f"unknown plot {name!r}, choose from: {', '.join(PLOTS.names())} ({EXT_HINT})")
 
 # --- command line --- #
 def _marker(text: str) -> dict:
@@ -189,6 +191,9 @@ def validate(spec: LayoutSpec, plot_types=None):
                 raise ValueError("it does not carry markers")
             for m in p.markers:
                 params = {k: v for k, v in m.items() if k != "kind"}
+                if m["kind"] not in MARKER_KINDS:
+                    raise ValueError(f"unknown marker kind {m['kind']!r}, choose from: "
+                                     f"{', '.join(MARKER_KINDS.names())} ({EXT_HINT})")
                 kind = MARKER_KINDS.get(m["kind"])
                 for key, value in params.items():
                     s = by_key(kind.PARAMS, key)

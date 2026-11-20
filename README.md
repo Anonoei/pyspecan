@@ -55,6 +55,15 @@ that shows every sample as a min/max envelope.
 - Screens longer than one block are filled across blocks
 - For faster updates, lower the samples per block and the frame interval together, e.g. `-st 20 --show 20` (about 50 updates/s). Faster than the screen can redraw only adds lag.
 
+## Plot extensions
+Other packages can add plots and marker kinds, which every view then lists. Name a module that
+registers them (`@plot("Name")`, `@marker_kind("name")`) under the `pyspecan.plots` entry point group:
+```toml
+[project.entry-points."pyspecan.plots"]
+mypkg = "mypkg.specan_plots"
+```
+See the `pyspecan.plots` docstring for a full example. `PYSPECAN_NO_EXTENSIONS=1` turns them off.
+
 # Install
 1. Run `pip install pyspecan`, to install
 2. Run `python3 -m pyspecan --help` to view available arguments
