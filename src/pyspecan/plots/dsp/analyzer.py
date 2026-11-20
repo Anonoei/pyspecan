@@ -20,7 +20,6 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from ..freq import hz
-
 from ..settings import ANALYSIS_SETTINGS, by_key
 
 MODULATIONS = by_key(ANALYSIS_SETTINGS, "dsp_mod").options

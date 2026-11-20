@@ -1,5 +1,6 @@
 from ... import logger
 
+
 class Sink:
     def __init__(self, view):
         self.log = logger.new(f"tkGUI.view.{type(self).__name__}")

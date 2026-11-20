@@ -1,12 +1,12 @@
 """Initialize pyspecan module/script"""
 from . import err
-from .config import config, Sink, View
-
-from .model.model import Model, GetModel
-from .view.view import GetView
-from .controller.controller import GetController
 from .arguments import split
+from .config import Sink, View, config
+from .controller.controller import GetController
+from .model.model import GetModel, Model
 from .plots import layout_from_kwargs
+from .view.view import GetView
+
 
 class SpecAn:
     """Run pyspecan: `SpecAn("web", "file", path="x.cf64", Fs="250k", layout=...)`

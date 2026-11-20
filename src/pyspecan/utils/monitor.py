@@ -1,8 +1,7 @@
+import cProfile
 import linecache
 import os
 import tracemalloc
-
-import cProfile
 
 
 class Memory:

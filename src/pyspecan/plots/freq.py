@@ -12,6 +12,7 @@ from .base import Plot
 from .frame import BLUE, GREEN, RED, Axis, Frame, Marker, Trace
 from .settings import Setting
 
+
 def _ref_level(value):
     if str(value).strip().lower() in ("", "auto"):
         return "auto"
@@ -83,7 +84,7 @@ class FreqPlot(Plot):
     )
 
     def __init__(self, source, **kwargs):
-        from .markers import MarkerSet # markers import this module
+        from .markers import MarkerSet  # markers import this module
         self.own_markers = MarkerSet()
         self.last = None
         super().__init__(source, **kwargs)

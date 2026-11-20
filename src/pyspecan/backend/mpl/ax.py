@@ -1,5 +1,6 @@
 from matplotlib.axes import Axes
 
+
 class Ax:
     def __init__(self, ax: Axes, parent=None):
         self.parent = parent

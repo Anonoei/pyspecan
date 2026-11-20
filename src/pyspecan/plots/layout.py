@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from .base import PLOTS
 from .settings import ANALYSIS_SETTINGS, GLOBAL_SETTINGS, HAVE_RPPS, by_key
 
+
 @dataclass
 class PlotSpec:
     type: str

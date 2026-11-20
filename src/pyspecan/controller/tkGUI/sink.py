@@ -1,5 +1,6 @@
 from ... import logger
 
+
 class Sink:
     """tkGUI controller for a model sink"""
     def __init__(self, ctrl):

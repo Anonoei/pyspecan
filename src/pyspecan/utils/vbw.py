@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def sigma2fwhm(sigma):
     return sigma * np.sqrt(8 * np.log(2))
 

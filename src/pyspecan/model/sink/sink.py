@@ -3,8 +3,9 @@ import math
 
 import numpy as np
 
-from .. import logger
 from ...obj import Frequency
+from .. import logger
+
 
 class SinkConfig:
     Fs = 1

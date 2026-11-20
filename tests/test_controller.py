@@ -3,9 +3,9 @@ import numpy as np
 import pytest
 
 from pyspecan.config import Sink
+from pyspecan.controller.base import Controller
 from pyspecan.model.model import GetModel
 from pyspecan.plots.frame import Axis, Frame, Image, Trace
-from pyspecan.controller.base import Controller
 from pyspecan.view.CUI.draw import draw_frame
 
 FS = 10_000
@@ -179,6 +179,7 @@ def test_playback_failures_say_why(capture, capsys):
 
 def test_draw_frame_shows_markers_bands_and_readout():
     import re
+
     from pyspecan.plots.frame import Band, Marker
     x = np.linspace(-1, 1, 400)
     ax = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", ymin=-100, ymax=0, traces=[Trace(np.sin(x*9)*50-50)],
@@ -195,6 +196,7 @@ def test_draw_frame_shows_markers_bands_and_readout():
 
 def test_draw_frame_shows_marks_on_images():
     import re
+
     from pyspecan.plots.frame import Band, Image, Marker
     data = np.full((20, 100), 128, dtype=np.uint8)
     spg = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", image=Image(data),
@@ -211,6 +213,7 @@ def test_draw_frame_shows_marks_on_images():
 
 def test_draw_frame_shows_level_lines_boxes_and_time():
     import re
+
     from pyspecan.plots.frame import Band, Image, Marker
     strip = lambda ls: [re.sub(r"\x1b\[[0-9;]*m", "", l) for l in ls]
     ax = Axis(xmin=-1e-3, xmax=1e-3, xfmt="time", ymin=-1, ymax=1, traces=[Trace(np.zeros(50))],
@@ -253,8 +256,9 @@ def test_marker_edits_redraw_the_current_block_while_stopped(capture):
         c.set_marker_params(pid, "M1", {"freq": "1k", "nope": 1}) # nothing applied
 
 def test_marker_set_many_is_all_or_nothing():
-    from pyspecan.plots import PLOTS, Source
     from tests.test_plots import FakeModel
+
+    from pyspecan.plots import PLOTS, Source
     psd = PLOTS.get("PSD")(Source(FakeModel()))
     mid = psd.markers.add("channel", freq="100", bw="50")
     psd.markers.set_many(mid, {"freq": "200.5", "bw": "10"})
@@ -266,8 +270,10 @@ def test_marker_set_many_is_all_or_nothing():
 
 def test_frames_say_which_markers_the_mouse_can_edit():
     import json
+
+    from tests.test_plots import FakeModel, _two_tones, feed
+
     from pyspecan.plots import PLOTS, Source
-    from tests.test_plots import FakeModel, feed, _two_tones
     model = FakeModel(nfft=256)
     src = Source(model)
     for name in ("PSD", "Spectrogram"):

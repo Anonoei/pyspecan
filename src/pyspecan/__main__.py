@@ -6,8 +6,8 @@ To run without installing as a module, use `python3 -m src.pyspecan`
 This makes specan available, by using _internal.main
 Use `python3 -m pyspecan --help` to see available arguments
 """
-import sys
 import pathlib
+import sys
 
 if __name__ == "__main__":
     try:

@@ -2,8 +2,8 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from ...backend.tk import widgets
-
 from .sink import Sink
+
 
 class SinkFile(Sink):
     __slots__ = (

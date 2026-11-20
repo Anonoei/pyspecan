@@ -57,6 +57,18 @@ jobs:
         if: runner.os != 'Linux'
         run: python -m pytest -q --durations=10
 
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install ruff
+      - run: ruff check src tests dev # the rules are in pyproject.toml
+
   without-rpps:
     # rpps is optional: everything but the DSP plots must work without it (they skip, the rest runs)
     name: Without rpps (Python 3.12, Linux)

@@ -3,9 +3,10 @@ import sys
 
 from .. import err
 from ..arguments import build_parser, define_args, parse
-from ..config import config, View, Sink
+from ..config import Sink, View, config
 from ..plots import layout_from_kwargs
 from ..specan import SpecAn
+
 
 def _list_radios(device, servers=None):
     from ..model.sink.live import list_devices, parse_servers

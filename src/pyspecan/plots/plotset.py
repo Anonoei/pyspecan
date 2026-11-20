@@ -25,7 +25,7 @@ def _changed(settings, values: dict) -> dict:
     return {s.key: values[s.key] for s in settings if s.key in values and values[s.key] != s.parse(s.default)}
 
 def _marker_spec(m: dict) -> dict:
-    from .markers import MARKER_KINDS # markers import the plots
+    from .markers import MARKER_KINDS  # markers import the plots
     return {"kind": m["kind"], **_changed(MARKER_KINDS.get(m["kind"]).PARAMS, m["params"])}
 
 class PlotSet:

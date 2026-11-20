@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+
 class PanelView:
     """The area plots live in: rows (top to bottom) of panes (left to right)"""
     def __init__(self, master):

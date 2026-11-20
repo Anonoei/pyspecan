@@ -2,9 +2,9 @@
 import numpy as np
 import pysdrlib
 
+from ...obj import Frequency
 from .sink import Sink, SinkConfig
 
-from ...obj import Frequency
 
 def args_tcpiq(sink):
     sink.add_argument("--tcp_host", default=None, help="client: server to connect to; server: address to listen on (default: all interfaces)")

@@ -6,7 +6,25 @@ any spectrum), see analyzer.py for how it is found and locked.
 import numpy as np
 
 from ..base import About, Plot, plot
-from ..frame import BLUE, GREEN, IMAGE, LINE, RED, SCATTER, THREE_D, YELLOW, Axis, Frame, Image, Marker, Table, TableRow, Trace, fmt_time, time_unit
+from ..frame import (
+    BLUE,
+    GREEN,
+    IMAGE,
+    LINE,
+    RED,
+    SCATTER,
+    THREE_D,
+    YELLOW,
+    Axis,
+    Frame,
+    Image,
+    Marker,
+    Table,
+    TableRow,
+    Trace,
+    fmt_time,
+    time_unit,
+)
 from ..freq import SETTING_CMAP, fmt_hz
 from ..iq import density
 from ..settings import Setting

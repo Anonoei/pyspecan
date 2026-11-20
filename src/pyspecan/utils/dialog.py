@@ -1,7 +1,7 @@
 """tkinter dialogs"""
 import pathlib
-
 from tkinter import filedialog
+
 
 def save_file(title: str = "", filetypes=None, defaultextension: str = ""):
     """Prompts for a file to write, None when cancelled"""

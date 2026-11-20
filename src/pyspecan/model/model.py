@@ -1,12 +1,9 @@
 from ..config import Sink as _Sink
-from ..utils.registry import Registry
-
-from .base import Model, args_model
 from ..utils import args
+from ..utils.registry import Registry
+from .base import Model, args_model
+from .sink import SinkFile, SinkLive, SinkTcpIq, args_file, args_live, args_tcpiq
 from .sink.sink import args_sink
-from .sink import SinkFile, args_file
-from .sink import SinkLive, args_live
-from .sink import SinkTcpIq, args_tcpiq
 
 SINKS: Registry = Registry("sink")
 SINKS.register(_Sink.FILE.name)((SinkFile, args_file))

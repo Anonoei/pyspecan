@@ -7,9 +7,10 @@ import numpy as np
 from ..measure import CCDF as _CCDF
 from ..measure import channel, units, windows
 from .base import About, Plot, plot
-from .frame import Axis, Frame, Marker, Trace, GREEN, RED, YELLOW
+from .frame import GREEN, RED, YELLOW, Axis, Frame, Marker, Trace
 from .freq import POWER_UNIT, FreqPlot, _ref_level, fmt_hz, freq_text, hz
 from .settings import Setting, override, without
+
 
 def _db(p: float) -> float:
     return float(units.lin_to_db(p))

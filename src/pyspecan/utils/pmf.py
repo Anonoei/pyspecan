@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class PMF:
     def __init__(self, bins=100, scale=0.2):
         self.num_bin = bins

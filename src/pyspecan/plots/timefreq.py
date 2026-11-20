@@ -6,6 +6,7 @@ from .frame import IMAGE, Axis, Frame, Image, fmt_time
 from .freq import SETTING_CMAP, fmt_hz, freq_text, hz
 from .settings import Setting
 
+
 @plot("Scalogram")
 class Scalogram(Plot):
     """Wavelet scalogram: a continuous wavelet transform (Morlet) of the samples, frequency on a log axis against time.

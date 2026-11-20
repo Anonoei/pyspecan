@@ -9,6 +9,7 @@ from .freq import fmt_hz, freq_text, hz, to_psd
 from .scope import _zigzag
 from .settings import Setting
 
+
 def _db(v: float) -> float:
     return float(10 * np.log10(max(v, 1e-30)))
 

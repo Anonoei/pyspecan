@@ -6,9 +6,8 @@ import time
 import pysdrlib
 from pysdrlib import err as _err
 
-from .sink import Sink, SinkConfig
-
 from ...obj import Frequency
+from .sink import Sink, SinkConfig
 
 PROGRAM = "pyspecan" # what a pysdrlib server shows next to a radio this program holds
 SERVERS_ENV = "PYSPECAN_SERVERS" # known pysdrlib servers, when --servers is not given

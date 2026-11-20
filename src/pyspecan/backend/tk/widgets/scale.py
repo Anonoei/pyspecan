@@ -1,6 +1,7 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
+
 class Scale(ttk.Frame):
     def __init__(self, master=None, **kw):
         ttk.Frame.__init__(self, master)

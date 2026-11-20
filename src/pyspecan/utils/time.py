@@ -1,5 +1,6 @@
 import datetime as dt
 
+
 def split_td(td: dt.timedelta):
     s = td.total_seconds()
     hrs, remainder = divmod(s, 3600)

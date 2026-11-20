@@ -8,22 +8,21 @@ import tkinter as tk
 from tkinter import simpledialog, ttk
 
 import numpy as np
-
-from matplotlib.figure import Figure
-from matplotlib.ticker import ScalarFormatter
-from matplotlib.patches import Rectangle
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-from matplotlib.ticker import FuncFormatter
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
+from matplotlib.ticker import FuncFormatter, ScalarFormatter
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from ...backend.mpl.color import cmap
 from ...backend.mpl.plot import BlitPlot
 from ...obj import Frequency
 from ...plots import Scroller
 from ...plots.drag import MIN_DRAG_PX, TOOLS, Drag, commit, hit_test, preview, settled
-from ...plots.freq import fmt_hz
 from ...plots.frame import Axis, Frame, Image, fmt_time
+from ...plots.freq import fmt_hz
 from ...view.tkGUI.panels import Panel
+
 
 def _signature(frame: Frame):
     """What decides the figure's layout, the figure is rebuilt when it changes"""

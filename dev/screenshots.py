@@ -27,13 +27,12 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 
-import numpy as np
-
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 
-from demo import FS, SECONDS, capture # noqa: E402 (the synthetic capture, shared with benchmark.py)
+from demo import capture  # noqa: E402 (the synthetic capture, shared with benchmark.py)
+
 
 # --- scenes --- #
 @dataclass
@@ -143,6 +142,7 @@ def shoot_web(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
 # --- tk --- #
 def shoot_tk(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
     from PIL import ImageGrab
+
     from pyspecan.config import Sink, View
     from pyspecan.controller.controller import GetController
     from pyspecan.model.model import GetModel

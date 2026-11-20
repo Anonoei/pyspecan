@@ -1,6 +1,7 @@
 from .base import About, plot
-from .freq import FreqPlot, HoldMixin, RefMixin, TraceMixin
 from .frame import Axis, Frame, Trace
+from .freq import FreqPlot, HoldMixin, RefMixin, TraceMixin
+
 
 @plot("PSD")
 class PSD(RefMixin, TraceMixin, HoldMixin, FreqPlot):

@@ -10,6 +10,7 @@ from pyspecan.plots.freq import to_psd
 from pyspecan.plots.source import Stream
 from pyspecan.utils.vbw import vbw, vbw_rows
 
+
 def ref_psd(samples, Fs=1.0, vbw=None, win="blackman"):
     """Straightforward windowed periodogram in dB/Hz, what the plots are checked against"""
     from pyspecan.measure.windows import WindowLUT
@@ -241,6 +242,7 @@ def test_psd_is_the_last_swept_frame():
 
 def test_frame_markers_bands_readout_round_trip():
     import json
+
     from pyspecan.plots.frame import Axis, Band, Frame, Marker
     ax = Axis(yfmt="log10", markers=[Marker(1.5, -20.0, "M1"), Marker(2.0, kind="vline")], bands=[Band(1.0, 2.0, label="ch")])
     d = json.loads(json.dumps(Frame([ax], readout=[("Power", "-3.2 dBm")]).to_dict()))
@@ -792,6 +794,7 @@ def test_global_cal_reaches_every_plot():
 
 def test_cal_db_still_a_cli_flag():
     import argparse
+
     from pyspecan.plots import args_plots, global_kwargs
     parser = argparse.ArgumentParser()
     args_plots(parser)
@@ -825,7 +828,7 @@ def extensions(monkeypatch):
         MARKER_KINDS.unregister(name)
 
 def _register_ext():
-    from pyspecan.plots import Frame, LINE, MarkerKind, Plot, marker_kind, plot
+    from pyspecan.plots import LINE, Frame, MarkerKind, Plot, marker_kind, plot
     @plot("ExtTest")
     class ExtTest(Plot):
         FEATURES = frozenset({LINE})

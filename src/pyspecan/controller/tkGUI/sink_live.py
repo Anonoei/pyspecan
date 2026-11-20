@@ -2,6 +2,7 @@
 
 from .sink import Sink
 
+
 class SinkLive(Sink):
     def __init__(self, ctrl):
         super().__init__(ctrl)

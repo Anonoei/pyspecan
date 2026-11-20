@@ -1,8 +1,8 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
-
 from .sink import Sink
+
 
 class SinkLive(Sink):
     __slots__ = (

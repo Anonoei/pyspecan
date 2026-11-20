@@ -1,6 +1,7 @@
 """A tooltip: a small borderless window of text beside a widget or a menu entry"""
 import tkinter as tk
 
+
 class Tooltip:
     """One floating label, shown with `show(text, x, y)` (screen coordinates) and hidden with `hide()`.
     `attach(widget, text)` shows it while the pointer is over a widget (text may be a callable, read each time)"""

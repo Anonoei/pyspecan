@@ -2,13 +2,13 @@
 import pathlib
 
 import pysdrlib
-from pysdrlib import Formats as _Formats
 from pysdrlib import File as _File
+from pysdrlib import Formats as _Formats
+
+from .sink import Sink
 
 # reading from a file that was never opened: newer pysdrlib raises NotOpen, older ones fail on a missing handle
 NotOpen = getattr(getattr(pysdrlib, "err", None), "NotOpen", AttributeError)
-
-from .sink import Sink
 
 
 # IQ formats only: real formats would yield real samples

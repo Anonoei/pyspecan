@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Sink(Enum):
     """Sink modes, `value` is the command line name"""
     NONE = "none"

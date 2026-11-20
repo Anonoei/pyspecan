@@ -8,8 +8,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from ... import logger
-from ...view.tkGUI.panels import PanelView, PanelChild, Panel
-
+from ...view.tkGUI.panels import Panel, PanelChild, PanelView
 from .plot import PlotPane
 
 BAR = 10 # [px] thickness of the drop indicator

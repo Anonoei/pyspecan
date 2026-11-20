@@ -2,9 +2,10 @@ import numpy as np
 
 from ..utils import matrix
 from .base import About, plot
-from .freq import FreqPlot, SETTING_CMAP
-from .frame import Axis, Frame, Image, Trace, IMAGE, LINE, RED, YELLOW
+from .frame import IMAGE, LINE, RED, YELLOW, Axis, Frame, Image, Trace
+from .freq import SETTING_CMAP, FreqPlot
 from .settings import Setting, override
+
 
 @plot("Persistence")
 class PST(FreqPlot):

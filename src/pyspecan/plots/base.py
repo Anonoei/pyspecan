@@ -6,8 +6,9 @@ Subclasses declare `SETTINGS`, implement `render()` and register with `@plot("Na
 from dataclasses import dataclass
 
 from ..utils.registry import Registry
-from .frame import Frame, LINE
+from .frame import LINE, Frame
 from .settings import GLOBAL_SETTINGS, Setting, by_key
+
 
 def default_globals(**kwargs) -> dict:
     """Values of the GLOBAL_SETTINGS, from `kwargs` where given"""

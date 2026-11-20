@@ -5,8 +5,8 @@ import pytest
 
 from pyspecan.plots import PlotSet, Source, layout, layout_from_kwargs
 from pyspecan.plots.layout import LayoutSpec, PlotSpec
-
 from test_plots import FakeModel
+
 
 def _plots():
     return PlotSet(Source(FakeModel(nfft=1024)))

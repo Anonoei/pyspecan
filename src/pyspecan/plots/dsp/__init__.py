@@ -3,7 +3,9 @@ signal found on a spectrum, and the plots that analyse the one selected (Constel
 
 Imported by pyspecan.plots only when rpps is installed (settings.HAVE_RPPS); rpps itself is imported when they first run.
 """
-from . import analyzer, signals, plots
+# isort: off
+from . import analyzer, signals, plots # the signals marker kind before the plots, as they list
+# isort: on
 from .analyzer import Analyzer, Lock, Selection
 
 __all__ = ["analyzer", "signals", "plots", "Analyzer", "Lock", "Selection"] # importing the modules registers them

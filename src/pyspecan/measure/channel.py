@@ -1,6 +1,7 @@
 """Channel measurements on a linear power density (power per Hz) and its frequency axis"""
 import numpy as np
 
+
 def _df(freqs: np.ndarray) -> float:
     return float(freqs[1] - freqs[0]) if len(freqs) > 1 else 1.0
 

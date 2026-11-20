@@ -1,5 +1,5 @@
-from matplotlib.figure import Figure
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from .ax import Ax, BlitAx
 

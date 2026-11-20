@@ -1,6 +1,7 @@
 """HTTP API"""
 from fastapi import APIRouter, HTTPException, Response
 
+
 class API:
     def __init__(self, parent):
         self.parent = parent

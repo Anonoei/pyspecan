@@ -29,7 +29,7 @@ import numpy as np
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from demo import capture # noqa: E402
+from demo import capture  # noqa: E402
 
 REFERENCE = "PSD"
 DSP_GLOBALS = {"dsp_freq": "150k", "dsp_bw": "60k"}
@@ -97,7 +97,7 @@ def main():
     ap.add_argument("--sort", choices=("cost", "name"), default="cost")
     ap.add_argument("--json", default=None, metavar="FILE", help="write the numbers here")
     a = ap.parse_args()
-    from pyspecan.plots import PLOTS, MARKER_KINDS, layout
+    from pyspecan.plots import MARKER_KINDS, PLOTS, layout
     a.block = int(round(a.fs * a.sweep / 1000))
     data = capture((a.warmup + a.blocks) * a.block + 1)
     sets = parse_sets(a.set)

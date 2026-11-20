@@ -33,8 +33,8 @@ def _dests(parser) -> set[str]:
 
 def build_parser(view: View, sink: Sink, base: argparse.ArgumentParser | None = None) -> argparse.ArgumentParser:
     """The full parser for `view` and `sink`. `parser.layers` maps each of LAYERS to the dests it owns"""
-    from .model.model import ModelArgs
     from .controller.controller import ControllerArgs
+    from .model.model import ModelArgs
     from .plots import args_plots
     parser = argparse.ArgumentParser("pyspecan", parents=[base or define_args()],
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)

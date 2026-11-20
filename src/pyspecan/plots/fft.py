@@ -1,9 +1,10 @@
 import numpy as np
 
 from .base import About, plot
+from .frame import BLUE, Axis, Frame, Trace
 from .freq import FreqPlot, HoldMixin
-from .frame import Axis, Frame, Trace, BLUE
 from .settings import override, without
+
 
 @plot("FFT")
 class FFT(HoldMixin, FreqPlot):

@@ -3,7 +3,7 @@ import numpy as np
 
 from ..utils import ComplexPMF
 from .base import About, Plot, plot
-from .frame import Axis, Frame, Image, Trace, YELLOW, BLUE, RED, GREEN, SCATTER, LINE, IMAGE, THREE_D
+from .frame import BLUE, GREEN, IMAGE, LINE, RED, SCATTER, THREE_D, YELLOW, Axis, Frame, Image, Trace
 from .freq import SETTING_CMAP
 from .settings import Setting
 

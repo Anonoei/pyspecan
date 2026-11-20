@@ -13,17 +13,15 @@ import tkinter as tk
 from tkinter import ttk
 
 from ... import logger
-from ...utils import args, dialog
-from ..base import Controller as _Controller
+from ...backend.tk import theme as theme_tk
 from ...model.model import Model
 from ...plots import GLOBAL_SETTINGS
-from ...plots.frame import Frame, LINE, SCATTER, IMAGE, THREE_D
+from ...plots.base import about_text
+from ...plots.frame import IMAGE, LINE, SCATTER, THREE_D, Frame
+from ...utils import args, dialog
 from ...view.tkGUI.base import View as GUI
 from ...view.tkGUI.tooltip import Tooltip
-from ...plots.base import about_text
-
-from ...backend.tk import theme as theme_tk
-
+from ..base import Controller as _Controller
 from .panels import PanelController
 from .sink import Sink
 

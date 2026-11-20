@@ -9,15 +9,15 @@ import pathlib
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from ...utils import args
 from ...model.model import Model
 from ...plots import colormap
-from ...plots.frame import Frame, LINE, SCATTER, IMAGE, THREE_D
+from ...plots.frame import IMAGE, LINE, SCATTER, THREE_D, Frame
+from ...utils import args
 from ...view.WEB.base import View as GUI
 from ..base import Controller as _Controller
-
 from .api import API
 from .websocket import WebSocketManager
+
 
 def args_ctrl(parser):
     ctrl = args.get_group(parser, "View (WEB)")

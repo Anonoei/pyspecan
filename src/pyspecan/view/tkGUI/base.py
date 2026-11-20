@@ -2,13 +2,11 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
-from ..base import View as _View
-
-from ...backend.tk import widgets
 from ...backend.mpl import theme as theme_mpl
-
-from .sink import Sink
+from ...backend.tk import widgets
+from ..base import View as _View
 from .panels import PanelView
+from .sink import Sink
 
 ADD_LABEL = "+ Add plot…"
 

@@ -2,9 +2,9 @@
 from ..config import Sink
 from ..utils.registry import Registry
 from .tkGUI.base import View
+from .tkGUI.sink import Sink as SinkTcpIq
 from .tkGUI.sink_file import SinkFile
 from .tkGUI.sink_live import SinkLive
-from .tkGUI.sink import Sink as SinkTcpIq
 
 SINKS: Registry = Registry("tkGUI sink view")
 SINKS.register(Sink.FILE.name)(SinkFile)

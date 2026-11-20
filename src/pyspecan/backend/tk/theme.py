@@ -1,6 +1,7 @@
 """tk themes"""
 from ._theme import _Theme
 
+
 class Light(_Theme):
     """pyspecan tk light theme"""
     C_FG = "#000000"

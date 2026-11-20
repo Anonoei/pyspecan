@@ -3,6 +3,7 @@ from functools import lru_cache
 
 import numpy as np
 
+
 @lru_cache(maxsize=16)
 def _col_map(n: int, x: int):
     """How n PSD bins become x columns, cached because it only depends on the sizes"""

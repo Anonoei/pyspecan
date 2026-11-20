@@ -4,12 +4,14 @@ import shlex
 import shutil
 import textwrap
 
-from ...plots import PLOTS, Scroller, layout
-from ...plots.frame import Frame, LINE, SCATTER, IMAGE
-from ...view.CUI.base import View as CUI, args_view
-from ...view.CUI.draw import draw_frame
 from ...model.model import Model
+from ...plots import PLOTS, Scroller, layout
+from ...plots.frame import IMAGE, LINE, SCATTER, Frame
+from ...view.CUI.base import View as CUI
+from ...view.CUI.base import args_view
+from ...view.CUI.draw import draw_frame
 from ..base import Controller as _Controller
+
 
 def args_ctrl(parser):
     args_view(parser)
@@ -308,7 +310,7 @@ class Controller(_Controller):
 
     def cmd_about(self, args):
         self._need(args, 1, "about <type>")
-        from ...plots.base import about_text # plain text, as the tk tooltip
+        from ...plots.base import about_text  # plain text, as the tk tooltip
         name = layout.resolve_type(" ".join(args))
         width = shutil.get_terminal_size((100, 20)).columns
         for line in about_text(name, self.plot_info().get(name) or PLOTS.get(name).about()).split("\n"):

@@ -1,8 +1,8 @@
 from .. import logger
-from ..utils import args
 from ..obj import Frequency
-
+from ..utils import args
 from .sink import Sink
+
 
 class ModelConfig:
     nfft = 1024

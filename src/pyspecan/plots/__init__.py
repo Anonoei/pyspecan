@@ -38,19 +38,20 @@ import logging
 import os
 from importlib import metadata
 
-from .base import Plot, PLOTS, plot, available, About, CATEGORIES
-from .frame import Frame, Axis, Trace, Image, Scroller, LINE, SCATTER, IMAGE, THREE_D
-from .plotset import PlotSet, Link
-from .settings import Setting, GLOBAL_SETTINGS
+# isort: off
+# registration order is the order views list them in (sorting would also let analog's import of scope go first)
+from . import psd, spg, pst, fft, iq, scope, measure, analog, timefreq, markers
+# isort: on
 from . import layout
+from .base import CATEGORIES, PLOTS, About, Plot, available, plot
+from .frame import IMAGE, LINE, SCATTER, THREE_D, Axis, Frame, Image, Scroller, Trace
+from .freq import FreqPlot
 from .layout import LayoutSpec, PlotSpec
+from .markers import MARKER_KINDS, MarkerKind, marker_kind
+from .plotset import Link, PlotSet
+from .settings import GLOBAL_SETTINGS, HAVE_RPPS, Setting
 from .source import Source
 
-# registration order is the order views list them in
-from . import psd, spg, pst, fft, iq, scope, measure, analog, timefreq, markers
-from .freq import FreqPlot
-from .markers import MarkerKind, MARKER_KINDS, marker_kind
-from .settings import HAVE_RPPS
 if HAVE_RPPS: # the DSP plots and the signals marker, see plots.dsp
     from . import dsp
 

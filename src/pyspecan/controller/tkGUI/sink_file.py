@@ -1,11 +1,11 @@
 """Controller for FILE sink"""
-from .sink import Sink
+import datetime as dt
 
+from ...model.sink.file import FORMATS
 from ...utils import dialog
 from ...utils.time import strfmt_td
-from ...model.sink.file import FORMATS
+from .sink import Sink
 
-import datetime as dt
 
 class SinkFile(Sink):
     def __init__(self, ctrl):

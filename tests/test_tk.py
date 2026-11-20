@@ -12,6 +12,7 @@ from pyspecan.controller.controller import GetController
 from pyspecan.model.model import GetModel
 from pyspecan.view.view import GetView
 
+
 @pytest.fixture
 def app(tmp_path):
     path = tmp_path / "capture.cf64"

@@ -4,9 +4,10 @@ from dataclasses import replace
 import numpy as np
 
 from .base import About, plot
-from .freq import FreqPlot, SETTING_CMAP
 from .frame import BLUE, IMAGE, LINE, THREE_D, YELLOW, Axis, Frame, Image, Surface, Trace
+from .freq import SETTING_CMAP, FreqPlot
 from .settings import Setting, override
+
 
 class _Spectrogram(FreqPlot):
     """Spectrogram, newest on top. Subclasses pick how the block is framed (FRAMING) and reduced"""

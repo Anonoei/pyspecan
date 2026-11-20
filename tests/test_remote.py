@@ -14,6 +14,7 @@ remote = pytest.importorskip("pysdrlib.remote")
 from pyspecan.config import Sink
 from pyspecan.controller.base import Controller
 
+
 class Recorder(Controller):
     def __init__(self, model, **kwargs):
         super().__init__(model, None, **kwargs)
@@ -21,6 +22,7 @@ class Recorder(Controller):
     def deliver(self, frames, status):
         self.ticks.append(frames)
 from pyspecan.model.model import GetModel
+
 
 @pytest.fixture(scope="module")
 def server():
@@ -346,6 +348,7 @@ def test_tk_shows_who_controls_the_radio_and_disables_tuning_while_watching(serv
 
 # --- frontends: a converter above the signal mirrors the spectrum, antennas are listed --- #
 import json
+
 
 @pytest.fixture
 def frontend_server(tmp_path):

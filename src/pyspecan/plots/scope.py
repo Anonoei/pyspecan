@@ -13,7 +13,7 @@ import numpy as np
 
 from ..measure import trigger
 from .base import About, Plot, plot
-from .frame import Axis, Frame, Marker, Trace, YELLOW, BLUE, GREEN, RED, fmt_time
+from .frame import BLUE, GREEN, RED, YELLOW, Axis, Frame, Marker, Trace, fmt_time
 from .freq import fmt_hz, freq_text, hz
 from .settings import Setting
 

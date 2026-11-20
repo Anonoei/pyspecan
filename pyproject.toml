@@ -51,6 +51,23 @@ Source = "https://github.com/anonoei/pyspecan"
 [tool.setuptools.package-data]
 "pyspecan.view.WEB" = ["static/*", "templates/*"]
 
+[tool.ruff]
+line-length = 140
+src = ["src", "tests", "dev"]
+
+[tool.ruff.lint]
+# syntax and runtime errors (E4, E7, E9), pyflakes (F), import order (I): the classic set, the rest is style
+select = ["E4", "E7", "E9", "F", "I"]
+ignore = ["E701", "E702", "E731", "E741"] # one line ifs, a; b, small lambdas and `l` are the house style
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"] # re-exports
+"dev/*.py" = ["E402"]    # sys.path set up before the imports
+"tests/*.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pyspecan"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

@@ -135,6 +135,7 @@ def test_averager():
 # --- trigger --- #
 from pyspecan.measure import trigger as trig
 
+
 def test_trigger_finds_edges_interpolated():
     ramp = np.array([-1.0, -0.5, 0.0, 0.5, 1.0, 0.5, 0.0, -0.5, -1.0])
     np.testing.assert_allclose(trig.find(ramp, 0.25, "rising"), [2.5])

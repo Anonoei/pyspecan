@@ -21,10 +21,11 @@ from .. import logger
 from ..model.model import Model
 from ..model.sink.file import FORMATS
 from ..obj import Frequency
-from ..plots import CATEGORIES, GLOBAL_SETTINGS, PLOTS, PlotSet, Source, available, layout_from_kwargs, layout
+from ..plots import CATEGORIES, GLOBAL_SETTINGS, PLOTS, PlotSet, Source, available, layout, layout_from_kwargs
+from ..plots.frame import IMAGE, LINE, SCATTER, Frame
 from ..utils import args
-from ..plots.frame import Frame, LINE, SCATTER, IMAGE
 from ..utils.time import strfmt_td
+
 
 class ControllerConfig:
     show = 50.0 # [ms] between frames
