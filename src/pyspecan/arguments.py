@@ -49,12 +49,40 @@ def build_parser(view: View, sink: Sink, base: argparse.ArgumentParser | None = 
     parser.layers = layers # type: ignore[attr-defined]
     return parser
 
+TCPIQ_RENAMED = ("host", "port", "listen", "timeout") # now --tcp_<name>, --host/--port are the web view's
+
+def hint(name: str, view: View, sink: Sink) -> str | None:
+    """What to use instead of option `name` (a dest or flag without dashes), for options that moved"""
+    from .plots import PLOTS
+    name = name.lstrip("-").split("=", 1)[0].replace("-", "_")
+    if sink == Sink.FILE and name == "d":
+        return "-d picks a live radio, the file format is -F/--fmt"
+    if sink == Sink.TCPIQ and name in TCPIQ_RENAMED and not (view == View.WEB and name in ("host", "port")):
+        return f"the TCP IQ option is --tcp_{name}"
+    if any(s.key == name for _, cls in PLOTS.items() for s in cls.SETTINGS):
+        return f"a per plot setting now: --plot \"PSD {name}=...\" (layout_items=[...] for SpecAn) or a --layout file"
+    return None
+
+def _unknown_message(names, view: View, sink: Sink) -> str:
+    notes = [f"{n}: {h}" for n in names if (h := hint(n, view, sink))]
+    return "; ".join(notes)
+
 def split(view: View, sink: Sink, kwargs: dict) -> dict[str, dict]:
     """`kwargs` by layer, raises TypeError naming any option `view` and `sink` don't have"""
     layers = build_parser(view, sink).layers # type: ignore[attr-defined]
     out = {layer: {k: v for k, v in kwargs.items() if k in layers[layer]} for layer in LAYERS}
-    unknown = set(kwargs) - set().union(*layers.values())
+    unknown = sorted(set(kwargs) - set().union(*layers.values()))
     if unknown:
         known = ", ".join(sorted(set().union(*layers.values())))
-        raise TypeError(f"unknown option(s) for view {view.cli} and sink {sink.value}: {', '.join(sorted(unknown))} (known: {known})")
+        notes = _unknown_message(unknown, view, sink)
+        raise TypeError(f"unknown option(s) for view {view.cli} and sink {sink.value}: {', '.join(unknown)}"
+                        + (f" ({notes})" if notes else f" (known: {known})"))
     return out
+
+def parse(parser: argparse.ArgumentParser, argv, view: View, sink: Sink) -> argparse.Namespace:
+    """parser.parse_args, with what to use instead of options that moved"""
+    ns, extra = parser.parse_known_args(argv)
+    if extra:
+        notes = _unknown_message([a for a in extra if a.startswith("-")], view, sink)
+        parser.error(f"unrecognized arguments: {' '.join(extra)}" + (f"\n  {notes}" if notes else ""))
+    return ns

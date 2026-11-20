@@ -90,7 +90,7 @@ def test_vbw_rows_matches_vbw(smooth):
     rng = np.random.default_rng(1)
     data = rng.standard_normal((5, 200)) * 10 - 60
     got = vbw_rows(data, smooth)
-    for row, g in zip(data, got):
+    for row, g in zip(data, got, strict=True):
         np.testing.assert_allclose(g, vbw(row, smooth), atol=1e-6)
 
 # --- settings --- #

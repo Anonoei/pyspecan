@@ -84,3 +84,23 @@ def test_specan_checks_names_and_options_before_opening_anything():
         SpecAn("cui", "file", vbw=3)
     with pytest.raises(ValueError, match="Laser"):
         SpecAn("cui", "FILE", layout_items=["Laser"])
+
+@pytest.mark.parametrize("argv, note", [
+    (["-v", "cui", "-d", "cf64"], "the file format is -F"),
+    (["-v", "cui", "--vbw", "3"], "--plot \"PSD vbw=...\""),
+    (["-v", "cui", "-s", "tcpiq", "--port", "1"], "--tcp_port"),
+])
+def test_moved_options_say_what_to_use(argv, note, capsys):
+    with pytest.raises(SystemExit):
+        m.parse_args(argv)
+    assert note in capsys.readouterr().err
+
+def test_web_keeps_its_own_host_and_port_with_tcpiq():
+    from pyspecan.arguments import hint
+    assert hint("port", View.WEB, Sink.TCPIQ) is None
+    assert hint("listen", View.WEB, Sink.TCPIQ) == "the TCP IQ option is --tcp_listen"
+
+def test_specan_says_what_to_use_for_moved_options():
+    from pyspecan import SpecAn
+    with pytest.raises(TypeError, match="tcp_host"):
+        SpecAn("cui", "tcpiq", host="x")

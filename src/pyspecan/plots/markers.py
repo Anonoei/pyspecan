@@ -185,7 +185,7 @@ class ACPR(_Band):
         lo, hi = ctx.edges
         bands = [Band(c - bw/2, c + bw/2, self.COLOR, label=mid, owner=mid, edit=("freq", "bw"))]
         rows = [[f"{fmt_hz(c)} / {fmt_hz(bw)}", f"{units.lin_to_db(main):.2f} {POWER_UNIT[ctx.unit]}"]]
-        for o, l, u in zip(offsets, lower, upper):
+        for o, l, u in zip(offsets, lower, upper, strict=True):
             for sign, dbc in ((-1, l), (1, u)):
                 centre = c + sign * o
                 inside = centre - adj/2 >= lo and centre + adj/2 <= hi # a channel cut by the span would read low

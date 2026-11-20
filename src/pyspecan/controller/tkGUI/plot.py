@@ -9,7 +9,8 @@ from tkinter import simpledialog, ttk
 
 import numpy as np
 
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.ticker import ScalarFormatter
 from matplotlib.patches import Rectangle
 from matplotlib.ticker import FuncFormatter
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -308,9 +309,9 @@ class PlotPane:
     def _build(self, frame: Frame, sig):
         if self.canvas_widget is not None:
             self.canvas_widget.destroy()
-            plt.close(self.plotter.fig) # type: ignore
-        fig = plt.figure(figsize=(5, 5), layout="constrained")
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
+        # no pyplot: it would also make a canvas for its default backend (a hidden gtk window, say)
+        fig = Figure(figsize=(5, 5), layout="constrained")
+        FigureCanvasTkAgg(fig, master=self.fr_canv) # becomes fig.canvas
         self.plotter = BlitPlot(fig) # type: ignore
         n = len(frame.axes)
         for i, ax in enumerate(frame.axes):
@@ -378,7 +379,7 @@ class PlotPane:
             if ax.yfmt == "log10":
                 mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: _log10_label(v)))
             else:
-                mpl.ax.yaxis.set_major_formatter(plt.ScalarFormatter())
+                mpl.ax.yaxis.set_major_formatter(ScalarFormatter())
 
         # artists
         names = set()
@@ -479,6 +480,4 @@ class PlotPane:
 
     def close(self):
         """Release the figure, the widgets go with their frame"""
-        if self.plotter is not None:
-            plt.close(self.plotter.fig)
-            self.plotter = None
+        self.plotter = None

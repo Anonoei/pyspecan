@@ -129,7 +129,7 @@ def _draw_trace(cv: Canvas, t: Trace, xr, yr, use_color):
     else:
         px = _scale(t.x, xr[0], xr[1], cv.w)
     if t.kind == "scatter":
-        for a, b, k in zip(px, py, ok):
+        for a, b, k in zip(px, py, ok, strict=True):
             if k:
                 cv.dot(int(a), int(b), t.color)
         return
@@ -192,7 +192,7 @@ def _draw_image(data: np.ndarray, cmap: str, cols: int, rows: int, use_color: bo
     for r in range(rows):
         top, bot = img[2 * r], img[2 * r + 1]
         if use_color:
-            parts = [f"{_fg(tuple(lut[a]))}{_bg(tuple(lut[b]))}▀" for a, b in zip(top.tolist(), bot.tolist())]
+            parts = [f"{_fg(tuple(lut[a]))}{_bg(tuple(lut[b]))}▀" for a, b in zip(top.tolist(), bot.tolist(), strict=True)]
             out.append("".join(parts) + RESET)
         else:
             avg = (top.astype(np.int32) + bot) // 2

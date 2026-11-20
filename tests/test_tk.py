@@ -134,7 +134,7 @@ def test_markers_draw_on_psd_and_spectrogram_with_a_table(app):
     app.command("next"); app.command("next")
     psd, spg = (app.panels.panes[i[n]] for n in ("PSD", "Spectrogram"))
     for pane in (psd, spg):
-        wait_for(app, lambda: pane.keep.get("frame") is not None and not pane.dirty)
+        wait_for(app, lambda pane=pane: pane.keep.get("frame") is not None and not pane.dirty)
     assert "RBW" in psd.lbl_readout.cget("text")
     assert psd.tree is not None and psd.tree.winfo_ismapped() and len(psd.tree.get_children()) == 3 # M1, M2 and its PSD row
     assert psd.tree_rows == ["M1", "M2", "M2"]

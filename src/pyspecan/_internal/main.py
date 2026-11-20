@@ -2,7 +2,7 @@ import argparse
 import sys
 
 from .. import err
-from ..arguments import build_parser, define_args
+from ..arguments import build_parser, define_args, parse
 from ..config import config, View, Sink
 from ..plots import layout_from_kwargs
 from ..specan import SpecAn
@@ -39,7 +39,7 @@ def parse_args(argv=None, view: View = View.tkGUI) -> argparse.Namespace:
     if s == Sink.NONE:
         raise err.UnknownOption(f"Unknown sink: {pre.sink}")
 
-    ns = build_parser(v, s, base).parse_args(argv)
+    ns = parse(build_parser(v, s, base), argv, v, s)
     ns.view, ns.sink = v.name, s.name
     config.MON_MEM = ns.mon_mem
     config.PROFILE = ns.profile
