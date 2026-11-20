@@ -12,18 +12,11 @@ noise, two tones and their IM3 products, a bursty signal, a chirp); run it again
 Web: PSD with found signals and a peak marker (the cursor readout over it), spectrogram, persistence, surface spectrogram
 ![web spectrum](/media/web_spectrum.png)
 
-Web: "+ Add plot" groups the plots by what they show; pointing at one says what data it uses, what it shows, what to
-use it for and what it costs
-![web picker](/media/web_picker.png)
-
 Web: channel power, TOI and a limit line, phase noise, FM demodulation, CCDF
 ![web measurements](/media/web_measurements.png)
 
 Web: 3D waterfall, IQ 3D, a turned surface spectrogram, occupancy
 ![web 3d](/media/web_3d.png)
-
-Web: scope, frequency vs time, IQ density, power vs time
-![web time](/media/web_time.png)
 
 Web, with RPPS: the analysed signal's constellation, eye diagram and the link's response (network analyzer)
 ![web dsp](/media/web_dsp.png)
@@ -34,12 +27,6 @@ Web, with RPPS: 3D constellation, error vector, impulse response (the echo at 10
 Web: a PSD against a stored reference (trace math: live - ref, the burst that has since stopped shows as a dip),
 wavelet scalogram, and with RPPS the vector diagram and constellation density (the echo splits each point in four)
 ![web analysis](/media/web_analysis.png)
-
-tkGUI: PSD with peak and occupied bandwidth markers, spectrogram, persistence, 3D waterfall
-![tk spectrum](/media/tk_spectrum.png)
-
-tkGUI, with RPPS: found signals, constellation, eye diagram, error vector
-![tk dsp](/media/tk_dsp.png)
 
 Console: PSD and spectrogram drawn as text
 ![console](/media/cui_spectrum.png)
