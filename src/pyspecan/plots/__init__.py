@@ -15,7 +15,7 @@ from .settings import Setting
 from .source import Source
 
 # registration order is the order views list them in
-from . import psd, spg, pst, fft, iq, measure, markers
+from . import psd, spg, pst, fft, iq, scope, measure, markers
 
 def plot_args() -> dict[str, Setting]:
     """Settings that can be given on the command line, by key"""

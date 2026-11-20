@@ -51,6 +51,7 @@ class Source:
     def __init__(self, model):
         self.model = model
         self.seq = 0
+        self.epoch = 0 # bumped by reset(): plots keeping their own sample history drop it when it changes
         self._streams: dict[tuple, Stream] = {}
 
     # --- per tick --- #
@@ -61,6 +62,7 @@ class Source:
 
     def reset(self):
         """Forget carried samples, call after the sample position jumps"""
+        self.epoch += 1
         self._streams.clear()
 
     # --- model view --- #

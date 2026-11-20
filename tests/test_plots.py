@@ -497,3 +497,123 @@ def test_persistence_scale_does_not_flicker():
     f = _pst_run([sig, sig, sig], persistence=5.0)
     assert f[0].image.data.max() == 255 and f[2].image.data.max() == 255
     assert f[2].image.data.dtype == np.uint8
+
+# --- scope --- #
+def clean(n, f=1/50, start=0):
+    return np.exp(2j*np.pi*f*np.arange(start, start + n)).astype(np.complex64)
+
+def _trace(frame, name):
+    return next(t for t in frame.axes[0].traces if t.name == name)
+
+def test_scope_trigger_locks_phase_across_ticks():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    scope = PLOTS.get("Scope")(src, overlay=1)
+    grid = np.linspace(-5, 50, 40) # ms, inside the 64 sample screen
+    seen = []
+    for i in range(4):
+        feed(src, model, clean(400, start=400*i + 7*i)) # blocks need not hold whole periods
+        frame = scope.update()
+        t = _trace(frame, "i0")
+        assert dict(frame.readout)["Trig"] == "triggered"
+        assert abs(np.interp(0.0, t.x, t.y)) < 1e-3       # crosses the level at x = 0
+        assert np.interp(1.0, t.x, t.y) > 0                # rising
+        seen.append(np.interp(grid, t.x, t.y))
+    for s in seen[1:]:
+        np.testing.assert_allclose(s, seen[0], atol=1e-3)
+
+def test_scope_overlay_draws_older_sweeps_faded():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    scope = PLOTS.get("Scope")(src, overlay=4, channel="I")
+    feed(src, model, clean(1000))
+    frame = scope.update()
+    names = [t.name for t in frame.axes[0].traces]
+    assert names == ["i3", "i2", "i1", "i0"] # newest drawn last
+    assert _trace(frame, "i0").alpha == 1.0 and _trace(frame, "i3").alpha < 1.0
+
+def test_scope_screen_longer_than_a_block_carries_samples():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    scope = PLOTS.get("Scope")(src, time_div="100m") # 1000 samples a screen, blocks are 400
+    feed(src, model, clean(400))
+    assert dict(scope.update().readout)["Trig"] == "filling"
+    for i in range(1, 4):
+        feed(src, model, clean(400, start=400*i))
+        frame = scope.update()
+    assert len(_trace(frame, "i0").y) == 1000
+    src.reset() # the position jumped: the carry is gone
+    feed(src, model, clean(400))
+    assert dict(scope.update().readout)["Trig"] == "filling"
+
+def test_scope_normal_holds_and_single_freezes():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    scope = PLOTS.get("Scope")(src, trig_mode="normal")
+    feed(src, model, clean(400))
+    first = scope.update()
+    feed(src, model, np.full(400, 0.5+0j, np.complex64)) # no crossing
+    held = scope.update()
+    assert dict(held.readout)["Trig"] == "armed"
+    assert held.axes is first.axes
+
+    scope.set("trig_mode", "single")
+    feed(src, model, clean(400))
+    shot = scope.update()
+    assert dict(shot.readout)["Trig"] == "stopped"
+    feed(src, model, clean(400, start=123))
+    assert scope.update() is shot
+    scope.set("trig_level", 0.2) # re-arms
+    feed(src, model, clean(400))
+    assert scope.update() is not shot
+
+def test_scope_auto_free_runs_without_trigger():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    scope = PLOTS.get("Scope")(src)
+    feed(src, model, np.full(400, 0.5+0j, np.complex64))
+    frame = scope.update()
+    assert dict(frame.readout)["Trig"] == "auto" and len(_trace(frame, "i0").y) == 64
+
+def test_scope_roll_envelope_is_continuous_across_ticks():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    scope = PLOTS.get("Scope")(src, trig_mode="roll", channel="I", time_div="500m") # 5000 samples, 10 per column
+    for i in range(10):
+        feed(src, model, np.arange(400*i, 400*(i+1)).astype(np.complex64))
+        frame = scope.update()
+    y = _trace(frame, "i").y
+    mins, maxs = y[0::2], y[1::2]
+    assert len(mins) == 400
+    np.testing.assert_array_equal(np.diff(mins), 10)
+    np.testing.assert_array_equal(maxs - mins, 9)
+    assert frame.axes[0].xmax == 0.0 and _trace(frame, "i").x[-1] <= 0.0
+
+def test_scope_roll_fine_timebase_draws_samples():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    scope = PLOTS.get("Scope")(src, trig_mode="roll")
+    feed(src, model, clean(400))
+    t = _trace(scope.update(), "i")
+    assert len(t.y) == 64 and t.x[-1] == 0.0
+
+def test_scope_time_parsing():
+    from pyspecan.plots.scope import parse_time
+    assert parse_time("10u") == pytest.approx(1e-5)
+    assert parse_time("2ms") == pytest.approx(2e-3)
+    assert parse_time("auto") == 0.0 and parse_time("") == 0.0
+    scope = PLOTS.get("Scope")(Source(FakeModel()))
+    with pytest.raises(ValueError):
+        scope.set("time_div", "fast")
+
+def test_scope_roll_block_longer_than_the_screen():
+    model = FakeModel(fs=1000.0, nfft=64)
+    src = Source(model)
+    scope = PLOTS.get("Scope")(src, trig_mode="roll", channel="I", time_div="500m") # 500 columns of 10 samples
+    feed(src, model, np.arange(7003).astype(np.complex64))       # 700 columns, 3 samples left over
+    scope.update()
+    feed(src, model, np.arange(7003, 7210).astype(np.complex64)) # completes 21 more
+    y = _trace(scope.update(), "i").y
+    mins = y[0::2]
+    assert len(mins) == 500 and mins[-1] == 7200
+    np.testing.assert_array_equal(np.diff(mins), 10)

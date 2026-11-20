@@ -116,7 +116,7 @@ def test_tick_paces_and_stops_at_the_end(capture):
 def test_plot_types_follow_the_views_features(capture):
     c = make(capture)
     c.FEATURES = {"line"}
-    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "CCDF", "Power vs Time"]
+    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "Scope", "CCDF", "Power vs Time"]
     with pytest.raises(ValueError):
         c.add_plot("Spectrogram")
 
