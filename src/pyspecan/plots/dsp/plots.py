@@ -5,7 +5,7 @@ any spectrum), see analyzer.py for how it is found and locked.
 """
 import numpy as np
 
-from ..base import Plot, plot
+from ..base import About, Plot, plot
 from ..frame import BLUE, GREEN, IMAGE, LINE, RED, SCATTER, THREE_D, YELLOW, Axis, Frame, Image, Marker, Table, TableRow, Trace, fmt_time, time_unit
 from ..freq import SETTING_CMAP, fmt_hz
 from ..iq import density
@@ -65,6 +65,19 @@ class DSPPlot(Plot):
 class Constellation(DSPPlot):
     """The selected signal's symbols after timing, carrier and gain recovery, over the ideal points"""
     TITLE = "Constellation"
+    CATEGORY = "Digital demodulation"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             '(rpps); the symbols matched filtered and corrected for frequency, phase and gain',
+        shows='Symbols (yellow) over the ideal points (red); modulation, rate, Es/N0, EVM and the error '
+              'summary',
+        use=(
+            'Identify a modulation and judge its quality',
+            'Spot phase noise (arcs), IQ imbalance (skew), compression (squeezed outer points)',
+        ),
+        cost=10,
+    )
     FEATURES = frozenset({SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("count", "Symbols", "int", default=1000, min=16, max=20000, step=100, group="Display", help="latest symbols shown"),
@@ -116,6 +129,15 @@ class VectorDiagram(DSPPlot):
     transitions show (a filtered PSK passing near the origin, an offset QPSK that never does, a timing error smearing
     the arrivals)"""
     TITLE = "Vector Diagram"
+    CATEGORY = "Digital demodulation"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             "(rpps); the matched filter's output between the symbols as well",
+        shows='The path between symbols as lines, the symbols marked, the ideal points',
+        use=('See transitions: through the origin or around it, filtering', 'Spot timing errors (smeared arrivals)'),
+        cost=14,
+    )
     FEATURES = frozenset({LINE, SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("count", "Symbols", "int", default=200, min=4, max=5000, step=50, group="Display", help="latest symbols drawn"),
@@ -147,6 +169,18 @@ class ConstellationDensity(DSPPlot):
     point (round for noise, stretched along the circle for phase noise, along the radius for compression) shows where
     a scatter of dots only overlaps"""
     TITLE = "Constellation Density"
+    CATEGORY = "Digital demodulation"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             '(rpps); the symbols binned on an I / Q grid, built up with decay',
+        shows='A heat map of the symbols under the ideal points',
+        use=(
+            'See how each point spreads: round for noise, along the circle for phase noise, along the radius for compression',
+            'Tell a few outliers from the bulk',
+        ),
+        cost=11,
+    )
     FEATURES = frozenset({IMAGE, SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("bins", "Bins", "int", default=160, min=32, max=1024, group="Display", help="cells across each axis"),
@@ -185,6 +219,15 @@ class Constellation3D(DSPPlot):
     """The selected signal's I and Q against time: the matched filter's path between symbols and the symbols on it, a
     constellation unrolled along the time axis"""
     TITLE = "3D Constellation"
+    CATEGORY = "Digital demodulation"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             "(rpps); the matched filter's output",
+        shows='I and Q against time: the path between symbols and the symbols on it. Drag to turn it',
+        use=('See the timing of transitions', 'Show how symbols follow each other'),
+        cost=14,
+    )
     FEATURES = frozenset({LINE, SCATTER, THREE_D})
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("count", "Symbols", "int", default=48, min=4, max=2000, step=8, group="Display", help="latest symbols shown"),
@@ -217,6 +260,19 @@ class Constellation3D(DSPPlot):
 class ErrorVector(DSPPlot):
     """Per symbol: the error vector magnitude, the magnitude error and the phase error against the decided points"""
     TITLE = "Error Vector"
+    CATEGORY = "Modulation quality"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             "(rpps); each symbol's error against its decided point",
+        shows='EVM, magnitude error and phase error per symbol, with the error summary (peak EVM, MER, IQ'
+              ' offset, gain imbalance, quadrature error)',
+        use=(
+            'Find the symbols with large errors (bursts of interference)',
+            'Tell amplitude problems from phase problems',
+        ),
+        cost=10,
+    )
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("count", "Symbols", "int", default=500, min=16, max=20000, step=100, group="Display", help="latest symbols shown"),
     )
@@ -256,6 +312,16 @@ class ErrorVectorSpectrum(DSPPlot):
     """The spectrum of the error waveform (what was received minus the ideal waveform of the decided symbols) over
     the signal's: where in the band the errors are, an interferer or a filter's edge shows up here"""
     TITLE = "Error Vector Spectrum"
+    CATEGORY = "Modulation quality"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             '(rpps); the received waveform minus the ideal one (the decided symbols through the ideal '
+             'pulse), its spectrum averaged',
+        shows="The error's spectrum under the signal's, and the error to signal ratio in band",
+        use=('Find interference or spurs hidden under the signal', 'See filter edges or a tilt causing errors'),
+        cost=14,
+    )
     SETTINGS = DSPPlot.SETTINGS + (SETTING_DECAY.with_(default=0.7),)
 
     def reset(self):
@@ -319,6 +385,20 @@ def matched(lk: Lock, up: int) -> tuple[np.ndarray, np.ndarray]:
 class EyeDiagram(DSPPlot):
     """The selected signal's matched filter output folded over two symbols, I above Q, as a density"""
     TITLE = "Eye Diagram"
+    CATEGORY = "Digital demodulation"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             "(rpps); the matched filter's output interpolated finer and folded over two symbols",
+        shows='I (top) and Q (bottom) as a heat map of how often the waveform passes each point: the '
+              'instants at 0, 1 and 2, the eye opening in the middle',
+        use=(
+            'Judge the noise margin (how open the eye is)',
+            'Spot timing jitter (blurred crossings)',
+            'See filter problems (closed or lopsided eyes)',
+        ),
+        cost=27,
+    )
     FEATURES = frozenset({IMAGE})
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("cols", "Width", "int", default=128, min=32, max=1024, group="Display", advanced=True, help="cells across two symbols"),
@@ -410,6 +490,18 @@ class NetworkAnalyzer(ResponseMixin, DSPPlot):
     the way a vector signal analyzer reads the channel from its equalizer: no stimulus is needed, so it shows the
     whole path (transmitter filters, the air, this receiver) and not one device on its own"""
     TITLE = "Network Analyzer"
+    CATEGORY = "Channel and signal analysis"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             '(rpps); the received waveform over the ideal one, their cross spectra averaged',
+        shows="Magnitude, phase deviation and group delay of the link across the signal's band",
+        use=(
+            "Measure a channel's or filter's response on live traffic, no stimulus",
+            'Find ripple, tilt and group delay distortion',
+        ),
+        cost=15,
+    )
     FEATURES = frozenset({LINE})
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("resolution", "Points / symbol rate", "int", default=16, min=4, max=128, group="Display",
@@ -472,6 +564,15 @@ class ImpulseResponse(ResponseMixin, DSPPlot):
     signal can not show delays much finer than one over its bandwidth (the resolution in the readout): closer echoes
     widen the main path instead of standing apart"""
     TITLE = "Impulse Response"
+    CATEGORY = "Channel and signal analysis"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             "(rpps); the link's frequency response, tapered and inverse transformed",
+        shows="The link's impulse response: the main path at 0, each echo by its delay and level",
+        use=('Find multipath echoes and their delays', "Check a cable's or antenna's reflections"),
+        cost=14,
+    )
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("resolution", "Points / symbol rate", "int", default=32, min=4, max=256, group="Display",
                 help="frequency points per symbol rate: the delays shown span that many symbols"),
@@ -519,6 +620,19 @@ class CyclicSpectrum(DSPPlot):
     frequency (the symbol rate and its multiples stand out for a linear modulation), the spectral coherence over
     frequency and cycle frequency, and what rpps reads from them (rate, carrier symmetry, offset, envelope)"""
     TITLE = "Cyclic Spectrum"
+    CATEGORY = "Channel and signal analysis"
+    ABOUT = About(
+        data='The analysed signal at baseband (no lock needed): its spectral correlation and coherence '
+             'over cycle frequencies (rpps)',
+        shows='The correlation against cycle frequency (symbol rate lines marked) and the coherence '
+              'image; the rate, carrier symmetry and envelope found blind',
+        use=(
+            "Find an unknown signal's symbol rate",
+            'Tell modulation families apart by their carrier lines (x^2, x^4, x^8)',
+            'Detect a signal under noise or another signal',
+        ),
+        cost=30,
+    )
     FEATURES = frozenset({LINE, IMAGE})
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("channels", "Channels", "int", default=64, min=16, max=512, step=16, group="Processing", advanced=True,
@@ -598,6 +712,15 @@ class SymbolTable(DSPPlot):
     """The decided symbols: each one's point in the constellation (rpps' point order) in a table, eight to a row, and
     against time. The carrier's phase ambiguity (any of the constellation's symmetric rotations) is not resolved"""
     TITLE = "Symbol Table"
+    CATEGORY = "Digital demodulation"
+    ABOUT = About(
+        data='The analysed signal (the Analysis settings, or a box clicked on the signals marker) shifted'
+             ' to 0 Hz, filtered and decimated; its symbol rate, roll-off, timing and carrier recovered '
+             '(rpps); each symbol decided to the nearest ideal point',
+        shows='The decided points (their index in the constellation), eight to a row, and against time',
+        use=('Read out the symbol stream', 'Look for repeating patterns: preambles, idle fill'),
+        cost=10,
+    )
     FEATURES = frozenset({SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("count", "Symbols", "int", default=128, min=8, max=2048, step=8, group="Display", help="latest symbols listed"),

@@ -182,3 +182,24 @@ dialog .dlg-actions { text-align: right; }
 .pyspecan .canvas-box { min-height: 140px; }
 .pyspecan .mk-panel { max-height: 40%; overflow: auto; flex: 0 1 auto; }
 .pyspecan .mk-panel > :not([hidden]) { border-top: 1px solid var(--border-muted); }
+
+/* the plot picker: categories and their plots, what the one pointed at does beside them */
+.pyspecan .add-menu { position: relative; display: inline-block; }
+.pyspecan .add-menu-panel {
+    position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; display: flex; gap: 0;
+    background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
+    max-height: calc(100vh - 70px);
+}
+.pyspecan .add-menu-list { overflow-y: auto; padding: 6px 0; min-width: 14em; border-right: 1px solid var(--border-muted); }
+.pyspecan .add-menu-cat { padding: 5px 12px 1px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.pyspecan .add-menu-item {
+    display: block; width: 100%; text-align: left; border: none; border-radius: 0; background: none; padding: 1px 12px 1px 20px;
+}
+.pyspecan .add-menu-item:hover, .pyspecan .add-menu-item:focus { background: var(--bg-light); outline: none; }
+.pyspecan .add-menu-info { width: 24em; padding: 10px 14px; overflow-y: auto; font-size: 0.9rem; line-height: 1.35; }
+.pyspecan .add-menu-info p { margin: 0 0 6px; }
+.pyspecan .add-menu-info ul { margin: 0 0 6px; padding-left: 1.2em; }
+.pyspecan .about-name { font-weight: 600; font-size: 1rem; }
+.pyspecan .about-cat { margin-bottom: 6px; font-size: 0.8rem; }
+.pyspecan .about-label { font-weight: 600; font-size: 0.8rem; color: var(--info); margin-top: 4px; }
+.pyspecan .plot-header .plot-name { cursor: help; }

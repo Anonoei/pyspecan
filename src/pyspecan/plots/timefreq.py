@@ -1,7 +1,7 @@
 """Time-frequency plots beyond the spectrogram: the wavelet scalogram"""
 import numpy as np
 
-from .base import Plot, plot
+from .base import About, Plot, plot
 from .frame import IMAGE, Axis, Frame, Image, fmt_time
 from .freq import SETTING_CMAP, fmt_hz, freq_text, hz
 from .settings import Setting
@@ -14,6 +14,18 @@ class Scalogram(Plot):
     and transients show both their start and their pitch. Frequencies are offsets from the tuned one, positive,
     negative (lower) or both summed"""
     TITLE = "Scalogram"
+    CATEGORY = "Time-frequency"
+    ABOUT = About(
+        data='The latest samples through a continuous wavelet transform (Morlet, a fixed number of cycles'
+             ' per frequency), one short FFT per frequency band',
+        shows='Frequency offset on a log axis against time, power as color: sharp in time at high '
+              'frequencies, sharp in frequency at low ones',
+        use=(
+            'Analyse chirps, pulses and transients: when they start and their pitch',
+            'Look at activity spanning decades of frequency',
+        ),
+        cost=16,
+    )
     FEATURES = frozenset({IMAGE})
     SETTINGS = (
         Setting("samples", "Samples", "int", default=16384, min=256, max=1 << 20, step=1024, group="Timebase",

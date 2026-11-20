@@ -50,8 +50,8 @@ def ids(ctrl):
     return {ctrl.plots.get(p).NAME: p for row in ctrl.plots.layout for p in row}
 
 def add(ctrl, name):
-    ctrl.view.tb_var_add.set(name)
-    ctrl.view.tb_cb_add.event_generate("<<ComboboxSelected>>") # the real binding
+    sub, k = ctrl.add_menu_items[name] # its entry in the "+ Add plot" menu's category submenu
+    sub.invoke(k) # the real command
     settle(ctrl)
 
 def drag(ctrl, pid, target, where):
@@ -66,13 +66,29 @@ def drag(ctrl, pid, target, where):
     grip.event_generate("<ButtonRelease-1>", x=3, y=3, **pos)
     settle(ctrl)
 
-def test_the_dropdown_offers_the_plots_and_adds_one(app):
-    assert list(app.view.tb_cb_add.cget("values")) == app.plot_types
+def test_the_add_menu_groups_the_plots_and_adds_one(app):
+    menu = app.view.tb_menu_add
+    cats = [menu.entrycget(k, "label") for k in range(menu.index("end") + 1)]
+    assert cats == [c for c, _ in app.plot_groups()] and cats[:2] == ["Spectrum", "Time-frequency"]
+    assert sorted(app.add_menu_items) == sorted(app.plot_types) # every plot, once
+    sub, k = app.add_menu_items["Persistence"]
+    sub.post(10, 10) # select its entry like the pointer would: what it does shows beside the menu
+    sub.activate(k)
+    sub.event_generate("<<MenuSelect>>")
+    settle(app)
+    text = app.tooltip.label.cget("text")
+    assert text.startswith("Persistence (Spectrum)") and "Data:" in text and "Use it to:" in text and "heavy" in text
+    sub.unpost()
     assert layout(app) == [["PSD"]]
     add(app, "Spectrogram")
     assert layout(app) == [["PSD"], ["Spectrogram"]]
-    assert app.view.tb_var_add.get().startswith("+")   # back to the label, ready for the next one
-    add(app, "not a plot")
+    pane = app.panels.panes[ids(app)["PSD"]].pane
+    pane.lbl_grip.event_generate("<Enter>") # the plot's grip says what it does too
+    settle(app)
+    assert app.tooltip.label.cget("text").startswith("PSD (Spectrum)")
+    pane.lbl_grip.event_generate("<Leave>")
+    app.add_from_menu("not a plot")
+    settle(app)
     assert layout(app) == [["PSD"], ["Spectrogram"]]
 
 def test_dragging_rearranges(app):

@@ -10,7 +10,8 @@
 Each plot runs alone on its own source, so it pays for everything it needs (in a layout, plots share the source's
 FFT frames and the DSP plots one signal search and lock). The first blocks are a warm-up (caches, the DSP plots' full
 search), timed but left out of the median; "first" shows the first one. "realtime" is the median against the block's
-own duration: over 100% the plot can not keep up with live samples at this rate on its own.
+own duration: over 100% the plot can not keep up with live samples at this rate on its own. "declared" is the cost
+the plot's About says (its picker tooltip), marked "!" when the measured one is more than twice off it: update it.
 
 The blocks come from dev/demo.py's synthetic capture (QPSK, FM, tones, a burst, a chirp), the DSP plots analyse the
 QPSK at 150 kHz.
@@ -119,16 +120,27 @@ def main():
     ref = results[REFERENCE]["median"]
 
     rows = []
+    stale = []
     for name, r in results.items():
+        about = PLOTS.get(name).ABOUT
+        declared = about.cost if about is not None else None
         if "error" in r:
-            rows.append([name, "-", "-", "-", "-", "-", r["error"]])
+            rows.append([name, "-", "-", "-", "-", "-", "-", r["error"]])
             continue
-        rows.append([name, f"{r['median'] / ref:.2f}", f"{r['median'] * 1e3:.2f}", f"{r['p90'] * 1e3:.2f}",
-                     f"{r['first'] * 1e3:.1f}", f"{r['median'] / block_s * 100:.1f}%", ",".join(sorted(PLOTS.get(name).FEATURES))])
+        cost = r["median"] / ref
+        r["declared"] = declared
+        off = declared is not None and not 0.5 <= cost / max(declared, 1e-9) <= 2.0
+        if off:
+            stale.append(name)
+        rows.append([name, f"{cost:.2f}", "-" if declared is None else f"{declared:g}{' !' if off else ''}", f"{r['median'] * 1e3:.2f}",
+                     f"{r['p90'] * 1e3:.2f}", f"{r['first'] * 1e3:.1f}", f"{r['median'] / block_s * 100:.1f}%",
+                     ",".join(sorted(PLOTS.get(name).FEATURES))])
     key = (lambda r: -float(r[1]) if r[1] != "-" else 1e9) if a.sort == "cost" else (lambda r: r[0].lower())
     rows.sort(key=key)
     print(f"\nPSD reference: {ref * 1e3:.2f} ms a block\n")
-    print(table(rows, ["Plot", "x PSD", "median ms", "p90 ms", "first ms", "realtime", "draws"]))
+    print(table(rows, ["Plot", "x PSD", "declared", "median ms", "p90 ms", "first ms", "realtime", "draws"]))
+    if stale:
+        print(f"\ndeclared cost more than 2x off (update its About.cost): {', '.join(stale)}")
 
     marks = {}
     if a.markers:

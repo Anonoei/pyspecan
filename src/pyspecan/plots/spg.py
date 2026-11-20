@@ -3,7 +3,7 @@ from dataclasses import replace
 
 import numpy as np
 
-from .base import plot
+from .base import About, plot
 from .freq import FreqPlot, SETTING_CMAP
 from .frame import BLUE, IMAGE, LINE, THREE_D, YELLOW, Axis, Frame, Image, Surface, Trace
 from .settings import Setting, override
@@ -47,6 +47,19 @@ class _Spectrogram(FreqPlot):
 class SPG(_Spectrogram):
     """One row per refresh: the last swept frame of the block, the trace the PSD plot draws"""
     TITLE = "Spectrogram"
+    CATEGORY = "Time-frequency"
+    ABOUT = About(
+        data="One PSD row per refresh (the block's last frame), smoothed by the VBW, scaled to the level "
+             'range',
+        shows='Frequency across, time downward (newest on top), level as color; markers as vertical '
+              'lines, found signals boxed',
+        use=(
+            'Watch signals come and go',
+            'Measure burst lengths and repetition',
+            'See frequency drift, sweeps and hops',
+        ),
+        cost=0.39,
+    )
 
     def raw_rows(self):
         return self.psd_rows("swept", smooth=False)[-1:]
@@ -55,6 +68,14 @@ class SPG(_Spectrogram):
 class RTSPG(_Spectrogram):
     """One row per block: the mean of its overlapped (realtime) frames"""
     TITLE = "RT Spectrogram"
+    CATEGORY = "Time-frequency"
+    ABOUT = About(
+        data='One row per block: the mean of all its overlapped (realtime) frames, so nothing between '
+             'refreshes is missed',
+        shows='Frequency across, time downward (newest on top), level as color',
+        use=('Watch activity without gaps between refreshes', 'See short events a swept spectrogram can skip'),
+        cost=0.78,
+    )
 
     def raw_rows(self):
         rows = self.psd_rows("rt", smooth=False)
@@ -65,6 +86,14 @@ class SPG3D(FreqPlot):
     """A waterfall in 3d: the last rows as lines over frequency (x), age (y) and level (z), newest in front.
     Markers measure the newest row, channel bands lie on the floor"""
     TITLE = "3D Spectrogram"
+    CATEGORY = "Time-frequency"
+    ABOUT = About(
+        data='The last PSD rows (reduced by a peak detector), kept as a history',
+        shows='Each row as a line over frequency (x), age (y) and level (z), newest in front, channel '
+              'bands on the floor. Drag to turn it, double click to reset',
+        use=("See how a spectrum's shape changes over time at a glance", 'Present a classic waterfall'),
+        cost=0.48,
+    )
     FEATURES = frozenset({LINE, THREE_D})
     SETTINGS = FreqPlot.SETTINGS + (
         Setting("framing", "Rows", "select", default="swept", options=("swept", "rt"), reset=True, group="Display",
@@ -112,6 +141,17 @@ class SurfaceSpectrogram(FreqPlot):
     color the level, newest in front. Turn it to look along the time or the frequency axis. Channel bands lie on the
     floor, markers measure the newest row"""
     TITLE = "Surface Spectrogram"
+    CATEGORY = "Time-frequency"
+    ABOUT = About(
+        data='The last PSD rows (reduced by a peak detector) joined into a surface',
+        shows='A solid surface over frequency and age, its height and color the level. Drag to turn it: '
+              'look along time or along frequency',
+        use=(
+            'See the spectral detail of a changing signal as a landscape',
+            'Compare peaks and floor across time from any angle',
+        ),
+        cost=0.41,
+    )
     FEATURES = frozenset({THREE_D})
     SETTINGS = FreqPlot.SETTINGS + (
         SETTING_CMAP,

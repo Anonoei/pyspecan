@@ -12,7 +12,7 @@ def test_benchmark_writes_costs_in_psds(tmp_path):
                            "--blocks", "3", "--warmup", "1", "--sweep", "10", "--markers", "--json", str(out)],
                           capture_output=True, text=True, timeout=300, check=False)
     assert proc.returncode == 0, proc.stderr
-    assert "PSD reference" in proc.stdout and "x PSD" in proc.stdout and "Marker" in proc.stdout
+    assert "PSD reference" in proc.stdout and "x PSD" in proc.stdout and "declared" in proc.stdout and "Marker" in proc.stdout
     d = json.loads(out.read_text())
     assert d["reference"]["plot"] == "PSD" and d["config"]["block"] == 10000
     assert set(d["plots"]) == {"PSD", "Scope", "Spectrogram"} # the reference always runs

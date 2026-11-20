@@ -14,7 +14,7 @@ sync_api = pytest.importorskip("playwright.sync_api")
 httpx = pytest.importorskip("httpx")
 pytest.importorskip("fastapi")
 
-from test_web_browser import ROOT, _browser
+from test_web_browser import ROOT, _browser, add_plot
 
 FS = 1e6
 
@@ -100,7 +100,7 @@ def test_every_plot_type_draws(page):
     problems = []
     for name in types:
         _clear(page)
-        page.select_option("#sel-add-plot", name)
+        add_plot(page, name)
         page.wait_for_function("Object.keys(state.plots).length === 1")
         pid = _ids(page)[0]
         for _ in range(3):
@@ -128,7 +128,7 @@ def test_every_plot_type_draws(page):
 
 def test_3d_axes_turn_with_the_mouse(page):
     _clear(page)
-    page.select_option("#sel-add-plot", "IQ 3D")
+    add_plot(page, "IQ 3D")
     page.wait_for_function("Object.keys(state.plots).length === 1")
     pid = _ids(page)[0]
     page.click("#btn-next")
@@ -148,7 +148,7 @@ def test_3d_axes_turn_with_the_mouse(page):
 
 def test_every_marker_kind_measures(page):
     _clear(page)
-    page.select_option("#sel-add-plot", "PSD")
+    add_plot(page, "PSD")
     page.wait_for_function("Object.keys(state.plots).length === 1")
     pid = _ids(page)[0]
     kinds = page.evaluate("(id) => Object.keys(state.plots[id].marker_kinds)", pid)
@@ -168,7 +168,7 @@ def test_every_marker_kind_measures(page):
 
 def test_phase_noise_has_a_log_axis(page):
     _clear(page)
-    page.select_option("#sel-add-plot", "Phase Noise")
+    add_plot(page, "Phase Noise")
     page.wait_for_function("Object.keys(state.plots).length === 1")
     pid = _ids(page)[0]
     for _ in range(2):
@@ -183,7 +183,7 @@ def test_phase_noise_has_a_log_axis(page):
 
 def test_peak_marker_steps_with_its_buttons(page):
     _clear(page)
-    page.select_option("#sel-add-plot", "PSD")
+    add_plot(page, "PSD")
     page.wait_for_function("Object.keys(state.plots).length === 1")
     pid = _ids(page)[0]
     page.select_option(f"#addmk-{pid}", "peak")
@@ -197,8 +197,10 @@ def test_peak_marker_steps_with_its_buttons(page):
         f = float(freq())
         page.locator(".mk-row", has_text="peak").locator("button", has_text=action).click()
         page.wait_for_function("([id, f]) => parseFloat(state.plots[id].markers[0].params.freq) !== f", arg=[pid, f])
-        page.wait_for_function("([id, f]) => runtime[id].frame.table.rows[0].cells[2].length && state.plots[id].markers[0].params.freq !== String(f)", arg=[pid, f])
-        page.wait_for_timeout(200)
+        # the frame drawn after the step: its marker sits at the new frequency
+        page.wait_for_function("""(id) => { const want = parseFloat(state.plots[id].markers[0].params.freq);
+            const m = runtime[id].frame.axes[0].markers.find((m) => m.label === state.plots[id].markers[0].id);
+            return m && Math.abs(m.x - want) < 1; }""", arg=pid)
     top = level()
     step("next")
     lower = level()
@@ -214,7 +216,7 @@ def test_peak_marker_steps_with_its_buttons(page):
 
 def test_surface_spectrogram_draws_a_surface(page):
     _clear(page)
-    page.select_option("#sel-add-plot", "Surface Spectrogram")
+    add_plot(page, "Surface Spectrogram")
     page.wait_for_function("Object.keys(state.plots).length === 1")
     pid = _ids(page)[0]
     for _ in range(4):
@@ -227,7 +229,7 @@ def test_surface_spectrogram_draws_a_surface(page):
 
 def test_store_ref_button_and_trace_math(page):
     _clear(page)
-    page.select_option("#sel-add-plot", "PSD")
+    add_plot(page, "PSD")
     page.wait_for_function("Object.keys(state.plots).length === 1")
     pid = _ids(page)[0]
     page.evaluate("(id) => plotOp('set', {id, key: 'math', value: 'live - ref'})", pid)

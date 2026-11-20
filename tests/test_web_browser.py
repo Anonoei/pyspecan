@@ -68,14 +68,37 @@ def drop(page, src, dst, where):
     plot(page, src).locator(".plot-header .grip").drag_to(plot(page, dst), target_position={"x": AT[where][0]*box["width"], "y": AT[where][1]*box["height"]})
     page.wait_for_timeout(400)
 
+def add_plot(page, name):
+    """Add a plot from the "+ Add plot" menu, like a user: open it, click the plot"""
+    page.click("#btn-add-plot")
+    page.locator(f".add-menu-item[data-name='{name}']").click()
+
+def test_add_menu_groups_and_describes_the_plots(page):
+    page.click("#btn-add-plot")
+    assert page.locator("#add-menu").is_visible()
+    cats = page.eval_on_selector_all(".add-menu-cat", "c => c.map(x => x.textContent)")
+    order = page.evaluate("state.categories")
+    assert cats[:5] == ["Spectrum", "Time-frequency", "Time domain", "Measurements", "Analog demodulation"] # grouped, in order
+    assert cats == [c for c in order if c in cats]
+    group = lambda c: page.evaluate("(c) => [...document.querySelectorAll('.add-menu-group')].find(g => g.firstChild.textContent === c)"
+                                    ".querySelectorAll('.add-menu-item').length", c)
+    assert group("Spectrum") == 3 and group("Time-frequency") == 5
+    page.locator(".add-menu-item[data-name='Persistence']").hover()
+    card = page.inner_text("#add-menu-info")
+    assert card.startswith("Persistence") and "Data" in card and "Shows" in card and "Use it to" in card and "Cost" in card
+    assert "heavy, about 16x a PSD" in card
+    assert "Data: " in page.get_attribute(".add-menu-item[data-name='PSD']", "title") # the plain text tooltip too
+    page.keyboard.press("Escape")
+    assert not page.locator("#add-menu").is_visible()
+    title = page.get_attribute(".plot-header .plot-name", "title") # the plot's name in its header says the same
+    assert title.startswith("PSD (Spectrum)") and "Use it to:" in title
+
 def test_add_dropdown_then_drag_and_drop(page):
-    options = page.eval_on_selector_all("#sel-add-plot option", "o => o.map(x => x.textContent)")
-    assert options[0].startswith("+") and {"PSD", "Spectrogram", "Persistence", "IQ"} <= set(options)
     for name in ("Spectrogram", "IQ", "Persistence"):
-        page.select_option("#sel-add-plot", name)
+        add_plot(page, name)
         page.wait_for_function(f"[...document.querySelectorAll('.plot-header b')].some(b => b.textContent === '{name}')")
     assert layout(page) == [["PSD"], ["Spectrogram"], ["IQ"], ["Persistence"]]
-    assert page.eval_on_selector("#sel-add-plot", "s => s.value") == ""
+    assert not page.locator("#add-menu").is_visible() # a pick closes the menu
 
     drop(page, "IQ", "PSD", "right")
     assert layout(page) == [["PSD", "IQ"], ["Spectrogram"], ["Persistence"]]
@@ -258,7 +281,7 @@ def test_hover_shows_frequency_and_level_under_the_cursor(page):
 def test_scope_trigger_level_is_dragged_along_y(page):
     if page.locator("#btn-stop").is_enabled():
         page.click("#btn-stop")
-    page.select_option("#sel-add-plot", "Scope")
+    add_plot(page, "Scope")
     page.wait_for_function("Object.values(state.plots).some((p) => p.name === 'Scope')")
     sid = page.evaluate("Object.keys(state.plots).find((k) => state.plots[k].name === 'Scope')")
     page.click("#btn-next")
@@ -305,7 +328,7 @@ def test_settings_sections_links_and_globals(page):
     if page.locator("#btn-stop").is_enabled():
         page.click("#btn-stop")
     if plot(page, "Spectrogram").count() == 0:
-        page.select_option("#sel-add-plot", "Spectrogram")
+        add_plot(page, "Spectrogram")
         page.wait_for_function("[...document.querySelectorAll('.plot-header b')].some(b => b.textContent === 'Spectrogram')")
     psd, spg = plot(page, "PSD"), plot(page, "Spectrogram")
     psd.locator("button[title=settings]").click()

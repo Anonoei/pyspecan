@@ -1,7 +1,7 @@
 import numpy as np
 
 from ..utils import matrix
-from .base import plot
+from .base import About, plot
 from .freq import FreqPlot, SETTING_CMAP
 from .frame import Axis, Frame, Image, Trace, IMAGE, LINE, RED, YELLOW
 from .settings import Setting, override
@@ -11,6 +11,20 @@ class PST(FreqPlot):
     """Persistence histogram of the block's overlapped frames, the chance of a frame passing each frequency / level pixel,
     with the live trace and a max hold over it"""
     TITLE = "Persistence"
+    CATEGORY = "Spectrum"
+    ABOUT = About(
+        data='Every overlapped (realtime) frame of the block as a dB trace, drawn into a frequency / '
+             'level histogram: brightness is how often frames pass each cell, cells lit earlier fade as a'
+             ' ghost',
+        shows='A density of level against frequency (color: how often), the live trace and a max hold '
+              'over it',
+        use=(
+            'Catch intermittent and bursty signals a normal sweep averages away',
+            'See a signal hidden under another (two levels at one frequency)',
+            'Spot frequency hopping or agile emitters',
+        ),
+        cost=16,
+    )
     FEATURES = frozenset({IMAGE, LINE})
     SETTINGS = override(FreqPlot.SETTINGS, vbw={"default": 0.0}) + (
         SETTING_CMAP.with_(default="hot"),

@@ -12,7 +12,7 @@ from dataclasses import replace
 import numpy as np
 
 from ..measure import trigger
-from .base import Plot, plot
+from .base import About, Plot, plot
 from .frame import Axis, Frame, Marker, Trace, YELLOW, BLUE, GREEN, RED, fmt_time
 from .freq import fmt_hz, freq_text, hz
 from .settings import Setting
@@ -78,6 +78,19 @@ def _zigzag(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 @plot("Scope")
 class Scope(Plot):
     TITLE = "Scope"
+    CATEGORY = "Time domain"
+    ABOUT = About(
+        data='The raw samples, carried across blocks, triggered on a level crossing of I, Q or the '
+             'magnitude (or rolling)',
+        shows='Amplitude against time: I and Q (or magnitude, phase), older triggered sweeps fading; the '
+              'trigger level is a line to drag',
+        use=(
+            'Look at waveforms and modulation envelopes',
+            'Trigger on bursts to capture their shape',
+            'Roll mode: a strip chart of a slowly changing signal',
+        ),
+        cost=0.58,
+    )
     SETTINGS = (
         Setting("channel", "Show", "select", default="I/Q", options=CHANNELS, reset=True, group="Timebase"),
         Setting("time_div", "Time / div", "text", default="auto", coerce=time_text, hint="auto, 10u, 2m", reset=True,
@@ -252,6 +265,14 @@ class FreqVsTime(Plot):
     """Instantaneous frequency (an FM discriminator): the phase step between samples, as an offset from the
     tuned frequency. Shows FM / FSK deviation, chirps and frequency hops"""
     TITLE = "Frequency vs Time"
+    CATEGORY = "Analog demodulation"
+    ABOUT = About(
+        data='The latest samples through an FM discriminator (the phase step between samples), optionally'
+             ' smoothed',
+        shows='Instantaneous frequency offset against time; mean, deviation and RMS',
+        use=('See FSK symbols and frequency hops', 'Measure chirps and how a synthesizer settles'),
+        cost=0.06,
+    )
     SETTINGS = (
         Setting("count", "Samples", "int", default=4096, min=2, step=256, help="samples to plot", group="Timebase"),
         Setting("smooth", "Smoothing", "int", default=1, min=1, max=4096, help="samples averaged (moving average), 1 for none",

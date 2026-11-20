@@ -1281,3 +1281,25 @@ def test_scalogram_places_tones_in_time_and_frequency():
 def test_plot_actions_through_the_controller():
     from pyspecan.plots.base import Plot
     assert Plot.ACTIONS == ()
+
+
+# --- what the plot picker tells about each plot --- #
+def test_every_plot_says_what_it_does():
+    from pyspecan.plots.base import CATEGORIES
+    for name in PLOTS.names():
+        cls = PLOTS.get(name)
+        a = cls.about()
+        assert cls.CATEGORY in CATEGORIES and cls.CATEGORY != "Other", name
+        assert a["data"] and a["shows"] and a["use"] and a["cost"], name # Data, Shows, Use it to, Cost
+        assert all(u and u[0].isupper() for u in a["use"]), name
+
+def test_about_of_a_plot_that_says_nothing():
+    from pyspecan.plots.base import Plot, about_text, cost_text
+    class Bare(Plot):
+        """Something an extension added"""
+        CATEGORY = "Not a category"
+    a = Bare.about()
+    assert a == {"category": "Other", "data": "", "shows": "Something an extension added", "use": [], "cost": ""}
+    assert about_text("Bare", a) == "Bare (Other)\nShows: Something an extension added" # no empty lines
+    assert (cost_text(None), cost_text(0.5), cost_text(3), cost_text(16)) == ("", "light, about 0.5x a PSD",
+                                                                                "medium, about 3x a PSD", "heavy, about 16x a PSD")

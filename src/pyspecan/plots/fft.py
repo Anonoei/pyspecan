@@ -1,6 +1,6 @@
 import numpy as np
 
-from .base import plot
+from .base import About, plot
 from .freq import FreqPlot, HoldMixin
 from .frame import Axis, Frame, Trace, BLUE
 from .settings import override, without
@@ -9,6 +9,15 @@ from .settings import override, without
 class FFT(HoldMixin, FreqPlot):
     """Magnitude and phase of the block's last swept FFT"""
     TITLE = "FFT"
+    CATEGORY = "Spectrum"
+    ABOUT = About(
+        data="The block's last frame (no overlap), transformed: linear magnitude and phase of each bin, "
+             'no unit scaling',
+        shows='Magnitude (top, linear) and phase in radians (bottom) against frequency, with max and min '
+              'holds',
+        use=('See raw FFT magnitudes without dB scaling', 'Look at the phase of tones in coherent test signals'),
+        cost=0.27,
+    )
     MARKERS = False # linear magnitude, markers measure dB traces
     LINK_DOMAIN = None # its levels are not dB, nothing to share with the dB plots
     SETTINGS = override(without(FreqPlot.SETTINGS, "vbw", "unit", "cal_db", "ext_gain"),

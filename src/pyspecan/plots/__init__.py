@@ -38,7 +38,7 @@ import logging
 import os
 from importlib import metadata
 
-from .base import Plot, PLOTS, plot, available
+from .base import Plot, PLOTS, plot, available, About, CATEGORIES
 from .frame import Frame, Axis, Trace, Image, Scroller, LINE, SCATTER, IMAGE, THREE_D
 from .plotset import PlotSet, Link
 from .settings import Setting, GLOBAL_SETTINGS

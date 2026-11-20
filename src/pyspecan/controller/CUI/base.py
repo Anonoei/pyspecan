@@ -1,8 +1,10 @@
 """CUI Controller: a command line over the shared controller core, plots are drawn as text"""
 import pathlib
 import shlex
+import shutil
+import textwrap
 
-from ...plots import Scroller, layout
+from ...plots import PLOTS, Scroller, layout
 from ...plots.frame import Frame, LINE, SCATTER, IMAGE
 from ...view.CUI.base import View as CUI, args_view
 from ...view.CUI.draw import draw_frame
@@ -50,7 +52,8 @@ class Controller(_Controller):
             (("overlap",), "overlap <0-1>", "overlap of realtime frames", self.cmd_overlap),
             (("show",), "show <ms>", "ms between frames while playing", self.cmd_show),
             (("plots", "ls"), "plots", "list the plots and their settings", self.cmd_plots),
-            (("types",), "types", "list the plots that can be added", self.cmd_types),
+            (("types",), "types", "list the plots that can be added, by category", self.cmd_types),
+            (("about",), "about <type>", "what a plot does: its data, what it shows, what to use it for, its cost", self.cmd_about),
             (("add",), "add <type>", "add a plot, e.g. add Spectrogram", self.cmd_add),
             (("del", "rm"), "del <id>", "remove a plot", self.cmd_del),
             (("type",), "type <id> <type>", "change a plot's type", self.cmd_type),
@@ -293,7 +296,23 @@ class Controller(_Controller):
         self.cmd_plots([])
 
     def cmd_types(self, args):
-        print("  " + ", ".join(self.plot_types))
+        """The plot types by category, each with what it shows (cut to the line)"""
+        info = self.plot_info()
+        width = shutil.get_terminal_size((100, 20)).columns
+        for category, names in self.plot_groups():
+            print(f"  {category}")
+            for n in names:
+                line = f"    {n:<22} {info[n]['shows']}"
+                print(line if len(line) <= width else line[:width - 1] + "…")
+        print("  about <type> tells more")
+
+    def cmd_about(self, args):
+        self._need(args, 1, "about <type>")
+        from ...plots.base import about_text # plain text, as the tk tooltip
+        name = layout.resolve_type(" ".join(args))
+        width = shutil.get_terminal_size((100, 20)).columns
+        for line in about_text(name, self.plot_info().get(name) or PLOTS.get(name).about()).split("\n"):
+            print(textwrap.fill(line, width - 2, initial_indent="  ", subsequent_indent="      "))
 
     def cmd_add(self, args):
         self._need(args, 1, "add <type>")

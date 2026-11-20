@@ -1,4 +1,4 @@
-from .base import plot
+from .base import About, plot
 from .freq import FreqPlot, HoldMixin, RefMixin, TraceMixin
 from .frame import Axis, Frame, Trace
 
@@ -8,6 +8,21 @@ class PSD(RefMixin, TraceMixin, HoldMixin, FreqPlot):
     (the persistence plot is its realtime view). Holds, markers and measurements use full resolution rows,
     only the displayed traces go through the detector."""
     TITLE = "PSD"
+    CATEGORY = "Spectrum"
+    ABOUT = About(
+        data='The block cut into frames (FFT size, window), each transformed and scaled to power per Hz '
+             '(or dBm, dBFS); averaged over blocks when asked and smoothed by the VBW; max and min holds '
+             'over every frame; the detector reduces the bins to the display points',
+        shows='Level against frequency across the tuned span: the live trace (yellow), max hold (red), '
+              'min hold (blue), a stored reference (grey), markers and their table; with trace math, live'
+              ' - ref on an axis of its own',
+        use=(
+            'Find and measure signals: peak, channel power, ACPR, occupied bandwidth, harmonics, TOI',
+            'Compare against a stored reference before and after a change (store ref, trace math)',
+            "Check a limit (the limit marker's pass / fail)",
+        ),
+        cost=1.0,
+    )
     SETTINGS = FreqPlot.SETTINGS + HoldMixin.SETTINGS + TraceMixin.SETTINGS + RefMixin.SETTINGS
 
     def reset(self):

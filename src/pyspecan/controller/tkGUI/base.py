@@ -18,7 +18,9 @@ from ..base import Controller as _Controller
 from ...model.model import Model
 from ...plots import GLOBAL_SETTINGS
 from ...plots.frame import Frame, LINE, SCATTER, IMAGE, THREE_D
-from ...view.tkGUI.base import View as GUI, ADD_LABEL
+from ...view.tkGUI.base import View as GUI
+from ...view.tkGUI.tooltip import Tooltip
+from ...plots.base import about_text
 
 from ...backend.tk import theme as theme_tk
 
@@ -69,8 +71,8 @@ class Controller(_Controller):
         self._build_globals()
 
         self.panels = PanelController(self, self.view.panel)
-        v.tb_cb_add.config(values=self.plot_types)
-        v.tb_cb_add.bind("<<ComboboxSelected>>", self.add_from_dropdown)
+        self.tooltip = Tooltip(v.root)
+        self.build_add_menu()
         v.tb_btn_layout_save.config(command=self.save_layout_dialog)
         v.tb_btn_layout_load.config(command=self.load_layout_dialog)
         self.panels.rebuild()
@@ -227,11 +229,36 @@ class Controller(_Controller):
             self.show_message(f"Loaded {path.name}")
         self.when_idle(load) # not in the middle of drawing the panes it replaces
 
-    def add_from_dropdown(self, event=None):
-        v = self.view
-        name = v.tb_var_add.get()
-        v.tb_var_add.set(ADD_LABEL)
-        v.root.focus_set()
+    def build_add_menu(self):
+        """The "+ Add plot" menu: a submenu per category, what a plot does shown beside its entry as it is selected"""
+        menu = self.view.tb_menu_add
+        menu.delete(0, "end")
+        info = self.plot_info()
+        self.add_menu_items = {} # plot type -> (submenu, index), for invoking an entry like a user
+        for category, names in self.plot_groups():
+            sub = tk.Menu(menu, tearoff=0)
+            for k, name in enumerate(names):
+                sub.add_command(label=name, command=lambda n=name: self.add_from_menu(n))
+                self.add_menu_items[name] = (sub, k)
+            sub.bind("<<MenuSelect>>", lambda _e, m=sub, n=names: self._about_entry(m, n, info))
+            sub.bind("<Unmap>", lambda _e: self.tooltip.hide())
+            menu.add_cascade(label=category, menu=sub)
+
+    def _about_entry(self, menu, names, info):
+        """Show what the selected entry's plot does beside the menu"""
+        try:
+            k = menu.index("active")
+        except tk.TclError:
+            k = None
+        if k is None or not 0 <= k < len(names):
+            self.tooltip.hide()
+            return
+        x = menu.winfo_rootx() + menu.winfo_width() + 4
+        y = menu.winfo_rooty() + menu.yposition(k)
+        self.tooltip.show(about_text(names[k], info[names[k]]), x, y)
+
+    def add_from_menu(self, name: str):
+        self.tooltip.hide()
         if name in self.plot_types:
             self.when_idle(lambda: self.panels.add(name))
 
@@ -254,3 +281,4 @@ class Controller(_Controller):
             pass
         self.view.root.quit()
         self.view.root.destroy()
+

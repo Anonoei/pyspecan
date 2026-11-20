@@ -21,7 +21,7 @@ from .. import logger
 from ..model.model import Model
 from ..model.sink.file import FORMATS
 from ..obj import Frequency
-from ..plots import GLOBAL_SETTINGS, PlotSet, Source, available, layout_from_kwargs, layout
+from ..plots import CATEGORIES, GLOBAL_SETTINGS, PLOTS, PlotSet, Source, available, layout_from_kwargs, layout
 from ..utils import args
 from ..plots.frame import Frame, LINE, SCATTER, IMAGE
 from ..utils.time import strfmt_td
@@ -197,6 +197,16 @@ class Controller:
             })
         return status
 
+    def plot_info(self) -> dict:
+        """{plot type: its category and what it does} for the plot types this view draws, see plots.base.About"""
+        return {name: PLOTS.get(name).about() for name in self.plot_types}
+
+    def plot_groups(self) -> list[tuple[str, list[str]]]:
+        """[(category, plot types)] in CATEGORIES order, only the ones that have any"""
+        info = self.plot_info()
+        return [(c, [n for n in self.plot_types if info[n]["category"] == c]) for c in CATEGORIES
+                if any(info[n]["category"] == c for n in self.plot_types)]
+
     def get_state(self) -> dict:
         with self.lock:
             sink = self.sink
@@ -213,6 +223,8 @@ class Controller:
                 "sweep_samples": self.model.get_sweep_samples(),
                 "show": self.time_show,
                 "plot_types": self.plot_types,
+                "plot_info": self.plot_info(),
+                "categories": list(CATEGORIES),
                 **self.plots.describe(),
             }
             radio = sink.status()

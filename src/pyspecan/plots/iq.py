@@ -2,7 +2,7 @@
 import numpy as np
 
 from ..utils import ComplexPMF
-from .base import Plot, plot
+from .base import About, Plot, plot
 from .frame import Axis, Frame, Image, Trace, YELLOW, BLUE, RED, GREEN, SCATTER, LINE, IMAGE, THREE_D
 from .freq import SETTING_CMAP
 from .settings import Setting
@@ -28,6 +28,13 @@ class TimePlot(Plot):
 @plot("IQ")
 class IQ(TimePlot):
     TITLE = "IQ"
+    CATEGORY = "Time domain"
+    ABOUT = About(
+        data="The latest samples (an FFT's worth, or the count set)",
+        shows='I and Q against sample index',
+        use=('Check the raw samples: clipping, a DC offset, a dead channel',),
+        cost=0.01,
+    )
     SETTINGS = (SETTING_COUNT,)
 
     def reset(self):
@@ -47,6 +54,13 @@ class IQ(TimePlot):
 @plot("IQ 3D")
 class IQ3D(TimePlot):
     TITLE = "IQ 3D"
+    CATEGORY = "Time domain"
+    ABOUT = About(
+        data='The latest samples',
+        shows='The IQ trajectory along time in 3D with its I and Q projections. Drag to turn it',
+        use=('See phase rotate over time', 'Show a modulation as a helix'),
+        cost=0.01,
+    )
     FEATURES = frozenset({LINE, THREE_D})
     SETTINGS = (SETTING_COUNT,)
 
@@ -74,6 +88,13 @@ class IQ3D(TimePlot):
 class PMF(Plot):
     """Probability mass function of the samples' real and imaginary values, accumulated over time"""
     TITLE = "PMF"
+    CATEGORY = "Time domain"
+    ABOUT = About(
+        data="The samples' I and Q values, their histogram accumulated over time",
+        shows='The probability of each value, for I and Q',
+        use=('Check amplitude statistics and clipping (spikes at the rails)', 'Compare with Gaussian noise'),
+        cost=0.46,
+    )
 
     def reset(self):
         self.pmf = ComplexPMF(256)
@@ -91,6 +112,13 @@ class PMF(Plot):
 @plot("Phasor")
 class Phasor(TimePlot):
     TITLE = "Phasor"
+    CATEGORY = "Time domain"
+    ABOUT = About(
+        data='The latest samples, normalized to the largest',
+        shows='Q against I as dots, unsynchronized',
+        use=('See the shape of the raw samples', 'Check IQ imbalance (an ellipse instead of a circle)'),
+        cost=0.01,
+    )
     FEATURES = frozenset({SCATTER})
     SETTINGS = (SETTING_COUNT,)
 
@@ -109,6 +137,16 @@ class Phasor(TimePlot):
 class IQDensity(Plot):
     """The constellation as a heat map: how often the samples land on each I / Q cell, built up over refreshes"""
     TITLE = "IQ Density"
+    CATEGORY = "Time domain"
+    ABOUT = About(
+        data='Every sample of the block binned on an I / Q grid, built up with decay',
+        shows='A heat map of where the samples land in the IQ plane',
+        use=(
+            "See a modulation's shape without demodulating it",
+            'Spot compression (a flattened ring) or a DC offset',
+        ),
+        cost=0.31,
+    )
     FEATURES = frozenset({IMAGE})
     SETTINGS = (
         Setting("bins", "Bins", "int", default=128, min=16, max=1024, reset=True, help="cells across each axis", group="Display"),

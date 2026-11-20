@@ -12,6 +12,10 @@ noise, two tones and their IM3 products, a bursty signal, a chirp); run it again
 Web: PSD with found signals and a peak marker (the cursor readout over it), spectrogram, persistence, surface spectrogram
 ![web spectrum](/media/web_spectrum.png)
 
+Web: "+ Add plot" groups the plots by what they show; pointing at one says what data it uses, what it shows, what to
+use it for and what it costs
+![web picker](/media/web_picker.png)
+
 Web: channel power, TOI and a limit line, phase noise, FM demodulation, CCDF
 ![web measurements](/media/web_measurements.png)
 
@@ -77,15 +81,22 @@ load one back ("Load layout", `load <file>`). Launch with it using `--layout <fi
 Settings left out keep their defaults. Linked plots take the first one's shared (level, processing) values.
 
 ## Plots and measurements
-Every view lists the plots it can draw (the web view and tkGUI draw them all, 3D included: drag a 3D plot to turn it,
-double click to reset it; the console draws all but 3D).
+Every view lists the plots it can draw, grouped by category ("+ Add plot" in the web view and tkGUI, `types` in the
+console). Pointing at one (or at a plot's name, or its grip in tkGUI; `about <type>` in the console) says what data it
+uses and what it does to it, what it shows, what to use it for, and roughly what it costs to run (in PSDs, see
+Benchmark). The web view and tkGUI draw them all, 3D included (drag a 3D plot to turn it, double click to reset it);
+the console draws all but 3D.
 - Spectrum: PSD (max / min hold, averaging, detector, a stored reference trace and trace math: "store ref" and the
-  `math` setting, live - ref on its own axis), Spectrogram, RT Spectrogram, 3D Spectrogram (a waterfall of
-  lines), Surface Spectrogram (a 3D surface spectrogram: the spectrogram as a solid surface colored by level), Persistence, FFT
-- Time domain: IQ, IQ 3D, PMF, Phasor, IQ Density, Scope (triggered / roll), Frequency vs Time, Scalogram (a wavelet
-  transform: frequency on a log axis against time, sharp in time at high frequencies, in frequency at low ones)
+  `math` setting, live - ref on its own axis), Persistence, FFT
+- Time-frequency: Spectrogram, RT Spectrogram, 3D Spectrogram (a waterfall of lines), Surface Spectrogram (a 3D
+  surface spectrogram: the spectrogram as a solid surface colored by level), Scalogram (a wavelet transform: frequency
+  on a log axis against time, sharp in time at high frequencies, in frequency at low ones)
+- Time domain: IQ, IQ 3D, PMF, Phasor, IQ Density, Scope (triggered / roll)
 - Measurements: CCDF, Power vs Time, Occupancy, Phase Noise (L(f) on a log offset axis, integrated phase noise and
-  jitter), Analog Demod (`mode` AM / FM / PM against time and its spectrum, depth / deviation, modulating frequency, SINAD)
+  jitter)
+- Analog demodulation: Analog Demod (`mode` AM / FM / PM against time and its spectrum, depth / deviation, modulating
+  frequency, SINAD), Frequency vs Time
+- Digital demodulation, Modulation quality, Channel and signal analysis: with RPPS, see DSP plots below
 - Markers on any spectrum (`+ Marker`, or `marker=<kind>` in a layout): point, peak (lands on the highest peak and
   stays there; its ▲ prev / ▼ next buttons step up / down the peaks by level, ◀ left / ▶ right to the nearest peak in
   frequency, the console's `marker <id> act <marker> next`; `track` follows the peak instead; a threshold line to drag),

@@ -117,9 +117,62 @@ function applyStatus(s) {
     }
 }
 
+// --- the plot picker: plot types grouped by category, what each does in a card beside the list --- //
+let addMenuSig = null;
+function buildAddMenu(s) {
+    const sig = JSON.stringify([s.plot_types, s.categories]);
+    if (sig === addMenuSig) return;
+    addMenuSig = sig;
+    const info = s.plot_info || {};
+    const groups = (s.categories || ["Other"]).map((c) => [c, s.plot_types.filter((n) => (info[n] || {}).category === c)])
+        .filter(([, names]) => names.length);
+    const known = new Set(groups.flatMap(([, names]) => names));
+    const rest = s.plot_types.filter((n) => !known.has(n)); // a category this view does not know
+    if (rest.length) groups.push(["Other", rest]);
+    $("add-menu-list").replaceChildren(...groups.map(([c, names]) => el("div", {className: "add-menu-group"},
+        el("div", {className: "add-menu-cat", textContent: c}),
+        ...names.map((n) => {
+            const item = el("button", {className: "add-menu-item", textContent: n, title: aboutText(n, info[n]), role: "menuitem"});
+            item.dataset.name = n;
+            item.onmouseenter = item.onfocus = () => showAbout(n, info[n]);
+            item.onclick = () => { plotOp("add", {name: n}); toggleAddMenu(false); };
+            return item;
+        }))));
+    showAbout(null);
+}
+
+function toggleAddMenu(open) {
+    const menu = $("add-menu");
+    menu.hidden = open === undefined ? !menu.hidden : !open;
+    if (!menu.hidden) { showAbout(null); const first = menu.querySelector(".add-menu-item"); if (first) first.focus({preventScroll: true}); }
+}
+
+// what a plot does: the category, Data (its input and what is done to it), Shows, Use it to, and its cost
+function aboutCard(name, a) {
+    if (!a) return [el("p", {className: "muted", textContent: "Point at a plot to see what it does"})];
+    const part = (label, text) => (text ? [el("div", {className: "about-label", textContent: label}), el("p", {textContent: text})] : []);
+    return [el("div", {className: "about-name", textContent: name}), el("div", {className: "muted about-cat", textContent: a.category}),
+        ...part("Data", a.data), ...part("Shows", a.shows),
+        ...(a.use && a.use.length ? [el("div", {className: "about-label", textContent: "Use it to"}),
+            el("ul", {}, ...a.use.map((u) => el("li", {textContent: u})))] : []),
+        ...part("Cost", a.cost)];
+}
+function showAbout(name, a) { $("add-menu-info").replaceChildren(...aboutCard(name, a)); }
+
+// the same as plain text, for a native tooltip (the plot's name in its header, the menu items)
+function aboutText(name, a) {
+    if (!a) return name;
+    const lines = [`${name} (${a.category})`];
+    if (a.data) lines.push(`Data: ${a.data}`);
+    if (a.shows) lines.push(`Shows: ${a.shows}`);
+    if (a.use && a.use.length) lines.push("Use it to:", ...a.use.map((u) => `  • ${u}`));
+    if (a.cost) lines.push(`Cost: ${a.cost}`);
+    return lines.join("\n");
+}
+
 function applyState(s) {
     state = s;
-    fillSelect($("sel-add-plot"), ["", ...s.plot_types], (o) => o || "+ Add plot…");
+    buildAddMenu(s);
     setValue($("in-fs"), s.fs);
     setValue($("in-cf"), s.cf);
     setValue($("in-nfft"), s.nfft_exp);
@@ -280,7 +333,9 @@ function buildPlot(id, p) {
     rt.canvas = el("canvas");
     bindCanvas(id, rt.canvas);
     const header = el("div", {className: "plot-header", title: "drag to move"},
-        el("span", {className: "grip", textContent: "⠿"}), el("b", {textContent: p.name}), ...linkChip(p), ptime,
+        el("span", {className: "grip", textContent: "⠿"}),
+        el("b", {textContent: p.name, className: "plot-name", title: aboutText(p.name, ((state && state.plot_info) || {})[p.name])}),
+        ...linkChip(p), ptime,
         el("span", {className: "right"}, ...(p.marker_kinds ? [toolMenu(id), markerMenu(id, p)] : []), ...linkMenu(id, p), ...actions, pause, gear, del));
     rt.readout = el("div", {className: "readout", hidden: true});
     rt.table = el("div", {className: "mtable", hidden: true});
@@ -1088,8 +1143,9 @@ function bindInputs() {
     $("btn-reset").onclick = () => cmd("reset");
     $("btn-prev").onclick = () => cmd("prev");
     $("btn-next").onclick = () => cmd("next");
-    const add = $("sel-add-plot");
-    add.onchange = () => { if (add.value) plotOp("add", {name: add.value}); add.value = ""; };
+    $("btn-add-plot").onclick = (ev) => { ev.stopPropagation(); toggleAddMenu(); };
+    document.addEventListener("click", (ev) => { if (!$("add-menu").hidden && !ev.target.closest(".add-menu")) toggleAddMenu(false); });
+    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !$("add-menu").hidden) toggleAddMenu(false); });
     const layoutFile = $("in-layout");
     $("btn-layout-load").onclick = () => layoutFile.click();
     layoutFile.onchange = async () => {

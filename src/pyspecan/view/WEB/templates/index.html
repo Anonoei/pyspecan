@@ -22,7 +22,13 @@
         </span>
         <span id="lbl-message" class="warning"></span>
         <span class="right">
-            <select id="sel-add-plot" title="add a plot"></select>
+            <span class="add-menu">
+                <button id="btn-add-plot" title="add a plot, grouped by what it shows" aria-haspopup="menu">+ Add plot ▾</button>
+                <div id="add-menu" class="add-menu-panel" role="menu" hidden>
+                    <div id="add-menu-list" class="add-menu-list"></div>
+                    <div id="add-menu-info" class="add-menu-info"></div>
+                </div>
+            </span>
             <a id="btn-layout-save" class="button" href="/api/layout" download="pyspecan-layout.json" title="save the plots, their settings, links and markers (relaunch with --layout)">Save layout</a>
             <button id="btn-layout-load" title="replace the plots by a saved layout">Load layout</button>
             <input type="file" id="in-layout" accept=".json,application/json" hidden>

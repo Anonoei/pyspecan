@@ -361,3 +361,13 @@ def test_plot_actions_through_the_controller_and_console(capture):
     assert c.plots.get(pid).ref is not None
     with pytest.raises(ValueError, match="no action"):
         c.plot_action(pid, "sideways")
+
+
+def test_state_groups_the_plot_types(capture):
+    c = make(capture)
+    s = c.get_state()
+    assert set(s["plot_info"]) == set(s["plot_types"]) and s["categories"][0] == "Spectrum"
+    groups = c.plot_groups()
+    assert [n for _, names in groups for n in names] == [n for cat, _ in groups for n in s["plot_types"]
+                                                         if s["plot_info"][n]["category"] == cat] # by category, in order
+    assert sorted(n for _, names in groups for n in names) == sorted(s["plot_types"]) # each once

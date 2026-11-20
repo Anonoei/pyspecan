@@ -3,7 +3,7 @@ import numpy as np
 
 from ..measure import units
 from ..measure.windows import WindowLUT
-from .base import Plot, plot
+from .base import About, Plot, plot
 from .frame import BLUE, GREEN, YELLOW, Axis, Frame, Trace
 from .freq import fmt_hz, freq_text, hz, to_psd
 from .scope import _zigzag
@@ -19,6 +19,15 @@ class PhaseNoise(Plot):
     carrier's power, so the analyzer's own noise and its window's skirt set the floor, and the resolution (the FFT size)
     the closest offset"""
     TITLE = "Phase Noise"
+    CATEGORY = "Measurements"
+    ABOUT = About(
+        data="Large FFTs (spanning blocks) averaged; the carrier's power from its main lobe; the noise "
+             'density at each offset over it',
+        shows='L(f) in dBc/Hz against the offset from the carrier on a log axis; the integrated phase '
+              'noise and jitter',
+        use=('Characterize an oscillator or synthesizer', 'Compare reference sources'),
+        cost=1.4,
+    )
     SETTINGS = (
         Setting("window", "Window", "select", default="blackman", options=tuple(WindowLUT), reset=True, group="Processing",
                 help="FFT window, a narrow main lobe reaches closer offsets"),
@@ -112,6 +121,15 @@ class AnalogDemod(Plot):
     """AM, FM or PM demodulation of a carrier: the modulation against time and its spectrum, with the depth or
     deviation, the modulating frequency and the SINAD"""
     TITLE = "Analog Demod"
+    CATEGORY = "Analog demodulation"
+    ABOUT = About(
+        data='The block shifted to the carrier, filtered to the demod bandwidth, then its envelope (AM), '
+             'phase step (FM) or unwrapped phase (PM)',
+        shows='The demodulated signal against time and its spectrum; depth or deviation, the modulating '
+              'frequency, SINAD',
+        use=('Measure FM deviation or AM depth', "Check a modulating tone's frequency and distortion (SINAD)"),
+        cost=5.7,
+    )
     SETTINGS = (
         Setting("mode", "Mode", "select", default="FM", options=MODES, reset=True, group="Demod", help="what is demodulated"),
         Setting("carrier", "Carrier", "text", default="", coerce=freq_text, hint="strongest", group="Demod",

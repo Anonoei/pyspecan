@@ -70,6 +70,10 @@ class PlotPane:
         self.hover: tuple[int, float, float] | None = None # (axis, x, y pixels) of the pointer over an axis
         self.keep.setdefault("tool", TOOLS[0])
         pane.master.config(text=self.plot.TITLE)
+        tip = getattr(ctrl, "tooltip", None)
+        if tip is not None: # what the plot does, on its grip
+            from ...plots.base import about_text
+            tip.attach(pane.lbl_grip, lambda: about_text(self.plot.NAME, type(self.plot).about()))
 
         self.btn_enable = ttk.Button(pane.master, text="DISABLE", style="Toggle.TButton", command=self.toggle)
         self.btn_enable.place(relx=1, rely=0, x=-100, y=5, anchor=tk.N, bordermode=tk.OUTSIDE, height=30, width=80)

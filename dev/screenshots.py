@@ -47,6 +47,7 @@ class Scene:
     turn: int | None = None  # web: drag this plot's canvas (a 3d plot turned)
     hover: tuple | None = None # web: (plot index, x, y) the cursor rests on, fractions of the canvas
     store_ref: int | None = None # after this many blocks, press every plot's "store ref" (then step the rest)
+    menu: str | None = None  # web: open "+ Add plot" and point at this plot (its description shows)
     size: tuple = (1600, 1000)
 
 DSP = ["--dsp_freq", "150k", "--dsp_bw", "60k"]
@@ -58,6 +59,7 @@ SCENES = [
                                   "Analog Demod mode=FM carrier=-300k demod_bw=40k", "CCDF"], steps=8),
     Scene("analysis", "web", ['PSD "math=live - ref"', "Scalogram", None, "Vector Diagram", "Constellation Density"], steps=10,
           store_ref=3, args=DSP, dsp=True),
+    Scene("picker", "web", ["PSD marker=signals", "Spectrogram max_count=40"], steps=20, menu="Eye Diagram"),
     Scene("time", "web", ["Scope trig_mode=auto", "Frequency vs Time", None, "IQ Density", "Power vs Time"], steps=6),
     Scene("3d", "web", ["3D Spectrogram", "IQ 3D", None, "Surface Spectrogram cmap=hot max_count=32", "Occupancy"], steps=34, turn=2),
     Scene("dsp", "web", ["PSD marker=signals", "Constellation", None, "Eye Diagram", "Network Analyzer"], steps=6, args=DSP, dsp=True),
@@ -120,6 +122,9 @@ def shoot_web(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
                 page.mouse.move(cx + 40, cy - 10, steps=6)
                 page.mouse.up()
                 page.mouse.move(5, 5)
+            if scene.menu is not None:
+                page.click("#btn-add-plot")
+                page.locator(f".add-menu-item[data-name='{scene.menu}']").hover()
             if scene.hover is not None:
                 k, fx, fy = scene.hover
                 box = canvases.nth(k).bounding_box()
