@@ -1,8 +1,6 @@
 """File reader"""
 import pathlib
 
-import numpy as np
-from numpy._typing._array_like import NDArray
 import pysdrlib
 from pysdrlib import Formats as _Formats
 from pysdrlib import File as _File
@@ -12,7 +10,6 @@ NotOpen = getattr(getattr(pysdrlib, "err", None), "NotOpen", AttributeError)
 
 from .sink import Sink
 
-from ... import err
 
 # IQ formats only: real formats would yield real samples
 FORMATS = [f.name for f in _Formats if f.is_complex]
@@ -20,7 +17,7 @@ DEFAULT_FORMAT = "cf64"
 
 def args_file(sink):
     sink.add_argument("-f", "--path", default=None, help="file path")
-    sink.add_argument("-d", "--fmt", choices=FORMATS, default=DEFAULT_FORMAT, help="data format")
+    sink.add_argument("-F", "--fmt", choices=FORMATS, default=DEFAULT_FORMAT, help="data format")
 
 class SinkFile(Sink):
     SEEKABLE = True

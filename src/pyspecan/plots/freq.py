@@ -9,7 +9,7 @@ from ..obj import Frequency
 from ..utils.vbw import vbw_rows
 from . import colormap
 from .base import Plot
-from .frame import RED, BLUE, Frame, Marker, Trace
+from .frame import RED, BLUE, Frame, Trace
 from .settings import Setting
 
 def _ref_level(value):

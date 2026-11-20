@@ -83,7 +83,7 @@ class Controller(_Controller):
             return
         per = max((height - len(shown)) // len(shown), 4)
         lines = []
-        for pid, (frame, images) in shown:
+        for _, (frame, images) in shown:
             lines += draw_frame(frame, images, width, per, self.view.use_color)
         out = "\n".join(lines)
         if clear and self.view.tty:

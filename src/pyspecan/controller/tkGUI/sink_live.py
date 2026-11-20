@@ -1,5 +1,4 @@
 """Controller for LIVE sink"""
-import pysdrlib
 
 from .sink import Sink
 

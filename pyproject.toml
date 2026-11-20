@@ -52,7 +52,6 @@ Source = "https://github.com/anonoei/pyspecan"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-norecursedirs = ["tests/dev"]
 pythonpath = ["src"]
 
 [tool.bumpver]

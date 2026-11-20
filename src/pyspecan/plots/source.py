@@ -14,7 +14,7 @@ asking for the same (mode, nfft, window) get the same frames, computed once per 
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
-from ..utils.window import WindowLUT
+from ..measure.windows import WindowLUT
 
 
 class Stream:

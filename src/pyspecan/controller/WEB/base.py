@@ -114,7 +114,7 @@ class Controller(_Controller):
                 except OSError:
                     continue
         except PermissionError:
-            raise ValueError("permission denied")
+            raise ValueError("permission denied") from None
         entries.sort(key=lambda e: (not e["dir"], e["name"].lower()))
         parent = d.parent if d.parent != d and self._allowed(d.parent) else None
         return {"path": str(d), "parent": str(parent) if parent else None, "entries": entries}

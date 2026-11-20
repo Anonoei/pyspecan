@@ -25,11 +25,11 @@ class API:
             try:
                 return self.parent.radios()
             except Exception as e:
-                raise HTTPException(400, str(e))
+                raise HTTPException(400, str(e)) from e
 
         @self.router.get("/fs")
         def list_dir(path: str | None = None):
             try:
                 return self.parent.list_dir(path)
             except ValueError as e:
-                raise HTTPException(400, str(e))
+                raise HTTPException(400, str(e)) from e

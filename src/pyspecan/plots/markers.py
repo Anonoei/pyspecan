@@ -250,7 +250,7 @@ class MarkerSet:
     def merge(self, other: "MarkerSet"):
         """Take in the markers of `other` under new ids. Delta markers keep pointing at their renumbered reference"""
         renamed = {}
-        for mid, it in other.items.items():
+        for mid in other.items:
             renamed[mid] = f"M{self._next}"
             self._next += 1
         for mid, it in other.items.items():

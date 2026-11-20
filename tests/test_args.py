@@ -46,3 +46,41 @@ def test_plot_and_row_keep_their_order():
     ns = m.parse_args(["-v", "cui", "--plot", "PSD vbw=5", "--plot", "FFT", "--row", "--plot", "Scope", "--cal_db", "-3"])
     assert ns.layout_items == ["PSD vbw=5", "FFT", None, "Scope"]
     assert ns.cal_db == -3.0
+
+@pytest.mark.parametrize("given, view", [("tk", "tkGUI"), ("TKGUI", "tkGUI"), ("tkGUI", "tkGUI"), ("c", "CUI"), ("Web", "WEB")])
+def test_view_names_ignore_case(given, view):
+    assert m.parse_args(["-v", given]).view == view
+
+def test_short_choices_in_help(capsys):
+    with pytest.raises(SystemExit):
+        m.parse_args(["-h"])
+    out = capsys.readouterr().out
+    assert "{cui,tk,web}" in out and "{file,live,tcpiq}" in out
+
+def test_file_format_is_capital_f_and_d_is_the_radio():
+    assert m.parse_args(["-F", "ci16t"]).fmt == "ci16t"
+    assert m.parse_args(["-s", "live", "-d", "uhd"]).device == "uhd"
+    with pytest.raises(SystemExit):
+        m.parse_args(["-d", "cf64"]) # file sink: no -d any more
+
+def test_each_layer_gets_only_its_options():
+    from pyspecan.arguments import split
+    _importable(View.WEB)
+    part = split(View.WEB, Sink.TCPIQ, {"tcp_port": 1, "nfft": 512, "port": 8080, "show": 20.0, "cal_db": -3.0})
+    assert part["model"] == {"tcp_port": 1, "nfft": 512}
+    assert part["ui"] == {"port": 8080, "show": 20.0}
+    assert part["plots"] == {"cal_db": -3.0}
+
+def test_unknown_options_are_rejected():
+    from pyspecan.arguments import split
+    with pytest.raises(TypeError, match="port"): # a web option, not the console's
+        split(View.CUI, Sink.FILE, {"port": 8080})
+
+def test_specan_checks_names_and_options_before_opening_anything():
+    from pyspecan import SpecAn, err
+    with pytest.raises(err.UnknownOption):
+        SpecAn("nope")
+    with pytest.raises(TypeError, match="vbw"):
+        SpecAn("cui", "file", vbw=3)
+    with pytest.raises(ValueError, match="Laser"):
+        SpecAn("cui", "FILE", layout_items=["Laser"])

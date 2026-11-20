@@ -1,11 +1,9 @@
-from collections import Counter
 import linecache
 import os
 import tracemalloc
 
 import cProfile
 
-from ..config import config
 
 class Memory:
     __instance = None

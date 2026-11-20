@@ -8,8 +8,15 @@ from pyspecan.plots import PLOTS, PlotSet, Scroller, Source, available
 from pyspecan.plots.frame import Image
 from pyspecan.plots.freq import to_psd
 from pyspecan.plots.source import Stream
-from pyspecan.utils.psd import psd as ref_psd
 from pyspecan.utils.vbw import vbw, vbw_rows
+
+def ref_psd(samples, Fs=1.0, vbw=None, win="blackman"):
+    """Straightforward windowed periodogram in dB/Hz, what the plots are checked against"""
+    from pyspecan.measure.windows import WindowLUT
+    from pyspecan.utils.vbw import vbw as _vbw
+    n = len(samples)
+    out = np.fft.fftshift(10.0*np.log10(np.abs(np.fft.fft(samples * WindowLUT[win](n)))**2 / (n*Fs)))
+    return out if vbw is None else _vbw(out, vbw)
 
 class FakeModel:
     """The parts of Model plots read"""

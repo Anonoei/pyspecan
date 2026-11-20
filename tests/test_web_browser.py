@@ -32,7 +32,7 @@ def page(tmp_path_factory):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
-    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-d", "cf64", "-fs", "250k", "-n", "512"],
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64", "-fs", "250k", "-n", "512"],
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         for _ in range(100):

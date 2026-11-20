@@ -15,7 +15,7 @@ tkGUI, persistence and realtime spectrogram
 ![tkGUI_RT](/media/RT_tkGUI2.png)
 
 # Usage
-- View (-v|--view): specifies which frontend to use (tkGUI, web, cui)
+- View (-v|--view): specifies which frontend to use (tk, web, cui; any case)
 - Sink (-s|--sink): specifies which interface to use (file, live, tcpiq)
   - Live uses [pysdrlib](https://github.com/anonoei/pysdrlib) for hardware SDR abstractions
   - TCPIQ takes `--tcp_host`, `--tcp_port`, `--tcp_listen`, `--tcp_timeout`
@@ -24,15 +24,15 @@ tkGUI, persistence and realtime spectrogram
 - `python3 -m pyspecan --help`
 - tkGUI, file: `python3 -m pyspecan`
 - tkGUI, live (hackrf): `python3 -m pyspecan -s live -d hackrf`
-- web, file: `python3 -m pyspecan -v web -f <file> -d cf64 -fs 250k`, then open http://127.0.0.1:8000
-- console, file: `python3 -m pyspecan -v cui -f <file> -d cf64 -fs 250k`, type `help` (draws plots as text, needs no plotting library)
+- web, file: `python3 -m pyspecan -v web -f <file> -F cf64 -fs 250k`, then open http://127.0.0.1:8000
+- console, file: `python3 -m pyspecan -v cui -f <file> -F cf64 -fs 250k`, type `help` (draws plots as text, needs no plotting library)
 
 ## Layouts
 Start with specific plots, in rows, with their settings, links and markers. `--plot` adds a plot to the
 current row, `--row` starts a new one. A plot is its name (case and spaces don't matter) then `key=value`
 settings; `link=<name>` links plots that share a name, `marker=<kind>[:key=value,...]` adds a marker.
 ```
-python3 -m pyspecan -v web -f <file> -d cf64 -fs 250k --cal_db -10 \
+python3 -m pyspecan -v web -f <file> -F cf64 -fs 250k --cal_db -10 \
     --plot "PSD vbw=5 unit=dBm link=a marker=peak" --plot "spectrogram link=a" \
     --row --plot "persistence show_max=on" --plot "scope trig_mode=roll time_div=10u"
 ```
