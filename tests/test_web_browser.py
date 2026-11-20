@@ -322,3 +322,41 @@ def test_save_and_load_layout(page, tmp_path):
     page.set_input_files("#in-layout", str(path))
     page.wait_for_function("document.querySelector('#lbl-message').textContent.includes('Laser')")
     assert layout(page) == [["PSD", "Spectrogram"], ["Scope"]] # a bad file changes nothing
+
+def test_closing_pages_mid_stream_logs_no_errors(page, tmp_path):
+    """Pages, and a whole browser context, going away while frames stream: the server drops them quietly.
+    Uses the module's browser, playwright's sync API runs once per thread"""
+    capture = tmp_path / "capture.cf64"
+    (np.exp(2j*np.pi*0.1*np.arange(2_000_000))).astype(np.complex64).tofile(capture)
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64", "-fs", "1M"],
+                            env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    try:
+        for _ in range(100):
+            try:
+                httpx.get(f"http://127.0.0.1:{port}/api/status")
+                break
+            except Exception:
+                time.sleep(0.1)
+        ctx = page.context.browser.new_context()
+        for _ in range(3):
+            pg = ctx.new_page()
+            pg.goto(f"http://127.0.0.1:{port}/")
+            pg.wait_for_selector(".plot")
+            pg.click("#btn-start")
+            pg.wait_for_timeout(800)
+            pg.close()
+        pg = ctx.new_page()
+        pg.goto(f"http://127.0.0.1:{port}/")
+        pg.click("#btn-start")
+        pg.wait_for_timeout(800)
+        ctx.close()
+        time.sleep(1)
+        assert httpx.get(f"http://127.0.0.1:{port}/api/status").status_code == 200 # still serving
+    finally:
+        proc.terminate()
+        out = proc.communicate(timeout=5)[0]
+    assert "Traceback" not in out and "ERROR" not in out, out

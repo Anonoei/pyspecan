@@ -400,9 +400,14 @@ class Controller:
         self.thread = threading.Thread(target=self._stream, name="stream", daemon=True)
         self.thread.start()
 
+    QUIT_WAIT = 3.0 # [s] the stream thread gets to finish its block (a radio read waits at most 2 s) before the sink closes
+
     def quit(self):
         self.running = False
         self.playing = False
+        t = self.thread
+        if t is not None and t is not threading.current_thread() and t.is_alive():
+            t.join(timeout=self.QUIT_WAIT) # closing the radio under a read in progress would fail that read
         try:
             self.sink.close() # a radio on a server is detached from, not left streaming
         except Exception as e:

@@ -202,6 +202,59 @@ def test_nothing_attached_says_what_to_do(monkeypatch):
     with pytest.raises(pysdrlib.err.NoDevice, match="--list"):
         GetModel(Sink.LIVE)(device=None, nfft=256)
 
+def _dead_address():
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return f"tcp://127.0.0.1:{s.getsockname()[1]}" # nothing listens there
+
+def test_known_servers_are_used_when_nothing_is_attached(server, monkeypatch, capsys):
+    from pyspecan.model.sink import live
+    monkeypatch.setattr(pysdrlib, "find", lambda *a, **k: [])
+    monkeypatch.setattr(live, "PROBE_TIMEOUT", 0.5)
+    dead = _dead_address()
+    sink = GetModel(Sink.LIVE)(device=None, servers=f"{dead}, {server}", claim=True, nfft=256).sink
+    try:
+        assert sink.remote and sink.server == server and sink.next(2048) # the dead one was skipped
+        assert "using sim-0" in capsys.readouterr().out or sink.dev.id == "sim-0"
+        targets = [c["target"] for c in sink.radios()]
+        assert f"{server}/sim-0" in targets and None in targets # the dead server is listed as not answering
+    finally:
+        sink.close()
+    monkeypatch.setenv("PYSPECAN_SERVERS", server)
+    sink = GetModel(Sink.LIVE)(device="auto", nfft=256).sink
+    try:
+        assert sink.server == server
+    finally:
+        sink.close()
+    monkeypatch.setenv("PYSPECAN_SERVERS", dead)
+    with pytest.raises(pysdrlib.err.NoDevice, match=dead):
+        GetModel(Sink.LIVE)(device=None, nfft=256)
+
+def test_a_local_radio_comes_before_the_known_servers(server, monkeypatch):
+    monkeypatch.setattr(pysdrlib, "find", lambda *a, **k: [pysdrlib.DeviceInfo(driver="sim", label="Simulated radio 0")])
+    sink = GetModel(Sink.LIVE)(device=None, servers=server, nfft=256).sink
+    try:
+        assert not sink.remote
+    finally:
+        sink.close()
+
+def test_known_servers_must_be_addresses():
+    from pyspecan.model.sink.live import parse_servers
+    assert parse_servers(" tcp://a:1 ,tcp://b:2/, tcp://a:1") == ["tcp://a:1", "tcp://b:2"]
+    assert parse_servers("") == []
+    for bad in ("a:1", "tcp://a:1/sim-0"):
+        with pytest.raises(ValueError):
+            parse_servers(bad)
+
+def test_list_shows_every_known_server(server, empty_server, monkeypatch, capsys):
+    from pyspecan._internal import main as m
+    from pyspecan.model.sink import live
+    monkeypatch.setattr(live, "PROBE_TIMEOUT", 0.5)
+    dead = _dead_address()
+    m._main(m.parse_args(["--list", "--servers", f"{server},{dead}", "-d", empty_server]))
+    out = capsys.readouterr().out
+    assert f"{server}/sim-0" in out and f"on the server {empty_server}" in out and f"{dead}: not answering" in out
+
 def test_a_driver_name_and_serial_still_pick_the_radio(monkeypatch):
     seen = []
     real = pysdrlib.open
@@ -347,3 +400,16 @@ def test_antennas_of_a_local_radio():
         assert not sink.inverted
     finally:
         sink.close()
+
+def test_quitting_while_streaming_a_claimed_radio_is_quick_and_frees_it(server):
+    c = Recorder(make(server, claim=True))
+    c.start_stream()
+    c.playing = True
+    end = time.monotonic() + 5
+    while len(c.ticks) < 3 and time.monotonic() < end:
+        time.sleep(0.05)
+    assert c.ticks
+    t0 = time.monotonic()
+    c.quit()
+    assert time.monotonic() - t0 < 2.0 and not c.thread.is_alive()
+    assert not hosted(server)["sim-0"]["controlled"]

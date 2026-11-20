@@ -18,6 +18,9 @@ tkGUI, persistence and realtime spectrogram
 - View (-v|--view): specifies which frontend to use (tk, web, cui; any case)
 - Sink (-s|--sink): specifies which interface to use (file, live, tcpiq)
   - Live uses [pysdrlib](https://github.com/anonoei/pysdrlib) for hardware SDR abstractions
+    - `-d` picks the radio: a driver (`uhd`), or a radio on a pysdrlib server (`tcp://host:5555/hackrf-0`). With no `-d` it uses the first radio attached to this machine
+    - `--servers tcp://a:5555,tcp://b:5555` (or the `PYSPECAN_SERVERS` environment variable) names known servers. With no `-d` and no radio attached here, it uses the first server that has one. `--list` and the radio picker show their radios too
+    - `--list` prints every radio it can use, with the options that pick each one
   - TCPIQ takes `--tcp_host`, `--tcp_port`, `--tcp_listen`, `--tcp_timeout`
 
 ## Module

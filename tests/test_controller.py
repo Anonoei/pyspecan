@@ -190,6 +190,22 @@ def test_draw_frame_shows_markers_bands_and_readout():
     ccdf = Frame([Axis(ymin=-6, ymax=0, yfmt="log10", traces=[Trace(np.linspace(-6, 0, 20))])])
     assert "1e-3" in "\n".join(draw_frame(ccdf, [None], 60, 20, False))
 
+def test_draw_frame_shows_marks_on_images():
+    import re
+    from pyspecan.plots.frame import Band, Image, Marker
+    data = np.full((20, 100), 128, dtype=np.uint8)
+    spg = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", image=Image(data),
+               markers=[Marker(-3e3, kind="vline", label="M2")], bands=[Band(1e3, 3e3, label="ch")])
+    for color in (False, True):
+        lines = [re.sub(r"\x1b\[[0-9;]*m", "", l) for l in draw_frame(Frame([spg]), [data], 60, 12, color)]
+        body = lines[:-1]
+        assert all(l.count("│") >= 4 for l in body[1:-1]) # the axis bar, two band edges and the marker
+        assert "M2" in body[0] and "ch" in body[-1]
+        assert all(len(l) <= 60 for l in lines)
+    pst = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", ymin=-100, ymax=0, image=Image(data), markers=[Marker(0.0, -50.0, "M1")])
+    text = "\n".join(draw_frame(Frame([pst]), [data], 60, 12, False))
+    assert "▼M1" in text
+
 # --- markers edited by the mouse --- #
 def test_marker_edits_redraw_the_current_block_while_stopped(capture):
     c = make(capture)
@@ -262,3 +278,20 @@ def test_plot_settings_redraw_the_current_block_while_stopped(capture):
     c.playing = True
     c.set_plot(pid, "ref_level", "-10")
     assert len(c.ticks) == n + 1 # playing: the next block shows it
+
+def test_a_client_gone_mid_send_is_dropped_quietly():
+    import asyncio
+    import logging
+    pytest.importorskip("fastapi")
+    from pyspecan.controller.WEB.websocket import WebSocketManager
+    class Gone:
+        async def accept(self): pass
+        async def send_json(self, msg): raise RuntimeError("Cannot call send once a close message has been sent")
+    class Parent:
+        log = logging.getLogger("test")
+    ws = WebSocketManager(Parent())
+    async def run():
+        cid = await ws.connect(Gone())
+        assert await ws.send(cid, {"type": "state"}) is False and cid not in ws.connections
+        assert await ws.send(cid, {"type": "error"}) is False # already dropped: no KeyError
+    asyncio.run(run())

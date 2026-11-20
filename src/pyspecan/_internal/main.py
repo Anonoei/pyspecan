@@ -7,17 +7,17 @@ from ..config import config, View, Sink
 from ..plots import layout_from_kwargs
 from ..specan import SpecAn
 
-def _list_radios(device):
-    from ..model.sink.live import list_devices
-    address = device if device and "://" in device else None
-    print("\n".join(list_devices(address)))
+def _list_radios(device, servers=None):
+    from ..model.sink.live import list_devices, parse_servers
+    address = [device] if device and "://" in device else []
+    print("\n".join(list_devices(address + parse_servers(servers))))
 
 def _main(ns: argparse.Namespace):
     kwargs = vars(ns)
     for key in ("mon_mem", "profile"):
         kwargs.pop(key)
     if kwargs.pop("list"):
-        return _list_radios(kwargs.get("device"))
+        return _list_radios(kwargs.get("device"), kwargs.get("servers"))
     view, sink = kwargs.pop("view"), kwargs.pop("sink")
     try:
         kwargs["layout"] = layout_from_kwargs(kwargs) # fail before any window opens

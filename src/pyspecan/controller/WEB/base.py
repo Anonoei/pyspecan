@@ -52,7 +52,7 @@ class Controller(_Controller):
             client_id = await self.ws.connect(websocket)
             try:
                 await self.ws.send(client_id, {"type": "state", "data": self.get_state()})
-                while True:
+                while client_id in self.ws.connections: # a failed send drops the client
                     msg = json.loads(await websocket.receive_text())
                     if msg.get("type") == "ack":
                         self.ws.ack(client_id)

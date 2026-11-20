@@ -185,19 +185,57 @@ def _resample(data: np.ndarray, rows: int, cols: int) -> np.ndarray:
             out = np.take(out, idx, axis=axis)
     return out
 
-def _draw_image(data: np.ndarray, cmap: str, cols: int, rows: int, use_color: bool) -> list[str]:
+def _draw_image(data: np.ndarray, cmap: str, cols: int, rows: int, use_color: bool) -> list[list[str]]:
+    """rows x cols cells, each a half block (or a ramp character) with its own color codes"""
     img = _resample(np.asarray(data, dtype=np.uint8), rows * 2, cols)
     lut = colormap.lut(cmap)
     out = []
     for r in range(rows):
         top, bot = img[2 * r], img[2 * r + 1]
         if use_color:
-            parts = [f"{_fg(tuple(lut[a]))}{_bg(tuple(lut[b]))}▀" for a, b in zip(top.tolist(), bot.tolist(), strict=True)]
-            out.append("".join(parts) + RESET)
+            out.append([f"{_fg(tuple(lut[a]))}{_bg(tuple(lut[b]))}▀" for a, b in zip(top.tolist(), bot.tolist(), strict=True)])
         else:
             avg = (top.astype(np.int32) + bot) // 2
-            out.append("".join(RAMP[min(int(v) * len(RAMP) // 256, len(RAMP) - 1)] for v in avg))
+            out.append([RAMP[min(int(v) * len(RAMP) // 256, len(RAMP) - 1)] for v in avg])
     return out
+
+def _join(cells: list[list[str]], use_color: bool) -> list[str]:
+    return ["".join(row) + (RESET if use_color else "") for row in cells]
+
+def _draw_image_marks(cells: list[list[str]], ax: Axis, xr, yr, use_color: bool):
+    """Band edges and vline markers as vertical lines over an image, point markers (on a level axis) as a
+    triangle and label, written over the cells"""
+    rows = len(cells)
+    cols = len(cells[0]) if rows else 0
+    if not cols:
+        return
+    def col(v):
+        return int(_scale(v, xr[0], xr[1], cols))
+    def put(r, c, text, color):
+        for k, ch in enumerate(text):
+            if 0 <= r < rows and 0 <= c + k < cols:
+                cells[r][c + k] = f"{RESET}{_fg(_rgb(color))}{ch}{RESET}" if use_color else ch
+    def vline(v, color):
+        for r in range(rows):
+            put(r, col(v), "│", color)
+    for b in ax.bands:
+        for v in (b.lo, b.hi):
+            if xr[0] <= v <= xr[1]:
+                vline(v, EDGE)
+    for b in ax.bands:
+        if b.label and xr[0] <= b.lo <= xr[1]:
+            put(rows - 1, col(b.lo) + 1, b.label, b.color)
+    for m in ax.markers:
+        if not xr[0] <= m.x <= xr[1]:
+            continue
+        if m.kind == "vline" or ax.ymin is None: # no level axis: a point is only a frequency
+            vline(m.x, m.color)
+            if m.label:
+                put(0, col(m.x) + 1, m.label, m.color)
+            continue
+        row = (rows * 2 - 1 - int(_scale(m.y, yr[0], yr[1], rows * 2))) // 2
+        above = row > 0
+        put(row - 1 if above else row + 1, col(m.x), ("▼" if above else "▲") + m.label, m.color)
 
 def draw_axis(ax: Axis, image_data, width: int, height: int, use_color=True) -> list[str]:
     """One axis in a width x height box of text"""
@@ -222,7 +260,9 @@ def draw_axis(ax: Axis, image_data, width: int, height: int, use_color=True) -> 
 
     # plot area
     if is_image:
-        body = _draw_image(image_data if image_data is not None else ax.image.data, ax.image.cmap, cols, plot_rows, use_color)
+        cells = _draw_image(image_data if image_data is not None else ax.image.data, ax.image.cmap, cols, plot_rows, use_color)
+        _draw_image_marks(cells, ax, xr, yr, use_color)
+        body = _join(cells, use_color)
     else:
         cv = Canvas(cols, plot_rows)
         for t in ax.traces:

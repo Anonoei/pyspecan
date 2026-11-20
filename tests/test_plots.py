@@ -720,6 +720,24 @@ def test_retype_keeps_link_when_it_can():
     plots.retype(a, "FFT")
     assert plots.get(a).link is None and plots.get(b).link is None
 
+def test_retype_keeps_markers():
+    _, _, plots, (a,) = _linked("PSD")
+    plots.get(a).markers.add("point", freq="100")
+    plots.get(a).markers.add("channel")
+    plots.retype(a, "Spectrogram")
+    assert list(plots.get(a).markers.items) == ["M1", "M2"]
+    assert plots.get(a).markers.add("peak") == "M3"
+    plots.retype(a, "FFT")
+    assert not plots.get(a).MARKERS
+
+def test_retype_of_a_linked_plot_does_not_duplicate_markers():
+    _, _, plots, (a, b) = _linked("PSD", "Spectrogram")
+    plots.link(a, b)
+    plots.get(a).markers.add("point", freq="100")
+    plots.retype(a, "Persistence")
+    assert plots.get(a).link is plots.get(b).link
+    assert list(plots.get(a).markers.items) == ["M1"]
+
 def test_global_cal_reaches_every_plot():
     model, src, plots, (a, b) = _linked("PSD", "Power vs Time", unit="dBm", cal_db=-10)
     assert plots.globals["cal_db"] == -10 and plots.get(a).cal_db == -10
@@ -808,3 +826,53 @@ def test_missing_extension_hint():
         layout.validate(layout.parse_inline(["NotInstalled"]))
     with pytest.raises(ValueError, match="unknown marker kind 'nope'.*need their package installed"):
         layout.validate(layout.parse_inline(["PSD marker=nope"]))
+
+# --- mouse drags (plots/drag.py, what tk uses) --- #
+def _drag_axis():
+    from pyspecan.plots.frame import Axis, Band, Marker
+    return Axis(xmin=0, xmax=1000, ymin=-100, ymax=0, traces=[],
+                markers=[Marker(100.0, -20.0, "M1", owner="M1", edit="freq"), Marker(900.0, -20.0, "M3", owner="M3")],
+                bands=[Band(400.0, 600.0, owner="M2", edit=("freq", "bw")), Band(700.0, 800.0, owner="M4")])
+
+def test_hit_test_finds_markers_edges_and_bodies():
+    from pyspecan.plots.drag import hit_test
+    ax, px, py = _drag_axis(), (lambda x: x), (lambda y: -y) # 1 px per Hz, 1 px per dB
+    m = hit_test(ax, 0, px, 103, 20, py)
+    assert (m.mode, m.owner, m.edit) == ("marker", "M1", "freq")
+    assert hit_test(ax, 0, px, 103, 80, py) is None # far below the triangle
+    assert hit_test(ax, 0, px, 103) is not None     # no levels: only the frequency counts
+    assert hit_test(ax, 0, px, 398).mode == "left" and hit_test(ax, 0, px, 604).mode == "right"
+    body = hit_test(ax, 0, px, 500)
+    assert (body.mode, body.owner, body.edit) == ("move", "M2", ("freq", "bw"))
+    assert hit_test(ax, 0, px, 900, 20, py) is None and hit_test(ax, 0, px, 750) is None # not editable
+    assert hit_test(ax, 0, px, 300) is None
+
+def test_drag_preview_and_commit():
+    from pyspecan.plots.drag import Drag, commit, hit_test, preview
+    ax = _drag_axis()
+    d = hit_test(ax, 0, lambda x: x, 604)
+    d.start = 604
+    d.to(700.0, 96)
+    shown = preview(ax, d, 0)
+    assert (shown.bands[0].lo, shown.bands[0].hi) == (400.0, 700.0) and ax.bands[0].hi == 600.0
+    assert preview(ax, d, 1) is ax
+    assert commit("off", d, True) == ("set", "M2", {"freq": "550.0", "bw": "300.0"})
+    d = hit_test(ax, 0, lambda x: x, 500)
+    d.start = 500
+    d.to(450.0, -50)
+    assert commit("channel", d, True) == ("set", "M2", {"freq": "450.0", "bw": "200.0"})
+    d = hit_test(ax, 0, lambda x: x, 100)
+    d.start = 100
+    d.to(150.0, 50)
+    assert preview(ax, d, 0).markers[0].x == 150.0
+    assert commit("channel", d, True) == ("set", "M1", {"freq": "150.0"})
+    still = hit_test(ax, 0, lambda x: x, 100)
+    assert commit("channel", still, False) is None # a plain click on a marker
+    new = Drag(0, "new", 200.0, 200.0, start=200.0)
+    new.to(300.0, 100)
+    assert preview(ax, new, 0).bands[-1].lo == 200.0
+    assert commit("channel", new, True) == ("add", "channel", {"freq": "250.0", "bw": "100.0"})
+    assert commit("obw", new, True) == ("add", "obw", {"freq": "250.0", "span": "100.0"})
+    assert commit("point", new, True) is None and commit("channel", new, False) is None
+    assert commit("point", Drag(0, "new", 200.0, 200.0), False) == ("add", "point", {"freq": "200.0"})
+    assert commit("off", new, True) is None

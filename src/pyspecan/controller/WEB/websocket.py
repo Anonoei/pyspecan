@@ -44,8 +44,17 @@ class WebSocketManager:
             self.in_flight[client_id] = max(0, self.in_flight[client_id] - 1)
             self.last_ack[client_id] = time.monotonic()
 
-    async def send(self, client_id: int, message: dict):
-        await self.connections[client_id].send_json(message)
+    async def send(self, client_id: int, message: dict) -> bool:
+        """Send to one client, False when it is gone (closed mid-send, or dropped by a broadcast already)"""
+        websocket = self.connections.get(client_id)
+        if websocket is None:
+            return False
+        try:
+            await websocket.send_json(message)
+        except Exception: # client went away mid-send, like in broadcast
+            self.disconnect(client_id)
+            return False
+        return True
 
     async def broadcast(self, message: dict, frame=False):
         for client_id, websocket in list(self.connections.items()):

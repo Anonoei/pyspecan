@@ -6,6 +6,7 @@ the playback thread).
 """
 import collections
 import math
+import signal
 import threading
 import time
 import tkinter as tk
@@ -76,6 +77,9 @@ class Controller(_Controller):
 
         self.refresh()
         self.view.root.protocol("WM_DELETE_WINDOW", self.quit)
+        if threading.current_thread() is threading.main_thread():
+            # Ctrl-C: tk's loop runs in C and would swallow the KeyboardInterrupt in a callback, quit from the loop instead
+            signal.signal(signal.SIGINT, lambda *_: self.view.root.after(0, self.quit))
         self.start_stream()
         self._poll_id = self.view.root.after(POLL, self._poll)
 
@@ -238,9 +242,12 @@ class Controller(_Controller):
         self.apply_setting(key, var.get())
 
     def quit(self):
+        if getattr(self, "_quit", False): # the window closing and Ctrl-C can both ask
+            return
+        self._quit = True
+        if threading.current_thread() is threading.main_thread():
+            signal.signal(signal.SIGINT, signal.default_int_handler)
         super().quit()
-        if self.thread is not None:
-            self.thread.join(timeout=1)
         try:
             self.view.root.after_cancel(self._poll_id)
         except (tk.TclError, AttributeError):

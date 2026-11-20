@@ -147,6 +147,72 @@ def test_markers_draw_on_psd_and_spectrogram_with_a_table(app):
     with pytest.raises(ValueError):
         app.add_marker(i["PSD"], "nope")
 
+def _mouse(pane, kind, f, level=None, button=1):
+    """A matplotlib mouse event at frequency f (and level, default mid axis) of the pane's first axis"""
+    from matplotlib.backend_bases import MouseEvent
+    ax = pane.plotter.ax(0).ax
+    y = level if level is not None else sum(ax.get_ylim()) / 2
+    x, py = ax.transData.transform((f, y))
+    ev = MouseEvent(kind, ax.figure.canvas, x, py, button=button)
+    ax.figure.canvas.callbacks.process(kind, ev)
+
+def _gesture(app, pane, f0, f1, level=None):
+    _mouse(pane, "button_press_event", f0, level)
+    _mouse(pane, "motion_notify_event", (f0 + f1) / 2, level)
+    _mouse(pane, "motion_notify_event", f1, level)
+    _mouse(pane, "button_release_event", f1, level)
+    app.command("next")
+    wait_for(app, lambda: pane.drag is None and not pane.dirty)
+
+def test_markers_are_drawn_moved_and_resized_with_the_mouse(app):
+    pid = ids(app)["PSD"]
+    pane = app.panels.panes[pid]
+    app.command("next")
+    wait_for(app, lambda: pane.keep.get("frame") is not None and not pane.dirty)
+    markers = app.plots.get(pid).markers
+    # a drag over empty space draws a channel from the dragged span
+    _gesture(app, pane, -3000, -1000)
+    (mid, item), = markers.items.items()
+    assert item["kind"] == "channel"
+    assert abs(float(item["params"]["freq"]) + 2000) < 100 and abs(float(item["params"]["bw"]) - 2000) < 100
+    band = pane.keep["frame"].axes[0].bands[0]
+    # its right edge widens it, its body moves it
+    _gesture(app, pane, band.hi, band.hi + 1000)
+    assert abs(float(markers.items[mid]["params"]["bw"]) - 3000) < 100
+    _gesture(app, pane, -2000, 0)
+    assert abs(float(markers.items[mid]["params"]["freq"]) - 500) < 100
+    # a drag of a few pixels draws nothing, a click with the point tool adds a point
+    n = len(markers)
+    _gesture(app, pane, 3000, 3001)
+    assert len(markers) == n
+    pane.keep["tool"] = "point"
+    _gesture(app, pane, 3000, 3000)
+    assert [it["kind"] for it in markers.items.values()] == ["channel", "point"]
+    # the point marker moves along frequency
+    pt = list(markers.items)[-1]
+    m = next(m for m in pane.keep["frame"].axes[0].markers if m.owner == pt)
+    lo, hi = sorted(pane.plotter.ax(0).ax.get_ylim())
+    _gesture(app, pane, m.x, 4000, level=min(max(m.y, lo + 0.5), hi)) # off the range it is drawn on the edge
+    assert abs(float(markers.items[pt]["params"]["freq"]) - 4000) < 100
+    # nothing to draw with "off"
+    pane.keep["tool"] = "off"
+    _gesture(app, pane, -4500, -4000)
+    assert len(markers) == 2
+
+def test_hover_readout_follows_the_pointer(app):
+    pid = ids(app)["PSD"]
+    pane = app.panels.panes[pid]
+    app.command("next")
+    wait_for(app, lambda: pane.keep.get("frame") is not None and not pane.dirty)
+    _mouse(pane, "motion_notify_event", 1000)
+    text = pane.plotter.ax(0).art("hov_t")
+    assert text.get_visible() and "f 99" in text.get_text() and "trace" in text.get_text()
+    assert str(pane.canvas_widget.cget("cursor")) == "crosshair"
+    from matplotlib.backend_bases import LocationEvent
+    canvas = pane.plotter.ax(0).ax.figure.canvas
+    canvas.callbacks.process("figure_leave_event", LocationEvent("figure_leave_event", canvas, 0, 0))
+    assert not text.get_visible()
+
 def _find(widget, cls):
     """Every descendant widget of a class, depth first"""
     out = []
@@ -197,3 +263,16 @@ def test_save_and_load_layout_buttons(app, tmp_path, monkeypatch):
     settle(app)
     assert layout(app) == [["Scope", "PSD"]] # a bad file changes nothing, the toolbar says why
     assert "not loaded" in app.view.tb_lbl_msg.cget("text")
+
+def test_ctrl_c_quits(app):
+    import os
+    import signal
+    os.kill(os.getpid(), signal.SIGINT) # the handler only schedules the quit on tk's loop
+    end = time.monotonic() + 5
+    while app.running and time.monotonic() < end:
+        try:
+            app.view.root.update()
+        except tk.TclError: # destroyed by the quit
+            break
+        time.sleep(0.01)
+    assert not app.running

@@ -106,17 +106,20 @@ class PlotSet:
                 self.layout.insert(r + (where == "below"), [pid])
 
     def retype(self, pid: str, name: str):
-        """Replace a plot by another type, keeping its place, paused state and link (when the new type can share it)"""
+        """Replace a plot by another type, keeping its place, paused state, link (when the new type can share it)
+        and markers (when the new type carries them)"""
         cls = PLOTS.get(name)
         with self.lock:
             old = self.get(pid)
             link = old.link
             peer = next((m for m in link.members if m != pid), None) if link else None
-            self.unlink(pid)
-            self.plots[pid] = self._new(name)
-            self.plots[pid].enabled = old.enabled
+            self.unlink(pid) # leaves `old` its own copy of the link's markers
+            new = self.plots[pid] = self._new(name)
+            new.enabled = old.enabled
             if peer is not None and cls.LINK_DOMAIN is not None and cls.LINK_DOMAIN == self.plots[peer].LINK_DOMAIN:
-                self.link(pid, peer)
+                self.link(pid, peer) # the link's markers come back with it, carrying ours too would duplicate them
+            elif cls.MARKERS and getattr(old, "own_markers", None) is not None:
+                new.own_markers = old.own_markers
 
     # --- settings --- #
     def set(self, pid: str, key: str, value):
