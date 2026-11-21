@@ -77,7 +77,7 @@ class PanelController:
 
     def toggle_settings(self, pid: str):
         pane = self.panes[pid].pane
-        if pane.fr_sets.winfo_ismapped():
+        if pane.fr_sets.winfo_manager(): # packed, mapped or not: a pane just added may not be drawn yet
             pane.fr_sets.forget()
         else:
             pane.fr_sets.pack(side=tk.LEFT, fill=tk.Y, before=pane.fr_main)
