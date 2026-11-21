@@ -1,4 +1,7 @@
 """Create a WEB view"""
+import asyncio
+import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
@@ -10,6 +13,20 @@ from fastapi.templating import Jinja2Templates
 from ..base import View as _View
 
 
+def _quiet_resets(loop: asyncio.AbstractEventLoop, context: dict):
+    """A browser closing its connection is normal. On Windows before Python 3.13 the proactor loop logs a
+    ConnectionResetError traceback for it (CPython bpo-39010), drop those and pass anything else on"""
+    if isinstance(context.get("exception"), ConnectionResetError):
+        return
+    loop.default_exception_handler(context)
+
+@asynccontextmanager
+async def _lifespan(_app):
+    if sys.platform == "win32":
+        asyncio.get_running_loop().set_exception_handler(_quiet_resets)
+    yield
+
+
 class View(_View):
     """WEB view class, serves the page and static files"""
     def __init__(self, **kwargs):
@@ -18,7 +35,7 @@ class View(_View):
         self.on_quit = None
 
         path = Path(__file__).parent
-        self.app = FastAPI(title="pyspecan")
+        self.app = FastAPI(title="pyspecan", lifespan=_lifespan)
         self.app.mount("/static", StaticFiles(directory=path / "static"), name="static")
         self.templates = Jinja2Templates(directory=path / "templates")
 
