@@ -10,14 +10,14 @@ import pathlib
 from fastapi import WebSocket, WebSocketDisconnect
 
 from ...model.model import Model
-from ...plots import colormap
+from ...plots import PLOTS, colormap
 from ...plots.frame import IMAGE, LINE, SCATTER, THREE_D, Frame
 from ...utils import args
 from ...view.WEB.base import View as GUI
 from ..base import Controller as _Controller
 from .api import API
 from .websocket import WebSocketManager
-from .wire import Encoder
+from .wire import Encoder, encode_json
 
 
 def args_ctrl(parser):
@@ -53,7 +53,7 @@ class Controller(_Controller):
         async def websocket_endpoint(websocket: WebSocket):
             client_id = await self.ws.connect(websocket)
             try:
-                await self.ws.send(client_id, {"type": "state", "data": self.get_state()})
+                await self.ws.send(client_id, self.state_message(full=True))
                 while client_id in self.ws.connections: # a failed send drops the client
                     msg = json.loads(await websocket.receive_text())
                     if msg.get("type") == "ack":
@@ -80,12 +80,32 @@ class Controller(_Controller):
         self.ws.publish(full, frame=True, lean=lean)
 
     def state_changed(self):
-        self.ws.publish({"type": "state", "data": self.get_state()})
+        self.ws.publish(self.state_message(full=False))
+
+    # parts of the state that never change while running: a browser gets them once, when it connects
+    STATIC_STATE = ("plot_types", "plot_info", "categories", "colormaps", "plot_fields")
+    _static: dict | None = None # colormaps and plot_fields, built on first use
 
     def get_state(self) -> dict:
+        """The whole state (also /api/state): with the colormaps, and the setting fields of every plot type"""
         state = super().get_state()
-        state["colormaps"] = {name: colormap.STOPS[name] for name in colormap.names()}
+        if self._static is None:
+            self._static = {
+                "colormaps": {name: colormap.STOPS[name] for name in colormap.names()},
+                "plot_fields": {name: [s.to_dict() for s in PLOTS.get(name).SETTINGS] for name in self.plot_types},
+            }
+        state.update(self._static)
         return state
+
+    def state_message(self, full: bool) -> bytes:
+        """The state as a message, deflated once for every client. Not `full`: without STATIC_STATE, and a plot's
+        "fields" left for the browser to take from plot_fields (a plot's fields are its type's)"""
+        state = self.get_state()
+        if not full:
+            for key in self.STATIC_STATE:
+                state.pop(key, None)
+            state["plots"] = {pid: {k: v for k, v in p.items() if k != "fields"} for pid, p in state["plots"].items()}
+        return encode_json({"type": "state", "data": state})
 
     # --- file browser --- #
     def _allowed(self, path: pathlib.Path) -> bool:

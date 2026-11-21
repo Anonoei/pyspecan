@@ -9,7 +9,7 @@ from ..obj import Frequency
 from ..utils.vbw import vbw_rows
 from . import colormap
 from .base import Plot
-from .frame import BLUE, GREEN, RED, Axis, Frame, Marker, Trace
+from .frame import BLUE, GREEN, RED, YELLOW, Axis, Frame, Marker, Trace
 from .settings import Setting
 
 
@@ -224,28 +224,132 @@ class HoldMixin:
         return out
 
 
+WRITE, AVERAGE, MAX_HOLD, MIN_HOLD, VIEW, BLANK = "clear/write", "average", "max hold", "min hold", "view", "blank"
+TRACE_MODES = (WRITE, AVERAGE, MAX_HOLD, MIN_HOLD, VIEW, BLANK)
+TRACE_COLORS = (YELLOW, RED, BLUE, GREEN)
+TRACE_DEFAULTS = (WRITE, MAX_HOLD, MIN_HOLD, BLANK) # what the PSD had before traces: live, max hold, min hold
+
+class _TraceState:
+    """What one trace holds: `data` full resolution, `smoothed` when it went through the vbw already (the holds fold
+    smoothed rows, as an analyzer's video filter sits ahead of its trace detector)"""
+    def __init__(self):
+        self.data: np.ndarray | None = None
+        self.smoothed = False
+        self.avg: Averager | None = None
+
 class TraceMixin:
-    """Averaging and the display detector, for the plots that show a trace"""
-    SETTINGS = (
-        Setting("avg", "Average", "select", default="off", options=("off", "power", "log", "exp"), help="trace averaging", group="Processing"),
-        Setting("avg_count", "Avg count", "int", default=10, min=1, max=10000, help="traces averaged", group="Processing"),
+    """Spectrum analyzer style traces: N_TRACES of them, each in a mode of its own and a color of its own
+
+    clear/write: the newest row. average: the rows averaged (the "avg" kind over "avg_count" rows). max / min hold:
+    the highest / lowest of every row since the mode was picked. view: frozen, keeps showing what it had.
+    blank: not shown (what it had is kept, "view" shows it again). Picking a mode other than view / blank starts
+    the trace over.
+
+    Markers, measurements, "store ref" and trace math read the "marker_trace". Traces are reduced to display points
+    by the detector, only what is drawn: markers read full resolution."""
+    N_TRACES = len(TRACE_COLORS)
+    SETTINGS = tuple(
+        Setting(f"t{i}_mode", f"Trace {i}", "select", default=TRACE_DEFAULTS[i - 1], options=TRACE_MODES, group="Trace",
+                help=f"what trace {i} shows: clear/write the newest, average, max / min hold, view (frozen), blank (hidden)")
+        for i in range(1, len(TRACE_COLORS) + 1)
+    ) + (
+        Setting("marker_trace", "Marker trace", "select", default="1", options=tuple(str(i) for i in range(1, len(TRACE_COLORS) + 1)),
+                group="Trace", help="the trace markers, measurements, store ref and trace math read"),
+        Setting("avg", "Average", "select", default="power", options=("power", "log", "exp"), group="Trace",
+                help="how the average traces average: power (mean in linear power), log (mean of dB), exp (exponential)"),
+        Setting("avg_count", "Avg count", "int", default=10, min=1, max=10000, help="rows the average traces average", group="Trace"),
         Setting("detector", "Detector", "select", default="peak", options=detector.MODES, help="how bins are reduced to display points",
                 group="Trace", advanced=True),
         Setting("points", "Points", "int", default=1001, min=0, max=65536, step=100, hint="0 = all bins", help="display points, 0 for every bin",
                 group="Trace", advanced=True),
     )
 
-    def reset_avg(self):
-        self._avg = Averager(self.avg, self.avg_count) # type: ignore
+    @classmethod
+    def migrate(cls, settings: dict) -> dict:
+        """The settings of before traces: show_max / show_min (traces 2 and 3) and avg "off" or a kind (trace 1)"""
+        out = dict(settings)
+        for old, key, mode in (("show_max", "t2_mode", MAX_HOLD), ("show_min", "t3_mode", MIN_HOLD)):
+            if old in out:
+                on = out.pop(old)
+                on = on.strip().lower() in ("1", "true", "yes", "on") if isinstance(on, str) else bool(on)
+                out.setdefault(key, mode if on else BLANK)
+        if out.get("avg") == "off":
+            del out["avg"]
+        elif out.get("avg") in ("power", "log", "exp") and "t1_mode" not in out and "marker_trace" not in out:
+            out["t1_mode"] = AVERAGE # an average then was of the live trace
+        return super().migrate(out) # type: ignore
+
+    def reset_traces(self):
+        self._traces = [_TraceState() for _ in range(self.N_TRACES)]
+
+    def mode(self, i: int) -> str:
+        """Trace i's mode, i from 0"""
+        return getattr(self, f"t{i + 1}_mode")
 
     def changed(self, key):
         super().changed(key) # type: ignore
-        if key in ("avg", "avg_count"):
-            self.reset_avg()
+        if key.startswith("t") and key.endswith("_mode") and key[1:-5].isdigit():
+            i = int(key[1:-5]) - 1
+            if self.mode(i) not in (VIEW, BLANK): # view / blank keep what it had, anything else starts over
+                self._traces[i] = _TraceState()
+        elif key in ("avg", "avg_count"):
+            for i, t in enumerate(self._traces):
+                if self.mode(i) == AVERAGE:
+                    self._traces[i] = _TraceState()
 
-    def average(self, rows: np.ndarray) -> np.ndarray:
-        """Fold the block's rows into the average, returns the trace to show (full resolution)"""
-        return self._avg.update(rows)
+    def fold(self, raw: np.ndarray):
+        """Fold the block's (k, n) unsmoothed rows into the traces"""
+        smoothed = None
+        n = raw.shape[-1]
+        for i, t in enumerate(self._traces):
+            mode = self.mode(i)
+            if mode in (VIEW, BLANK):
+                if t.data is not None and len(t.data) != n: # another FFT size: what it held no longer fits
+                    self._traces[i] = _TraceState()
+                continue
+            if t.data is not None and len(t.data) != n:
+                t = self._traces[i] = _TraceState()
+            if mode == WRITE:
+                t.data, t.smoothed = raw[-1], False
+            elif mode == AVERAGE:
+                if t.avg is None:
+                    t.avg = Averager(self.avg, self.avg_count) # type: ignore
+                t.data, t.smoothed = t.avg.update(raw), False
+            else:
+                if smoothed is None:
+                    smoothed = self.smooth(raw) # type: ignore
+                row = smoothed.max(axis=0) if mode == MAX_HOLD else smoothed.min(axis=0)
+                if t.data is None:
+                    t.data = row.copy()
+                else:
+                    (np.maximum if mode == MAX_HOLD else np.minimum)(t.data, row, out=t.data)
+                t.smoothed = True
+
+    def trace_data(self, i: int) -> np.ndarray | None:
+        """Trace i at full resolution, as measured (unsmoothed for clear/write and average), None when it has nothing"""
+        return self._traces[i].data
+
+    def trace_shown(self, i: int) -> np.ndarray | None:
+        """Trace i at full resolution as drawn: through the vbw"""
+        t = self._traces[i]
+        if t.data is None:
+            return None
+        return t.data if t.smoothed else self.smooth(t.data) # type: ignore
+
+    def marker_index(self) -> int:
+        return int(self.marker_trace) - 1 # type: ignore
+
+    def trace_list(self) -> list[Trace]:
+        """The traces to draw, full resolution: the higher numbers under the lower ones, and the marker trace on top
+        (last, views read the last trace under the mouse)"""
+        mk = self.marker_index()
+        order = [i for i in reversed(range(self.N_TRACES)) if i != mk] + [mk]
+        out = []
+        for i in order:
+            y = self.trace_shown(i)
+            if y is not None and self.mode(i) != BLANK:
+                out.append(Trace(y, color=TRACE_COLORS[i], name=f"t{i + 1}"))
+        return out
 
     def shrink(self, traces: list[Trace]) -> list[Trace]:
         """Pass traces through the detector, only what is displayed is reduced. A reduced trace gets the
@@ -256,9 +360,11 @@ class TraceMixin:
         return traces
 
     def avg_readout(self) -> list[tuple[str, str]]:
-        if self.avg == "off" or self.avg_count <= 1: # type: ignore
+        """How far along the average traces are: "Avg" for one, "T2 avg" ... for several"""
+        avgs = [(i, t.avg) for i, t in enumerate(self._traces) if self.mode(i) == AVERAGE and t.avg is not None]
+        if self.avg_count <= 1: # type: ignore
             return []
-        return [("Avg", f"{self._avg.n}/{self.avg_count} ({self.avg})")] # type: ignore
+        return [("Avg" if len(avgs) == 1 else f"T{i + 1} avg", f"{a.n}/{self.avg_count} ({self.avg})") for i, a in avgs] # type: ignore
 
 
 REF_COLOR = "#a0a0a0"
@@ -280,7 +386,9 @@ class RefMixin:
             if self.last is None: # type: ignore
                 raise ValueError("nothing to store yet: step or play first")
             n = len(self.last) # type: ignore
-            self.ref = (self.bin_freqs(n), self.smooth(self.last).copy(), self.unit) # type: ignore
+            shown = getattr(self, "last_shown", None) # as drawn: a hold went through the vbw already
+            shown = self.smooth(self.last) if shown is None else shown # type: ignore
+            self.ref = (self.bin_freqs(n), np.array(shown, copy=True), self.unit) # type: ignore
         elif action == "clear ref":
             self.ref = None
         else:

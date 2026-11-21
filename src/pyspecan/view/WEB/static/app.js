@@ -72,7 +72,7 @@ function connect() {
     ws.binaryType = "arraybuffer"; // frames: a json header and the arrays they reference
     ws.onopen = () => {
         setConnected(true);
-        xCache.clear(); // the server starts this connection with every x
+        traceCache.clear(); // the server starts this connection with every array
         sendVisible();
     };
     ws.onclose = () => {
@@ -87,7 +87,7 @@ function connect() {
 
 async function receive(data) {
     const msg = data instanceof ArrayBuffer ? decodeBinary(await inflate(data)) : JSON.parse(data);
-    if (msg.type === "state") applyState(msg.data);
+    if (msg.type === "state") applyState(withStatic(msg.data));
     else if (msg.type === "frame") { applyFrame(msg.data); send({type: "ack"}); } // the server waits for these
     else if (msg.type === "error") showMessage(msg.data, true);
 }
@@ -96,36 +96,70 @@ async function receive(data) {
 const sendVisible = () => send({type: "visible", value: document.visibilityState !== "hidden"});
 document.addEventListener("visibilitychange", sendVisible);
 
-// binary messages: [u32 header length][json header][padding to 8][arrays]. In the header an array is {"$": [offset, length,
-// type, ...]}, offset from the start of the array area; they are viewed in place, "q2" (int16 steps) is expanded. A trace's x that did not change
-// since the previous frame is {"$k": 1}: the one cached under its "xk"
-const xCache = new Map();
+// binary messages, see controller/WEB/wire.py: [u32 header length][json header][padding to 8][arrays]. In the header
+// an array is {"$": [offset, length, type, ...]}, offset from the start of the array area; f8 / u1 are viewed in place.
+// A trace's y / z come as "q2" (int16 steps from mid, byte shuffled) or "d2" (the change since the previous frame), any
+// of its arrays as {"$k": 1} when it did not change: both resolve against what is cached under the trace's key "k"
+const traceCache = new Map(); // "key/field" -> {val, q, mid, step}
 async function inflate(buf) { // [u32 0xffffffff][zlib stream]: deflated once on the server for every client
     if (new DataView(buf).getUint32(0, true) !== 0xffffffff) return buf;
     const stream = new Blob([new Uint8Array(buf, 4)]).stream().pipeThrough(new DecompressionStream("deflate"));
     return new Response(stream).arrayBuffer();
 }
 const ARRAY_TYPES = {f8: Float64Array, f4: Float32Array, u1: Uint8Array};
-function dequantize(buf, off, n, mid, step) { // "q2": int16 steps from mid, -32768 is not finite
-    const q = new Int16Array(buf, off, n), out = new Float32Array(n);
-    for (let i = 0; i < n; i++) out[i] = q[i] === -32768 ? NaN : mid + q[i] * step;
-    return out;
+function unshuffle(buf, off, n) { // all low bytes, then all high bytes -> int16
+    const b = new Uint8Array(buf, off, 2 * n), q = new Int16Array(n);
+    for (let i = 0; i < n; i++) q[i] = (b[n + i] << 8) | b[i]; // the store wraps it to int16
+    return q;
+}
+function resolveArray(key, v) {
+    if (v.$k) { const c = traceCache.get(key); return c ? c.val : null; }
+    let q = v.q, mid = v.mid, step = v.step;
+    if (v.delta) {
+        const c = traceCache.get(key);
+        if (!c || !c.q || c.q.length !== q.length) return null; // can not happen: the server sends d2 only after the base
+        const d = q;
+        q = new Int16Array(d.length);
+        for (let i = 0; i < d.length; i++) q[i] = c.q[i] + d[i]; // wraps as the server's subtraction did
+        mid = c.mid; step = c.step;
+    }
+    const val = new Float32Array(q.length);
+    for (let i = 0; i < q.length; i++) val[i] = q[i] === -32768 ? NaN : mid + q[i] * step;
+    traceCache.set(key, {val, q, mid, step});
+    return val;
 }
 function decodeBinary(buf) {
     const hlen = new DataView(buf).getUint32(0, true);
     const base = (4 + hlen + 7) & ~7;
-    const msg = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hlen)), (k, v) =>
-        !v || typeof v !== "object" || !Array.isArray(v.$) ? v
-        : v.$[2] === "q2" ? dequantize(buf, base + v.$[0], v.$[1], v.$[3], v.$[4])
-        : new ARRAY_TYPES[v.$[2]](buf, base + v.$[0], v.$[1]));
-    for (const frame of Object.values((msg.data && msg.data.plots) || {}))
+    const msg = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hlen)), (k, v) => {
+        if (!v || typeof v !== "object" || !Array.isArray(v.$)) return v;
+        const [off, n, type, mid, step] = v.$;
+        if (type === "q2") return {q: unshuffle(buf, base + off, n), mid, step};
+        if (type === "d2") return {q: unshuffle(buf, base + off, n), delta: true};
+        return new ARRAY_TYPES[type](buf, base + off, n);
+    });
+    if (msg.type !== "frame") return msg;
+    for (const frame of Object.values(msg.data.plots))
         for (const axis of frame.axes)
-            for (const t of axis.traces) {
-                if (!t.xk) continue;
-                if (t.x && t.x.$k) t.x = xCache.get(t.xk) || null;
-                else xCache.set(t.xk, t.x);
-            }
+            for (const t of axis.traces)
+                for (const f of ["x", "y", "z"]) {
+                    const v = t[f], key = `${t.k}/${f}`;
+                    if (v == null) continue;
+                    if (v.$k || v.q) t[f] = resolveArray(key, v);
+                    else traceCache.set(key, {val: v}); // x, float64
+                }
     return msg;
+}
+
+// the parts of the state that never change come once, with the first state of a connection; later ones leave them out,
+// and a plot's settings fields with them (they are its type's, in plot_fields)
+const STATIC_STATE = ["plot_types", "plot_info", "categories", "colormaps", "plot_fields"];
+let staticState = {};
+function withStatic(s) {
+    if (s.plot_fields) staticState = Object.fromEntries(STATIC_STATE.map((k) => [k, s[k]]));
+    const out = {...staticState, ...s};
+    for (const p of Object.values(out.plots || {})) p.fields ||= (staticState.plot_fields || {})[p.name] || [];
+    return out;
 }
 
 function setConnected(ok) {

@@ -67,13 +67,16 @@ class WebSocketManager:
         """Some client shows frames"""
         return any(self.visible.values())
 
-    async def send(self, client_id: int, message: dict) -> bool:
+    async def send(self, client_id: int, message: dict | bytes) -> bool:
         """Send to one client, False when it is gone (closed mid-send, or dropped by a broadcast already)"""
         websocket = self.connections.get(client_id)
         if websocket is None:
             return False
         try:
-            await websocket.send_json(message)
+            if isinstance(message, bytes):
+                await websocket.send_bytes(message)
+            else:
+                await websocket.send_json(message)
         except Exception: # client went away mid-send, like in broadcast
             self.disconnect(client_id)
             return False

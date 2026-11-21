@@ -73,8 +73,9 @@ console). Pointing at one (or at a plot's name, or its grip in tkGUI; `about <ty
 uses and what it does to it, what it shows, what to use it for, and roughly what it costs to run (in PSDs, see
 Benchmark). The web view and tkGUI draw them all, 3D included (drag a 3D plot to turn it, double click to reset it);
 the console draws all but 3D.
-- Spectrum: PSD (max / min hold, averaging, detector, a stored reference trace and trace math: "store ref" and the
-  `math` setting, live - ref on its own axis), Persistence, FFT
+- Spectrum: PSD (four analyzer traces, each clear/write, average, max hold, min hold, view or blank, a marker trace,
+  detector, a stored reference trace and trace math: "store ref" and the `math` setting, live - ref on its own axis),
+  Persistence, FFT
 - Time-frequency: Spectrogram, RT Spectrogram, 3D Spectrogram (a waterfall of lines), Surface Spectrogram (a 3D
   surface spectrogram: the spectrogram as a solid surface colored by level), Scalogram (a wavelet transform: frequency
   on a log axis against time, sharp in time at high frequencies, in frequency at low ones)

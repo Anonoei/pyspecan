@@ -95,6 +95,7 @@ class Plot:
         self.globals = globals if globals is not None else default_globals(**kwargs)
         self._scope = {s.key: s.scope for s in self.SETTINGS}
         self._cfg = {}
+        kwargs = self.migrate(kwargs)
         for s in self.SETTINGS:
             self._cfg[s.key] = s.parse(kwargs.get(s.key, s.default)) # raises on a bad value
         self.reset()
@@ -125,6 +126,12 @@ class Plot:
         raise AttributeError(name)
 
     # --- settings --- #
+    @classmethod
+    def migrate(cls, settings: dict) -> dict:
+        """`settings` with the keys of an older version of the plot turned into today's (a layout saved back then
+        still loads). Returns a new dict, the default changes nothing"""
+        return settings
+
     def setting(self, key: str) -> Setting | None:
         """The descriptor of one of this plot's settings or a global one"""
         return by_key(self.SETTINGS, key) or by_key(GLOBAL_SETTINGS, key)

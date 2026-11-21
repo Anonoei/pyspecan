@@ -9,7 +9,7 @@ import pytest
 pytest.importorskip("fastapi")
 
 from pyspecan.controller.WEB.websocket import WebSocketManager
-from pyspecan.controller.WEB.wire import Encoder, decode
+from pyspecan.controller.WEB.wire import Decoder, Encoder, decode, quantize
 from pyspecan.plots.frame import Axis, Band, Frame, Image, Marker, Surface, Table, TableRow, Trace
 
 X = np.linspace(2.4e9, 2.41e9, 1001) # needs float64: float32 can not tell 1 kHz apart at 2.4 GHz
@@ -46,19 +46,70 @@ def test_round_trip_matches_the_json_form():
 
 def test_shared_x_is_stored_once():
     full, _ = Encoder().encode(frames(np.zeros(1001)), {})
-    ref = decode(full)["data"]["plots"]["p1"]["axes"][0]["traces"]
-    assert ref[0]["x"].ctypes.data == ref[1]["x"].ctypes.data # the same bytes in the message
+    traces = _header(full)["data"]["plots"]["p1"]["axes"][0]["traces"]
+    assert traces[0]["x"]["$"][0] == traces[1]["x"]["$"][0] # one offset: the same bytes in the message
 
-def test_lean_leaves_out_only_the_unchanged_x():
-    enc = Encoder()
-    enc.encode(frames(np.zeros(1001)), {})
-    full, lean = enc.encode(frames(np.ones(1001)), {})
-    assert lean is not None and len(lean) < len(full)
-    traces = decode(lean)["data"]["plots"]["p1"]["axes"][0]["traces"]
-    assert [t["x"] for t in traces] == [{"$k": 1}, {"$k": 1}] and traces[0]["xk"] == "p1/0/max"
-    np.testing.assert_allclose(traces[0]["y"], 1, atol=0.005)
-    _, lean = enc.encode(frames(np.ones(1001), X + 1), {}) # retuned: every x changed
-    assert lean is None
+def _header(msg: bytes) -> dict:
+    import struct
+    import zlib
+    m = zlib.decompress(msg[4:])
+    return json.loads(m[4:4 + struct.unpack_from("<I", m)[0]])
+
+def test_lean_keeps_or_sends_the_change():
+    enc, dec = Encoder(), Decoder()
+    y = np.linspace(-90, -40, 1001)
+    dec.decode(enc.encode(frames(y), {})[0])
+    y2 = y.copy()
+    y2[500] += 3 # a hold that rose in one bin
+    full, lean = enc.encode(frames(y2), {})
+    assert lean is not None and len(lean) < len(full) / 4
+    traces = _header(lean)["data"]["plots"]["p1"]["axes"][0]["traces"]
+    assert traces[0]["x"] == {"$k": 1} and traces[0]["y"]["$"][2] == "d2" and traces[0]["k"] == "p1/0/max"
+    got = dec.decode(lean)["data"]["plots"]["p1"]["axes"][0]["traces"]
+    np.testing.assert_allclose(got[0]["y"], y2, atol=0.005)
+    np.testing.assert_array_equal(got[0]["x"], X)
+    _, lean = enc.encode(frames(y2), {}) # nothing changed: every array is "the one you have"
+    assert all(t[f] == {"$k": 1} for t in _header(lean)["data"]["plots"]["p1"]["axes"][0]["traces"][:2] for f in ("x", "y"))
+    _, lean = enc.encode(frames(y2 + 1, X + 1), {}) # retuned and every level moved: those go whole
+    traces = _header(lean)["data"]["plots"]["p1"]["axes"][0]["traces"]
+    assert [(t["x"]["$"][2], t["y"]["$"][2]) for t in traces] == [("f8", "q2"), ("f8", "q2")]
+
+def test_a_client_rebuilds_every_frame_whichever_variant_it_gets():
+    """Holds, noise, values off the fine grid, NaN, traces coming and going: a client that takes lean after a frame it
+    got and full after one it missed always sees what full alone decodes to"""
+    rng = np.random.default_rng(1)
+    enc, dec = Encoder(), Decoder()
+    hold = np.full(300, -120.0)
+    got_previous = False
+    for i in range(200):
+        hold = np.maximum(hold, rng.normal(-80, 10, 300)) if i % 50 else np.full(300, -120.0)
+        noise = rng.normal(-80, 10, 300)
+        big = noise * (1e3 if i % 7 == 0 else 1) # past ±327: a coarser grid that frame
+        odd = noise.copy()
+        odd[rng.integers(0, 300, 3)] = np.nan
+        traces = [Trace(hold, name="hold"), Trace(big, name="big"), Trace(odd, np.arange(300.0) * (1 + i // 40), name="odd")]
+        if i % 3:
+            traces.append(Trace(noise[:i % 50 + 1], name="sometimes"))
+        full, lean = enc.encode({"p": Frame([Axis(traces=traces)])}, {})
+        if rng.random() < 0.2: # skipped by flow control
+            got_previous = False
+            continue
+        msg = lean if lean is not None and got_previous else full
+        got_previous = True
+        want = Decoder().decode(full)["data"]["plots"]["p"]["axes"][0]["traces"]
+        have = dec.decode(msg)["data"]["plots"]["p"]["axes"][0]["traces"]
+        for w, h in zip(want, have):
+            for f in ("x", "y"):
+                if f in w:
+                    np.testing.assert_array_equal(w[f], h[f])
+        np.testing.assert_allclose(have[0]["y"], hold, atol=0.005)
+
+def test_quantize_grid():
+    q, mid, step = quantize([-150.0, 20.0])
+    assert (mid, step) == (0.0, 0.01) # a fixed grid: frames compare
+    q, mid, step = quantize(np.array([-1e5, 2e5]))
+    assert step >= 2e5 * 1.5 / 65534 and np.log2(step / 0.01) == int(np.log2(step / 0.01))
+    np.testing.assert_allclose(mid + q * step, [-1e5, 2e5], atol=step / 2)
 
 def test_two_traces_under_one_key_always_carry_their_x():
     enc = Encoder()
@@ -104,3 +155,17 @@ def test_lean_only_to_clients_that_got_the_previous_frame_and_none_to_hidden_one
     assert a.got == [b"F1", b"L2", b"L3", b"L4", '{"type":"state"}']
     assert b.got == [b"F1", b"F3", b"L4", '{"type":"state"}'] # missed 2: frame 3 in full
     assert c.got == [b"F4", '{"type":"state"}'] # hidden for 1-3, still gets the state
+
+def test_state_leaves_out_what_never_changes_after_the_first():
+    from pyspecan.controller.WEB.base import Controller
+    class Fake:
+        STATIC_STATE = Controller.STATIC_STATE
+        state_message = Controller.state_message
+        def get_state(self):
+            return {"playing": True, "plot_types": ["PSD"], "plot_info": {"PSD": {}}, "categories": ["Spectrum"],
+                    "colormaps": {"magma": []}, "plot_fields": {"PSD": [{"key": "vbw"}]},
+                    "plots": {"p1": {"name": "PSD", "fields": [{"key": "vbw"}], "settings": {"vbw": 3}}}}
+    full = decode(Fake().state_message(full=True))["data"]
+    lean = decode(Fake().state_message(full=False))["data"]
+    assert full == Fake().get_state()
+    assert lean == {"playing": True, "plots": {"p1": {"name": "PSD", "settings": {"vbw": 3}}}}
