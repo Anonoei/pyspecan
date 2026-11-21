@@ -17,6 +17,7 @@ from ...view.WEB.base import View as GUI
 from ..base import Controller as _Controller
 from .api import API
 from .websocket import WebSocketManager
+from .wire import Encoder
 
 
 def args_ctrl(parser):
@@ -36,6 +37,7 @@ class Controller(_Controller):
         self.root = pathlib.Path(kwargs["root"]).resolve() if kwargs.get("root") else None
 
         self.ws = WebSocketManager(self)
+        self.encoder = Encoder()
         self.api = API(self)
         self.setup_routes()
 
@@ -57,6 +59,9 @@ class Controller(_Controller):
                     if msg.get("type") == "ack":
                         self.ws.ack(client_id)
                         continue
+                    if msg.get("type") == "visible": # the page went to / came back from the background
+                        self.ws.set_visible(client_id, bool(msg.get("value")))
+                        continue
                     error = self.handle_message(msg)
                     if error:
                         await self.ws.send(client_id, {"type": "error", "data": error})
@@ -67,13 +72,12 @@ class Controller(_Controller):
 
     # --- core hooks --- #
     def can_stream(self) -> bool:
-        return bool(self.ws.connections)
+        return self.ws.watching()
 
     def deliver(self, frames: dict[str, Frame], status: dict):
-        self.ws.publish({"type": "frame", "data": {
-            "plots": {pid: frame.to_dict() for pid, frame in frames.items()},
-            "status": status,
-        }}, frame=True)
+        """Runs serialized (under the controller lock), so the encoder's previous frame is the one published last"""
+        full, lean = self.encoder.encode(frames, status)
+        self.ws.publish(full, frame=True, lean=lean)
 
     def state_changed(self):
         self.ws.publish({"type": "state", "data": self.get_state()})

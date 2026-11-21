@@ -46,7 +46,8 @@ class View(_View):
     def mainloop(self):
         print(f"pyspecan web view: http://{self.host}:{self.port}")
         try:
-            uvicorn.run(self.app, host=self.host, port=self.port, log_level="warning")
+            uvicorn.run(self.app, host=self.host, port=self.port, log_level="warning",
+                        ws_per_message_deflate=False) # frames come deflated already, once for all clients (see WEB.wire)
         finally:
             self.quit()
 

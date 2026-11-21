@@ -69,17 +69,63 @@ const plotOp = (op, extra) => send({type: "plot", op, ...extra});
 function connect() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
     ws = new WebSocket(`${proto}://${location.host}/ws`);
-    ws.onopen = () => setConnected(true);
+    ws.binaryType = "arraybuffer"; // frames: a json header and the arrays they reference
+    ws.onopen = () => {
+        setConnected(true);
+        xCache.clear(); // the server starts this connection with every x
+        sendVisible();
+    };
     ws.onclose = () => {
         setConnected(false);
         setTimeout(connect, 1000);
     };
-    ws.onmessage = (ev) => {
-        const msg = JSON.parse(ev.data);
-        if (msg.type === "state") applyState(msg.data);
-        else if (msg.type === "frame") { applyFrame(msg.data); send({type: "ack"}); } // the server waits for these
-        else if (msg.type === "error") showMessage(msg.data, true);
+    let inbox = Promise.resolve(); // inflating is async: messages are handled one after the other, in order
+    ws.onmessage = (ev) => { // a failure is thrown outside the queue (it shows as a page error), the queue goes on
+        inbox = inbox.then(() => receive(ev.data)).catch((e) => setTimeout(() => { throw e; }));
     };
+}
+
+async function receive(data) {
+    const msg = data instanceof ArrayBuffer ? decodeBinary(await inflate(data)) : JSON.parse(data);
+    if (msg.type === "state") applyState(msg.data);
+    else if (msg.type === "frame") { applyFrame(msg.data); send({type: "ack"}); } // the server waits for these
+    else if (msg.type === "error") showMessage(msg.data, true);
+}
+
+// a background tab gets no frames: no bandwidth for what nobody looks at, and playback pauses when no page is visible
+const sendVisible = () => send({type: "visible", value: document.visibilityState !== "hidden"});
+document.addEventListener("visibilitychange", sendVisible);
+
+// binary messages: [u32 header length][json header][padding to 8][arrays]. In the header an array is {"$": [offset, length,
+// type, ...]}, offset from the start of the array area; they are viewed in place, "q2" (int16 steps) is expanded. A trace's x that did not change
+// since the previous frame is {"$k": 1}: the one cached under its "xk"
+const xCache = new Map();
+async function inflate(buf) { // [u32 0xffffffff][zlib stream]: deflated once on the server for every client
+    if (new DataView(buf).getUint32(0, true) !== 0xffffffff) return buf;
+    const stream = new Blob([new Uint8Array(buf, 4)]).stream().pipeThrough(new DecompressionStream("deflate"));
+    return new Response(stream).arrayBuffer();
+}
+const ARRAY_TYPES = {f8: Float64Array, f4: Float32Array, u1: Uint8Array};
+function dequantize(buf, off, n, mid, step) { // "q2": int16 steps from mid, -32768 is not finite
+    const q = new Int16Array(buf, off, n), out = new Float32Array(n);
+    for (let i = 0; i < n; i++) out[i] = q[i] === -32768 ? NaN : mid + q[i] * step;
+    return out;
+}
+function decodeBinary(buf) {
+    const hlen = new DataView(buf).getUint32(0, true);
+    const base = (4 + hlen + 7) & ~7;
+    const msg = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 4, hlen)), (k, v) =>
+        !v || typeof v !== "object" || !Array.isArray(v.$) ? v
+        : v.$[2] === "q2" ? dequantize(buf, base + v.$[0], v.$[1], v.$[3], v.$[4])
+        : new ARRAY_TYPES[v.$[2]](buf, base + v.$[0], v.$[1]));
+    for (const frame of Object.values((msg.data && msg.data.plots) || {}))
+        for (const axis of frame.axes)
+            for (const t of axis.traces) {
+                if (!t.xk) continue;
+                if (t.x && t.x.$k) t.x = xCache.get(t.xk) || null;
+                else xCache.set(t.xk, t.x);
+            }
+    return msg;
 }
 
 function setConnected(ok) {
@@ -511,11 +557,7 @@ function applyFrame(data) {
         if (pt) pt.textContent = `${frame.title && frame.title !== name ? frame.title + "  " : ""}${(frame.ptime * 1000).toFixed(1)} ms`;
         frame.axes.forEach((axis, i) => {
             if (axis.image) applyImage(rt, i, axis.image);
-            if (axis.surface) { // a 3d surface's heights, decoded once
-                const bin = atob(axis.surface.data), b = new Uint8Array(bin.length);
-                for (let k = 0; k < bin.length; k++) b[k] = bin.charCodeAt(k);
-                axis.surface.bytes = b;
-            }
+            if (axis.surface) axis.surface.bytes = axis.surface.data; // a 3d surface's heights
         });
         applyReadout(rt, frame.readout || []);
         applyTable(rt, frame.table);
@@ -547,8 +589,7 @@ function applyReadout(rt, rows) {
 
 // images arrive either whole, or as the newest rows of a scrolling history (newest on top)
 function applyImage(rt, i, im) {
-    const bin = atob(im.data), bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const bytes = im.data;
     const w = im.cols, n = im.rows_in, h = im.scroll ? im.rows : n;
     let st = rt.images[i];
     if (!st || st.w !== w || st.h !== h || (im.scroll && im.clear)) {
