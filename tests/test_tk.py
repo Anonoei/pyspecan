@@ -1,4 +1,5 @@
 """tkGUI: adding plots from the dropdown and rearranging them by dragging. Needs a display (xvfb-run)."""
+import sys
 import time
 
 import numpy as np
@@ -73,13 +74,16 @@ def test_the_add_menu_groups_the_plots_and_adds_one(app):
     assert cats == [c for c, _ in app.plot_groups()] and cats[:2] == ["Spectrum", "Time-frequency"]
     assert sorted(app.add_menu_items) == sorted(app.plot_types) # every plot, once
     sub, k = app.add_menu_items["Persistence"]
-    sub.post(10, 10) # select its entry like the pointer would: what it does shows beside the menu
+    posted = sys.platform != "win32" # posting on Windows enters the native menu loop, which blocks until dismissed
+    if posted:
+        sub.post(10, 10) # select its entry like the pointer would: what it does shows beside the menu
     sub.activate(k)
     sub.event_generate("<<MenuSelect>>")
     settle(app)
     text = app.tooltip.label.cget("text")
     assert text.startswith("Persistence (Spectrum)") and "Data:" in text and "Use:" in text and "heavy" in text
-    sub.unpost()
+    if posted:
+        sub.unpost()
     assert layout(app) == [["PSD"]]
     add(app, "Spectrogram")
     assert layout(app) == [["PSD"], ["Spectrogram"]]
