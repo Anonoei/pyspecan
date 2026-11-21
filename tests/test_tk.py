@@ -330,9 +330,8 @@ def test_save_and_load_layout_buttons(app, tmp_path, monkeypatch):
     assert "not loaded" in app.view.tb_lbl_msg.cget("text")
 
 def test_ctrl_c_quits(app):
-    import os
     import signal
-    os.kill(os.getpid(), signal.SIGINT) # the handler only schedules the quit on tk's loop
+    signal.raise_signal(signal.SIGINT) # the handler only schedules the quit on tk's loop. Not os.kill: on Windows that terminates the process
     end = time.monotonic() + 5
     while app.running and time.monotonic() < end:
         try:
