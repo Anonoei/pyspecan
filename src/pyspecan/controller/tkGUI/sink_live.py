@@ -1,12 +1,7 @@
 """Controller for LIVE sink"""
-import pysdrlib
 
-from ...utils import args
-from .sink import Sink, args_sink
+from .sink import Sink
 
-def args_live(parser):
-    sink = args.get_group(parser, "Sink (LIVE)")
-    args_sink(sink)
 
 class SinkLive(Sink):
     def __init__(self, ctrl):

@@ -1,6 +1,7 @@
 """Peak search"""
 import numpy as np
 
+
 def _walk_min(y: np.ndarray, i: int, step: int) -> float:
     """Lowest value walking from i in direction `step` until a value higher than y[i] (or the edge)"""
     lvl = y[i]

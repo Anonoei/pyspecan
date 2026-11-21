@@ -6,10 +6,11 @@ import numpy as np
 
 from ..measure import CCDF as _CCDF
 from ..measure import channel, units, windows
-from .base import Plot, plot
-from .frame import Axis, Frame, Trace, RED, YELLOW
-from .freq import POWER_UNIT, FreqPlot, fmt_hz, freq_text, hz
+from .base import About, Plot, plot
+from .frame import GREEN, RED, YELLOW, Axis, Frame, Marker, Trace
+from .freq import POWER_UNIT, FreqPlot, _ref_level, fmt_hz, freq_text, hz
 from .settings import Setting, override, without
+
 
 def _db(p: float) -> float:
     return float(units.lin_to_db(p))
@@ -18,9 +19,17 @@ def _db(p: float) -> float:
 class CCDFPlot(Plot):
     """Complementary CDF of the instantaneous power, accumulated over every block since the last reset"""
     TITLE = "CCDF"
+    CATEGORY = "Measurements"
+    ABOUT = About(
+        data="Every sample's instantaneous power over the average, accumulated over blocks",
+        shows='The chance the power exceeds the average by x dB (log axis) with a Gaussian reference; '
+              'PAPR and percentiles',
+        use=('Measure peak to average power', 'Check amplifier compression (the curve falls short of the reference)'),
+        cost=0.28,
+    )
     SETTINGS = (
-        Setting("bins", "Bins", "int", default=1000, min=100, max=20000, step=100, reset=True, flags=("--ccdf_bins",), help="histogram bins over 160 dB"),
-        Setting("show_gauss", "Gaussian ref", "check", default=True, help="the CCDF of Gaussian noise"),
+        Setting("bins", "Bins", "int", default=1000, min=100, max=20000, step=100, reset=True, help="histogram bins over 160 dB", group="Measurement"),
+        Setting("show_gauss", "Gaussian ref", "check", default=True, help="the CCDF of Gaussian noise", group="Measurement"),
     )
 
     def reset(self):
@@ -52,11 +61,18 @@ class CCDFPlot(Plot):
 class PowerVsTime(FreqPlot):
     """Band power of every overlapped (realtime) frame, scrolling. Time resolution is hop / fs"""
     TITLE = "Power vs Time"
+    CATEGORY = "Measurements"
+    ABOUT = About(
+        data="Every overlapped frame's power in the whole span or a channel, kept as a history",
+        shows='Power against time, with its average, peak and minimum',
+        use=('Measure bursts and pulse timing', "Watch a channel's power change: fading, AGC"),
+        cost=1.7,
+    )
     MARKERS = False
     SETTINGS = override(without(FreqPlot.SETTINGS, "vbw"), scale_div={"default": 5.0}) + (
-        Setting("pvt_freq", "Center freq", "text", default="", coerce=freq_text, hint="center", flags=("--pvt_freq",), help="band center frequency"),
-        Setting("pvt_bw", "Bandwidth", "text", default="", coerce=freq_text, hint="0 = wideband", flags=("--pvt_bw",), help="band width, 0 or blank for the whole band"),
-        Setting("history", "History", "int", default=500, min=2, max=100000, reset=True, flags=("--history",), help="frames kept"),
+        Setting("pvt_freq", "Center freq", "text", default="", coerce=freq_text, hint="center", help="band center frequency", group="Measurement"),
+        Setting("pvt_bw", "Bandwidth", "text", default="", coerce=freq_text, hint="0 = wideband", help="band width, 0 or blank for the whole band", group="Measurement"),
+        Setting("history", "History", "int", default=500, min=2, max=100000, reset=True, help="frames kept", group="Measurement"),
     )
 
     def reset(self):
@@ -87,9 +103,65 @@ class PowerVsTime(FreqPlot):
         u = POWER_UNIT[self.unit]
         return Frame([Axis(
             xmin=-(self.history - 1) * dt, xmax=0, ymin=btm, ymax=top, offscale=self.offscale(h, btm, top), # type: ignore
-            xlabel="time (s)", ylabel=u, traces=[Trace(h, x, name="pvt")],
+            xfmt="time", xlabel="Time", ylabel=u, traces=[Trace(h, x, name="pvt")],
         )], title=self.TITLE, readout=[
             ("Band", "wideband" if bw <= 0 else f"{fmt_hz(c)}, {fmt_hz(bw)}"), # type: ignore
             ("Average", f"{_db(lin_mean):.2f} {u}"), ("Peak", f"{h.max():.2f} {u}"), ("Min", f"{h.min():.2f} {u}"),
             ("Resolution", f"{dt*1e3:.3g} ms"),
+        ])
+
+@plot("Occupancy")
+class Occupancy(FreqPlot):
+    """Spectrum occupancy: the share of the overlapped (realtime) frames in which each bin is above a threshold,
+    counted since the last reset. The live spectrum is drawn above it with the threshold as a line to drag"""
+    TITLE = "Occupancy"
+    CATEGORY = "Measurements"
+    ABOUT = About(
+        data="Every overlapped frame's PSD compared to a threshold, counted per bin since the last reset",
+        shows='The live spectrum with the threshold as a line to drag, and below it the share of frames '
+              'each bin was above it',
+        use=('Survey how much a band is used', 'Find intermittent users of a channel'),
+        cost=0.79,
+    )
+    MARKERS = False # the % axis is not a level
+    SETTINGS = override(FreqPlot.SETTINGS, vbw={"default": 0.0}) + (
+        Setting("threshold", "Threshold", "text", default="auto", coerce=_ref_level, hint="auto", reset=True, group="Measurement",
+                help="level a bin must pass to count as occupied ('auto': 10 dB over the median of the first block)"),
+        Setting("points", "Points", "int", default=1001, min=0, max=65536, step=100, hint="0 = all bins", group="Display", advanced=True,
+                help="display points (peak detector), 0 for every bin"),
+    )
+
+    def reset(self):
+        super().reset()
+        self.counts: np.ndarray | None = None
+        self.frames = 0
+        self.thr: float | None = None # the threshold in use, resolved from "auto" once
+
+    def render(self):
+        rows = self.psd_rows("rt", smooth=False)
+        if not len(rows):
+            return None
+        if self.thr is None:
+            self.thr = float(np.median(rows) + 10.0) if self.threshold == "auto" else float(self.threshold)
+        if self.counts is None or len(self.counts) != rows.shape[-1]:
+            self.counts, self.frames = np.zeros(rows.shape[-1]), 0
+        self.counts += (rows > self.thr).sum(axis=0)
+        self.frames += len(rows)
+        pct = 100.0 * self.counts / self.frames
+        self.last = rows[-1]
+        live = self.smooth(self.last)
+        btm, top = self.y_range(self.last)
+        fmin, fmax = self.source.freq_range()
+        lx, ly = self.reduced(live, self.points)
+        px, py = self.reduced(pct, self.points)
+        u = self.unit
+        return Frame([
+            Axis(xmin=fmin, xmax=fmax, xfmt="freq", ymin=btm, ymax=top, offscale=self.offscale(self.last, btm, top), ylabel=u,
+                 traces=[Trace(ly, lx, name="live")],
+                 markers=[Marker(0.0, self.thr, "threshold", RED, kind="hline", edit="threshold")]),
+            Axis(xmin=fmin, xmax=fmax, xfmt="freq", ymin=0.0, ymax=100.0, ylabel="% of frames",
+                 traces=[Trace(py, px, color=GREEN, name="occupancy")]),
+        ], title=self.TITLE, readout=[
+            ("Frames", str(self.frames)), ("Threshold", f"{self.thr:.1f} {u}"),
+            ("Occupied", f"{pct.mean():.1f}%"), ("Bins > 50%", f"{100.0 * np.mean(pct > 50):.1f}%"),
         ])

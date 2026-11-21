@@ -32,7 +32,7 @@ def page(tmp_path_factory):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
-    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-d", "cf64", "-fs", "250k", "-n", "512"],
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64", "-fs", "250k", "-n", "512"],
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         for _ in range(100):
@@ -68,14 +68,37 @@ def drop(page, src, dst, where):
     plot(page, src).locator(".plot-header .grip").drag_to(plot(page, dst), target_position={"x": AT[where][0]*box["width"], "y": AT[where][1]*box["height"]})
     page.wait_for_timeout(400)
 
+def add_plot(page, name):
+    """Add a plot from the "+ Add plot" menu, like a user: open it, click the plot"""
+    page.click("#btn-add-plot")
+    page.locator(f".add-menu-item[data-name='{name}']").click()
+
+def test_add_menu_groups_and_describes_the_plots(page):
+    page.click("#btn-add-plot")
+    assert page.locator("#add-menu").is_visible()
+    cats = page.eval_on_selector_all(".add-menu-cat", "c => c.map(x => x.textContent)")
+    order = page.evaluate("state.categories")
+    assert cats[:5] == ["Spectrum", "Time-frequency", "Time domain", "Measurements", "Analog demodulation"] # grouped, in order
+    assert cats == [c for c in order if c in cats]
+    group = lambda c: page.evaluate("(c) => [...document.querySelectorAll('.add-menu-group')].find(g => g.firstChild.textContent === c)"
+                                    ".querySelectorAll('.add-menu-item').length", c)
+    assert group("Spectrum") == 3 and group("Time-frequency") == 5
+    page.locator(".add-menu-item[data-name='Persistence']").hover()
+    card = page.inner_text("#add-menu-info")
+    assert card.startswith("Persistence") and "Data" in card and "Shows" in card and "Use" in card and "Cost" in card
+    assert "heavy, about 16x a PSD" in card
+    assert "Data: " in page.get_attribute(".add-menu-item[data-name='PSD']", "title") # the plain text tooltip too
+    page.keyboard.press("Escape")
+    assert not page.locator("#add-menu").is_visible()
+    title = page.get_attribute(".plot-header .plot-name", "title") # the plot's name in its header says the same
+    assert title.startswith("PSD (Spectrum)") and "Use:" in title
+
 def test_add_dropdown_then_drag_and_drop(page):
-    options = page.eval_on_selector_all("#sel-add-plot option", "o => o.map(x => x.textContent)")
-    assert options[0].startswith("+") and {"PSD", "Spectrogram", "Persistence", "IQ"} <= set(options)
     for name in ("Spectrogram", "IQ", "Persistence"):
-        page.select_option("#sel-add-plot", name)
+        add_plot(page, name)
         page.wait_for_function(f"[...document.querySelectorAll('.plot-header b')].some(b => b.textContent === '{name}')")
     assert layout(page) == [["PSD"], ["Spectrogram"], ["IQ"], ["Persistence"]]
-    assert page.eval_on_selector("#sel-add-plot", "s => s.value") == ""
+    assert not page.locator("#add-menu").is_visible() # a pick closes the menu
 
     drop(page, "IQ", "PSD", "right")
     assert layout(page) == [["PSD", "IQ"], ["Spectrogram"], ["Persistence"]]
@@ -156,7 +179,7 @@ def test_markers_menu_table_editor_and_spectrogram(page):
     page.click("#btn-next")
     page.wait_for_function("document.querySelectorAll('.mtable:not([hidden])').length >= 2")
     # remove from the editor
-    psd.locator(".mk-row button").first.click()
+    psd.locator(".mk-row button[title='remove marker']").first.click()
     page.wait_for_function("document.querySelectorAll('.marker-editor .mk-row').length === 2")
     n = psd.locator("canvas").evaluate("""(c) => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
         let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] === 0x5c && d[i+1] === 0xb8 && d[i+2] === 0x5c) n++; return n; }""")
@@ -184,7 +207,7 @@ def test_markers_are_drawn_moved_and_resized_with_the_mouse(page):
     pid = _psd_id(page)
     page.wait_for_function("(id) => runtime[id].frame && runtime[id].geom && runtime[id].geom[0]", arg=pid)
     while _markers(page, pid):  # start clean, earlier tests leave markers behind
-        plot(page, "PSD").locator(".mk-row button").first.click()
+        plot(page, "PSD").locator(".mk-row button[title='remove marker']").first.click()
         page.wait_for_timeout(250)
     assert page.evaluate("(id) => runtime[id].tool", pid) == "channel"
 
@@ -254,3 +277,154 @@ def test_hover_shows_frequency_and_level_under_the_cursor(page):
     page.wait_for_function("(id) => !runtime[id].hover", arg=pid)
     page.wait_for_timeout(200)
     assert readout_pixels() == base
+
+def test_scope_trigger_level_is_dragged_along_y(page):
+    if page.locator("#btn-stop").is_enabled():
+        page.click("#btn-stop")
+    add_plot(page, "Scope")
+    page.wait_for_function("Object.values(state.plots).some((p) => p.name === 'Scope')")
+    sid = page.evaluate("Object.keys(state.plots).find((k) => state.plots[k].name === 'Scope')")
+    page.click("#btn-next")
+    page.wait_for_function("(id) => runtime[id].geom && runtime[id].geom[0] && runtime[id].frame.axes[0].markers.some((m) => m.kind === 'hline')", arg=sid)
+    assert page.evaluate("(id) => runtime[id].frame.axes[0].xfmt", sid) == "time"
+    def at(level):
+        return page.evaluate("""([id, v]) => { const rt = runtime[id], g = rt.geom[0], r = rt.canvas.getBoundingClientRect();
+            return [r.left + g.x0 + g.w * 0.6, r.top + g.y0 + (1 - (v - g.ymin) / (g.ymax - g.ymin)) * g.h]; }""", [sid, level])
+    page.mouse.move(*at(0.0))
+    assert page.evaluate("(id) => runtime[id].canvas.style.cursor", sid) == "ns-resize"
+    level = page.evaluate("(id) => { const g = runtime[id].geom[0]; return g.ymin + (g.ymax - g.ymin) * 0.7; }", sid)
+    _drag(page, at(0.0), at(level))
+    page.wait_for_function("([id, v]) => Math.abs(state.plots[id].settings.trig_level - v) < 0.05 * Math.abs(v) + 0.01", arg=[sid, level])
+    plot(page, "Scope").locator("button[title='remove plot']").click()
+    page.wait_for_function("!Object.values(state.plots).some((p) => p.name === 'Scope')")
+
+def test_clicking_a_found_signal_selects_it_for_analysis(page):
+    from pyspecan.plots.settings import HAVE_RPPS
+    if not HAVE_RPPS:
+        pytest.skip("needs rpps (pyspecan[dsp])")
+    if page.locator("#btn-stop").is_enabled():
+        page.click("#btn-stop")
+    pid = _psd_id(page)
+    for m in _markers(page, pid): # start clean
+        page.evaluate("([id, mid]) => plotOp('marker_del', {id, marker: mid})", [pid, m["id"]])
+    page.wait_for_function("(id) => state.plots[id].markers.length === 0", arg=pid)
+    page.select_option(f"#addmk-{pid}", "signals")
+    page.click("#btn-next")
+    page.wait_for_function("(id) => runtime[id].frame.axes[0].bands.some((b) => b.edit && b.owner === '')", arg=pid)
+    assert page.evaluate("state.globals.settings.dsp_freq") == ""
+    xy = page.evaluate("""(id) => { const rt = runtime[id], g = rt.geom[0], r = rt.canvas.getBoundingClientRect();
+        const b = rt.frame.axes[0].bands.find((b) => b.owner === '' && b.edit), f = (b.lo + b.hi) / 2, y = (b.ylo + b.yhi) / 2;
+        return [r.left + g.x0 + (f - g.xmin) / (g.xmax - g.xmin) * g.w, r.top + g.y0 + (1 - (y - g.ymin) / (g.ymax - g.ymin)) * g.h, f]; }""", pid)
+    page.mouse.click(*xy[:2])
+    page.wait_for_function("state.globals.settings.dsp_freq !== ''")
+    assert abs(float(page.evaluate("state.globals.settings.dsp_freq")) - xy[2]) < 1.0 # the box's center: a click picks it
+    assert page.evaluate("[...document.querySelectorAll('#globals input')].some((e) => e.value !== '' && Math.abs(parseFloat(e.value) - %f) < 1)" % xy[2])
+    page.evaluate("(id) => plotOp('marker_del', {id, marker: state.plots[id].markers[0].id})", pid)
+    for key in ("dsp_freq", "dsp_bw"):
+        page.evaluate(f"set('{key}', '')")
+
+def test_settings_sections_links_and_globals(page):
+    """Settings are grouped in collapsible sections, linked plots share level settings and markers, cal is global"""
+    if page.locator("#btn-stop").is_enabled():
+        page.click("#btn-stop")
+    if plot(page, "Spectrogram").count() == 0:
+        add_plot(page, "Spectrogram")
+        page.wait_for_function("[...document.querySelectorAll('.plot-header b')].some(b => b.textContent === 'Spectrogram')")
+    psd, spg = plot(page, "PSD"), plot(page, "Spectrogram")
+    psd.locator("button[title=settings]").click()
+    sections = psd.locator(".plot-settings > details.section > summary").all_inner_texts()
+    assert sections[:3] == ["Level", "Processing", "Trace"], sections
+    adv = psd.locator("details.section.advanced").first
+    assert not adv.evaluate("d => d.open") and adv.locator("select").first.is_hidden() # advanced starts folded
+    adv.locator("summary").click()
+    assert adv.evaluate("d => d.open")
+
+    # link the spectrogram to the PSD from its header
+    pid = _psd_id(page)
+    spg.locator(".plot-header select[title^='link']").select_option(pid)
+    page.wait_for_function("Object.keys(state.links).length === 1")
+    assert psd.locator(".link-chip").inner_text().strip().startswith("🔗") and spg.locator(".link-chip").count() == 1
+    psd = plot(page, "PSD")
+    assert psd.locator("details.section.advanced").first.evaluate("d => d.open")
+    assert psd.locator(".control-group.linked").count() == 5
+    ref = psd.locator("input[id$='-ref_level']")
+    ref.fill("-33")
+    ref.press("Enter")
+    page.wait_for_function("Object.values(state.plots).filter((p) => p.link).every((p) => p.settings.ref_level === -33)")
+    # a marker added on one linked plot shows on both
+    before = len(_markers(page, pid))
+    psd.locator("[id^=addmk-]").select_option("peak")
+    page.wait_for_function("(n) => Object.values(state.plots).filter((p) => p.link).every((p) => p.markers.length === n)", arg=before + 1)
+    assert page.evaluate("new Set(Object.values(state.plots).filter((p) => p.link).map((p) => JSON.stringify(p.markers))).size") == 1
+
+    # global calibration in the side panel
+    page.fill("#g-cal_db", "-7")
+    page.press("#g-cal_db", "Enter")
+    page.wait_for_function("state.globals.settings.cal_db === -7")
+
+    # unlink: values stay, the plots go their own way
+    spg = plot(page, "Spectrogram")
+    spg.locator(".plot-header select[title^='link']").select_option("-")
+    page.wait_for_function("Object.keys(state.links).length === 0")
+    assert page.evaluate("Object.values(state.plots).filter((p) => p.name === 'Spectrogram')[0].settings.ref_level") == -33
+    page.screenshot(path=os.environ.get("PYSPECAN_SHOT", "/dev/null"), full_page=False) if os.environ.get("PYSPECAN_SHOT") else None
+
+def test_save_and_load_layout(page, tmp_path):
+    import json
+    with page.expect_download() as dl:
+        page.click("#btn-layout-save")
+    saved = json.loads(open(dl.value.path()).read())
+    assert dl.value.suggested_filename == "pyspecan-layout.json"
+    assert saved["globals"]["cal_db"] == -7 # set by the previous test
+    assert [[p["type"] for p in row] for row in saved["rows"]] == layout(page)
+
+    path = tmp_path / "l.json"
+    path.write_text(json.dumps({"rows": [[{"type": "PSD", "link": "a", "settings": {"vbw": 4}, "markers": [{"kind": "peak"}]},
+                                          {"type": "Spectrogram", "link": "a"}], [{"type": "Scope"}]]}))
+    page.set_input_files("#in-layout", str(path))
+    page.wait_for_function("Object.keys(state.plots).length === 3 && Object.keys(state.links).length === 1")
+    assert layout(page) == [["PSD", "Spectrogram"], ["Scope"]]
+    assert page.evaluate("state.globals.settings.cal_db") == 0 # left out of the file: back to the default
+
+    path.write_text(json.dumps({"rows": [[{"type": "Laser"}]]}))
+    page.set_input_files("#in-layout", str(path))
+    page.wait_for_function("document.querySelector('#lbl-message').textContent.includes('Laser')")
+    assert layout(page) == [["PSD", "Spectrogram"], ["Scope"]] # a bad file changes nothing
+
+def test_closing_pages_mid_stream_logs_no_errors(page, tmp_path):
+    """Pages, and a whole browser context, going away while frames stream: the server drops them quietly.
+    Uses the module's browser, playwright's sync API runs once per thread"""
+    capture = tmp_path / "capture.cf64"
+    (np.exp(2j*np.pi*0.1*np.arange(2_000_000))).astype(np.complex64).tofile(capture)
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64", "-fs", "1M"],
+                            env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    try:
+        for _ in range(100):
+            try:
+                httpx.get(f"http://127.0.0.1:{port}/api/status")
+                break
+            except Exception:
+                time.sleep(0.1)
+        ctx = page.context.browser.new_context()
+        for _ in range(3):
+            pg = ctx.new_page()
+            pg.goto(f"http://127.0.0.1:{port}/")
+            pg.wait_for_selector(".plot")
+            pg.click("#btn-start")
+            pg.wait_for_timeout(800)
+            pg.close()
+        pg = ctx.new_page()
+        pg.goto(f"http://127.0.0.1:{port}/")
+        pg.click("#btn-start")
+        pg.wait_for_timeout(800)
+        ctx.close()
+        time.sleep(1)
+        assert httpx.get(f"http://127.0.0.1:{port}/api/status").status_code == 200 # still serving
+    finally:
+        proc.terminate()
+        out = proc.communicate(timeout=5)[0]
+    assert "Traceback" not in out and "ERROR" not in out, out

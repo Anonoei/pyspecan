@@ -6,6 +6,7 @@ import sys
 from ...utils import args
 from ..base import View as _View
 
+
 class ViewConfig:
     width = 0   # 0: the terminal's
     height = 0

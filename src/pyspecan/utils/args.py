@@ -2,6 +2,7 @@ import argparse
 
 from ..obj import Frequency
 
+
 def update_register(parser: argparse.ArgumentParser):
     parser.register("type", "frequency", Frequency.get)
 

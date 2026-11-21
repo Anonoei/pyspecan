@@ -2,13 +2,11 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
-from ..base import View as _View
-
-from ...backend.tk import widgets
 from ...backend.mpl import theme as theme_mpl
-
-from .sink import Sink
+from ...backend.tk import widgets
+from ..base import View as _View
 from .panels import PanelView
+from .sink import Sink
 
 ADD_LABEL = "+ Add plot…"
 
@@ -24,9 +22,6 @@ LUT = {
     "vs": tk.StringVar,
     "vi": tk.IntVar,
 }
-
-def args_view(parser):
-    pass
 
 class View(_View):
     """Parent tkGUI view class"""
@@ -58,9 +53,15 @@ class View(_View):
         self.tb_ent_show: ttk.Entry = None # type: ignore
         self.tb_fr_btn = ttk.Frame(self.fr_tb)
         self.tb_fr_add = ttk.Frame(self.fr_tb)
-        self.tb_var_add = tk.StringVar(self.tb_fr_add, ADD_LABEL)
-        self.tb_cb_add = ttk.Combobox(self.tb_fr_add, textvariable=self.tb_var_add, state="readonly", width=16)
-        self.tb_cb_add.pack(padx=4, pady=8)
+        # the plot picker: a menu of categories, each a submenu of plot types (the controller fills it)
+        self.tb_mb_add = ttk.Menubutton(self.tb_fr_add, text=ADD_LABEL, width=14)
+        self.tb_menu_add = tk.Menu(self.tb_mb_add, tearoff=0)
+        self.tb_mb_add.config(menu=self.tb_menu_add)
+        self.tb_mb_add.pack(side=tk.LEFT, padx=4, pady=8)
+        self.tb_btn_layout_save = ttk.Button(self.tb_fr_add, text="Save layout")
+        self.tb_btn_layout_save.pack(side=tk.LEFT, padx=2)
+        self.tb_btn_layout_load = ttk.Button(self.tb_fr_add, text="Load layout")
+        self.tb_btn_layout_load.pack(side=tk.LEFT, padx=2)
         self.tb_btn_start: ttk.Button = None # type: ignore
         self.tb_btn_stop: ttk.Button = None # type: ignore
         self.tb_btn_reset: ttk.Button = None # type: ignore

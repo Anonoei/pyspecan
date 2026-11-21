@@ -1,15 +1,20 @@
 """Initialize pyspecan module/script"""
 from . import err
-from .config import config, Sink, View
-
-from .model.model import Model, GetModel
-from .view.view import GetView
+from .arguments import split
+from .config import Sink, View, config
 from .controller.controller import GetController
+from .model.model import GetModel, Model
+from .plots import layout_from_kwargs
+from .view.view import GetView
+
 
 class SpecAn:
-    """Class to initialize pyspecan"""
+    """Run pyspecan: `SpecAn("web", "file", path="x.cf64", Fs="250k", layout=...)`
+
+    `kwargs` are the command line options by dest (`python -m pyspecan -v <view> -s <sink> -h` lists
+    them), each part gets only its own. `layout`: a plots.LayoutSpec or a json layout file path"""
     __slots__ = ("model", "view", "controller")
-    def __init__(self, view, sink="file", **kwargs):
+    def __init__(self, view="tk", sink="file", layout=None, **kwargs):
         if config.PROFILE:
             from .utils.monitor import Profile
             Profile().enable()
@@ -18,19 +23,18 @@ class SpecAn:
             from .utils.monitor import Memory
             Memory().start()
 
-        if not isinstance(sink, Sink):
-            sink = Sink[sink]
-            if sink == Sink.NONE:
-                raise err.UnknownOption(f"Unknown sink {sink}")
-        if not isinstance(view, View):
-            view = View.get(view)
-            if view == View.NONE:
-                raise err.UnknownOption(f"Unknown view {view}")
+        v, s = View.get(view), Sink.get(sink)
+        if v == View.NONE:
+            raise err.UnknownOption(f"Unknown view {view}")
+        if s == Sink.NONE:
+            raise err.UnknownOption(f"Unknown sink {sink}")
 
-        self.model: Model = GetModel(sink)(**kwargs)
+        part = split(v, s, kwargs)
+        spec = layout_from_kwargs({**part["plots"], "layout": layout}) # bad layouts fail before anything opens
 
-        self.view = GetView(view, sink)(**kwargs)
-        self.controller = GetController(view, sink)(self.model, self.view, **kwargs)
+        self.model: Model = GetModel(s)(**part["model"])
+        self.view = GetView(v, s)(**part["ui"])
+        self.controller = GetController(v, s)(self.model, self.view, layout=spec, **part["ui"])
 
         self.model.show()
         self.view.mainloop()

@@ -5,21 +5,23 @@ return Frames. This is the only place the tk view draws them, so a new plot
 in `pyspecan.plots` shows up here without any tk code.
 """
 import tkinter as tk
-from tkinter import simpledialog, ttk
+from tkinter import filedialog, simpledialog, ttk
 
 import numpy as np
-
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-from matplotlib.ticker import FuncFormatter
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+from matplotlib.patches import Rectangle
+from matplotlib.ticker import FuncFormatter, ScalarFormatter
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from ...backend.mpl.color import cmap
 from ...backend.mpl.plot import BlitPlot
-from ...obj import Frequency
 from ...plots import Scroller
-from ...plots.frame import Axis, Frame, Image
+from ...plots.drag import MIN_DRAG_PX, TOOLS, Drag, commit, hit_test, preview, settled
+from ...plots.frame import Axis, Frame, Image, fmt_time
+from ...plots.freq import fmt_hz
 from ...view.tkGUI.panels import Panel
+
 
 def _signature(frame: Frame):
     """What decides the figure's layout, the figure is rebuilt when it changes"""
@@ -29,6 +31,26 @@ def _log10_label(v: float) -> str:
     """y values holding log10 of the quantity: -3 -> 1e-3"""
     m, e = f"{10.0 ** v:.0e}".split("e")
     return f"{m}e{int(e)}"
+
+def _hz_tick(v: float) -> str:
+    """A frequency as a short tick label: 62.5k, -1.2M, 500"""
+    for scale, suffix in ((1e9, "G"), (1e6, "M"), (1e3, "k")):
+        if abs(v) >= scale:
+            return f"{v / scale:.4g}{suffix}"
+    return f"{v:.4g}"
+
+EXPORTS = (("csv", "Traces (CSV)"), ("table", "Table (CSV)"), ("json", "Frame (JSON)"), ("png", "Image (PNG)"))
+
+MARK_TOP_PX = 22 # a point marker's triangle stays this far below the top, so its label shows
+
+def _mark_y(ax, v: float) -> float:
+    """The level a point marker's triangle is drawn at: on the plot even when its level is off the range"""
+    lo, hi = sorted(ax.get_ylim())
+    v = float(min(max(v, lo), hi)) if np.isfinite(v) else float(lo)
+    top = ax.transData.transform((0.0, hi))[1] - MARK_TOP_PX
+    if ax.transData.transform((0.0, v))[1] > top:
+        v = float(ax.transData.inverted().transform((0.0, top))[1])
+    return v
 
 class PlotPane:
     """One plot in a panel pane
@@ -51,7 +73,14 @@ class PlotPane:
         self.lim: dict[int, dict] = {}
         self.drawn: dict[int, set] = {}
         self.vars: dict[str, tk.Variable] = {}
+        self.drag: Drag | None = None # a marker being drawn, moved or resized with the mouse
+        self.hover: tuple[int, float, float] | None = None # (axis, x, y pixels) of the pointer over an axis
+        self.keep.setdefault("tool", TOOLS[0])
         pane.master.config(text=self.plot.TITLE)
+        tip = getattr(ctrl, "tooltip", None)
+        if tip is not None: # what the plot does, on its grip
+            from ...plots.base import about_text
+            tip.attach(pane.lbl_grip, lambda: about_text(self.plot.NAME, type(self.plot).about()))
 
         self.btn_enable = ttk.Button(pane.master, text="DISABLE", style="Toggle.TButton", command=self.toggle)
         self.btn_enable.place(relx=1, rely=0, x=-100, y=5, anchor=tk.N, bordermode=tk.OUTSIDE, height=30, width=80)
@@ -72,31 +101,112 @@ class PlotPane:
 
     # --- settings --- #
     def build_settings(self):
-        """One widget per declared setting"""
+        """The link picker, then one collapsible section per settings group (rarely used ones folded under
+        "Advanced"), then the markers"""
         parent = self.pane.settings
         for child in parent.winfo_children():
             child.destroy()
         self.vars = {}
         values = self.plot.settings()
-        for row, f in enumerate(self.plot.fields()):
-            key, kind = f["key"], f["kind"]
-            ttk.Label(parent, text=f["label"]).grid(row=row, column=0, sticky=tk.W)
-            if kind == "check":
-                var = tk.BooleanVar(parent, bool(values[key]))
-                w = ttk.Checkbutton(parent, variable=var, command=lambda k=key: self.commit(k))
-            elif kind == "select":
-                var = tk.StringVar(parent, str(values[key]))
-                w = ttk.Combobox(parent, textvariable=var, values=f["options"], state="readonly", width=9)
-                w.bind("<<ComboboxSelected>>", lambda e, k=key: self.commit(k))
-            else:
-                var = tk.StringVar(parent, str(values[key]))
-                w = ttk.Entry(parent, textvariable=var, width=10)
-                w.bind("<Return>", lambda e, k=key: self.commit(k))
-                w.bind("<FocusOut>", lambda e, k=key: self.refresh())
-            self.vars[key] = var
-            w.grid(row=row, column=1)
+        linked = self.plot.link is not None
+        self._link_picker(parent)
+        row = ttk.Frame(parent) # the plot's actions (store a reference trace), and export
+        row.pack(side=tk.TOP, fill=tk.X, pady=(2, 0))
+        for action in self.plot.ACTIONS:
+            ttk.Button(row, text=action, command=lambda a=action: self._plot_action(a)).pack(side=tk.LEFT)
+        exp = ttk.Menubutton(row, text="Export ▾")
+        menu = tk.Menu(exp, tearoff=0)
+        for what, label in EXPORTS:
+            menu.add_command(label=label, command=lambda w=what: self.export(w))
+        exp.config(menu=menu)
+        exp.pack(side=tk.LEFT)
+        groups: dict[str, list[dict]] = {}
+        for f in self.plot.fields():
+            groups.setdefault(f["group"], []).append(f)
+        for name, fields in groups.items():
+            body = self._section(parent, name)
+            basic = [f for f in fields if not f["advanced"]]
+            adv = [f for f in fields if f["advanced"]]
+            for row, f in enumerate(basic):
+                self._field(body, row, f, values, linked)
+            if adv:
+                more = self._section(body, f"{name} advanced", text="Advanced", row=len(basic), default=False)
+                for row, f in enumerate(adv):
+                    self._field(more, row, f, values, linked)
         if self.plot.MARKERS:
-            self._marker_controls(parent, len(self.plot.fields()))
+            body = self._section(parent, "Markers")
+            self._marker_controls(body, 0)
+
+    def _section(self, parent, key: str, text: str | None = None, row: int | None = None, default=True) -> ttk.Frame:
+        """A titled section whose body the title button shows and hides, open state survives rebuilds"""
+        opened = self.keep.setdefault("sections", {})
+        opened.setdefault(key, default)
+        outer = ttk.Frame(parent)
+        if row is None:
+            outer.pack(side=tk.TOP, fill=tk.X, pady=(2, 0))
+        else:
+            outer.grid(row=row, column=0, columnspan=2, sticky=tk.EW)
+        body = ttk.Frame(outer, padding=(8, 0, 0, 2))
+        btn = ttk.Button(outer, style="Toolbutton")
+        def show():
+            btn.config(text=("▾ " if opened[key] else "▸ ") + (text or key))
+            if opened[key]:
+                body.pack(side=tk.TOP, fill=tk.X)
+            else:
+                body.pack_forget()
+        def toggle():
+            opened[key] = not opened[key]
+            show()
+        btn.config(command=toggle)
+        btn.pack(side=tk.TOP, anchor=tk.W)
+        show()
+        return body
+
+    def _field(self, parent, row: int, f: dict, values: dict, linked: bool):
+        key, kind = f["key"], f["kind"]
+        label = f["label"] + (" 🔗" if linked and f["scope"] == "link" else "")
+        ttk.Label(parent, text=label).grid(row=row, column=0, sticky=tk.W)
+        if kind == "check":
+            var = tk.BooleanVar(parent, bool(values[key]))
+            w = ttk.Checkbutton(parent, variable=var, command=lambda k=key: self.commit(k))
+        elif kind == "select":
+            var = tk.StringVar(parent, str(values[key]))
+            w = ttk.Combobox(parent, textvariable=var, values=f["options"], state="readonly", width=9)
+            w.bind("<<ComboboxSelected>>", lambda e, k=key: self.commit(k))
+        else:
+            var = tk.StringVar(parent, str(values[key]))
+            w = ttk.Entry(parent, textvariable=var, width=10)
+            w.bind("<Return>", lambda e, k=key: self.commit(k))
+            w.bind("<FocusOut>", lambda e, k=key: self.refresh())
+        self.vars[key] = var
+        w.grid(row=row, column=1)
+
+    def _link_picker(self, parent):
+        """Link this plot to another of its domain, they then share level / processing settings and markers"""
+        plots = self.ctrl.plots
+        targets = plots.linkable(self.pid)
+        if not targets and self.plot.link is None:
+            return
+        fr = ttk.Frame(parent)
+        fr.pack(side=tk.TOP, fill=tk.X)
+        ttk.Label(fr, text="Link").grid(row=0, column=0, sticky=tk.W)
+        names = {f"{t} {plots.get(t).NAME}": t for t in targets}
+        link = self.plot.link
+        current = f"{link.id}: " + ", ".join(m for m in link.members if m != self.pid) if link else "none"
+        var = tk.StringVar(fr, current)
+        box = ttk.Combobox(fr, textvariable=var, values=["none", *names], state="readonly", width=12)
+        box.grid(row=0, column=1)
+        def pick(_e):
+            choice = var.get()
+            try:
+                if choice == "none":
+                    self.ctrl.unlink_plot(self.pid)
+                elif choice in names:
+                    self.ctrl.link_plot(self.pid, names[choice])
+            except ValueError as e:
+                self.ctrl.show_message(str(e))
+            self.ctrl.when_idle(self.ctrl.panels.rebuild_settings)
+        box.bind("<<ComboboxSelected>>", pick)
 
     # --- markers --- #
     def _marker_controls(self, parent, row):
@@ -110,13 +220,57 @@ class PlotPane:
         box.bind("<<ComboboxSelected>>", add)
         ttk.Button(parent, text="Edit selected", command=self._edit_marker).grid(row=row + 1, column=0)
         ttk.Button(parent, text="Delete selected", command=lambda: self._marker_op(lambda: self.ctrl.del_marker(self.pid, self._selected()))).grid(row=row + 1, column=1)
+        peaks = ttk.Frame(parent) # the selected marker's actions (a peak marker's next peak)
+        peaks.grid(row=row + 3, column=0, columnspan=2, sticky=tk.W)
+        for action, label in (("prev", "▲ Prev"), ("next", "▼ Next"), ("left", "◀ Left"), ("right", "▶ Right")):
+            ttk.Button(peaks, text=label, width=7,
+                       command=lambda a=action: self._marker_op(lambda: self.ctrl.marker_action(self.pid, self._selected(), a))).pack(side=tk.LEFT)
+        ttk.Label(parent, text="Draw").grid(row=row + 2, column=0, sticky=tk.W)
+        tool = tk.StringVar(parent, self.keep["tool"])
+        draw = ttk.Combobox(parent, textvariable=tool, values=list(TOOLS), state="readonly", width=9)
+        draw.grid(row=row + 2, column=1)
+        draw.bind("<<ComboboxSelected>>", lambda _e: self.keep.__setitem__("tool", tool.get()))
+        self.vars["_tool"] = tool
 
-    def _marker_op(self, fn):
+    def export(self, what: str, path: str | None = None):
+        """Save the latest frame: "csv" its traces, "table" its marker table, "json" all of it, "png" the figure.
+        Asks where unless `path` is given"""
+        ext = {"csv": ".csv", "table": ".csv", "json": ".json", "png": ".png"}[what]
+        if path is None:
+            stem = "".join(ch if ch.isalnum() else "-" for ch in self.plot.NAME.lower()).strip("-")
+            path = filedialog.asksaveasfilename(parent=self.pane.master, defaultextension=ext,
+                                                initialfile=f"pyspecan-{stem}{'-table' if what == 'table' else ''}{ext}")
+            if not path:
+                return
+        try:
+            if what == "png":
+                if self.plotter is None:
+                    raise ValueError("nothing drawn yet")
+                self.plotter.fig.savefig(path, facecolor=self.plotter.fig.get_facecolor())
+            else:
+                text = self.ctrl.export(self.pid, what) # first: nothing is written when there is nothing to export
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(text)
+            self.ctrl.show_message(f"Saved {path}")
+        except (ValueError, OSError) as e:
+            self.ctrl.show_message(str(e))
+
+    def _plot_action(self, action: str):
+        try:
+            self.ctrl.plot_action(self.pid, action)
+        except ValueError as e:
+            self.ctrl.show_message(str(e))
+
+    def _marker_op(self, fn) -> bool:
+        """Run a marker change, showing what went wrong, True when it worked"""
+        ok = True
         try:
             fn()
         except (ValueError, TypeError) as e:
             self.ctrl.show_message(str(e))
+            ok = False
         self.table_sig = None # redraw the table with the next frame
+        return ok
 
     def _selected(self) -> str:
         if self.tree is None or not self.tree.selection():
@@ -167,17 +321,19 @@ class PlotPane:
             self.tree.pack(side=tk.BOTTOM, fill=tk.X, before=self.fr_canv)
 
     def commit(self, key):
-        """Apply a widget's value to the plot, the widgets show what the plot really holds afterwards"""
+        """Apply a widget's value to the plot, the widgets (of every plot, linked ones follow) show what the plots really hold afterwards"""
         try:
             self.ctrl.set_plot(self.pid, key, self.vars[key].get())
         except ValueError as e:
             self.ctrl.show_message(str(e))
-        self.refresh()
+        self.ctrl.panels.refresh()
 
     def refresh(self):
+        self.plot = self.ctrl.plots.get(self.pid)
         values = self.plot.settings()
         for key, var in self.vars.items():
-            var.set(values[key])
+            if key in values:
+                var.set(values[key])
 
     def toggle(self):
         self.ctrl.set_plot(self.pid, "enabled", not self.plot.enabled)
@@ -194,6 +350,9 @@ class PlotPane:
         """Take in a frame without drawing it, scrolling images must see every frame"""
         self.keep["frame"] = frame
         self.dirty = True
+        d = self.drag
+        if d is not None and d.committed and d.i < len(frame.axes) and settled(frame.axes[d.i], d):
+            self.drag = None
         for i, ax in enumerate(frame.axes):
             if ax.image is not None:
                 self.images[i] = self.scrollers.setdefault(i, Scroller()).apply(ax.image)
@@ -218,7 +377,8 @@ class PlotPane:
             elif lbl.winfo_ismapped():
                 lbl.place_forget()
         for i, ax in enumerate(frame.axes):
-            self._draw_axis(i, ax)
+            self._draw_axis(i, preview(ax, self.drag, i))
+        self._draw_hover(frame)
         self.plotter.update() # type: ignore
         self.dirty = False
 
@@ -235,9 +395,9 @@ class PlotPane:
     def _build(self, frame: Frame, sig):
         if self.canvas_widget is not None:
             self.canvas_widget.destroy()
-            plt.close(self.plotter.fig) # type: ignore
-        fig = plt.figure(figsize=(5, 5), layout="constrained")
-        fig.canvas = FigureCanvasTkAgg(fig, master=self.fr_canv)
+        # no pyplot: it would also make a canvas for its default backend (a hidden gtk window, say)
+        fig = Figure(figsize=(5, 5), layout="constrained")
+        FigureCanvasTkAgg(fig, master=self.fr_canv) # becomes fig.canvas
         self.plotter = BlitPlot(fig) # type: ignore
         n = len(frame.axes)
         for i, ax in enumerate(frame.axes):
@@ -255,6 +415,10 @@ class PlotPane:
         self.plotter.canvas.draw()
         self.canvas_widget = self.plotter.canvas.get_tk_widget() # type: ignore
         self.canvas_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        for name, fn in (("button_press_event", self._on_press), ("motion_notify_event", self._on_motion),
+                         ("button_release_event", self._on_release), ("figure_leave_event", self._on_leave)):
+            fig.canvas.mpl_connect(name, fn)
+        self.drag = self.hover = None
         self.sig = sig
         self.lim = {}
         self.drawn = {}
@@ -279,6 +443,9 @@ class PlotPane:
 
     def _draw_axis(self, i: int, ax: Axis):
         mpl = self.plotter.ax(i) # type: ignore
+        if self.lim.setdefault(i, {}).get("xlog") != ax.xlog: # before the limits: a new scale resets the ticks
+            self.lim[i] = {"xlog": ax.xlog}
+            mpl.ax.set_xscale("log" if ax.xlog else "linear")
         # x / y limits
         traces = ax.traces
         if ax.image is not None:
@@ -286,7 +453,7 @@ class PlotPane:
         else:
             xmin, xmax = ax.xmin, ax.xmax
         if xmin is not None and xmax is not None:
-            self._set_lim(i, "x", xmin, xmax, mpl.set_xlim, (lambda lo, hi, ax=ax, mpl=mpl: self._freq_ticks(mpl, lo, hi)) if ax.xfmt == "freq" else None)
+            self._set_lim(i, "x", xmin, xmax, mpl.set_xlim, self._x_ticks(ax, mpl))
         elif traces:
             xs = [np.asarray(t.x) for t in traces if t.x is not None]
             if xs:
@@ -304,8 +471,12 @@ class PlotPane:
             self.lim[i]["yfmt"] = ax.yfmt
             if ax.yfmt == "log10":
                 mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: _log10_label(v)))
+            elif ax.yfmt == "freq":
+                mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: fmt_hz(v)))
+            elif ax.yfmt == "logfreq": # y holds log10 of a frequency
+                mpl.ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: fmt_hz(10.0 ** v)))
             else:
-                mpl.ax.yaxis.set_major_formatter(plt.ScalarFormatter())
+                mpl.ax.yaxis.set_major_formatter(ScalarFormatter())
 
         # artists
         names = set()
@@ -314,7 +485,8 @@ class PlotPane:
             names.add(name)
             x = np.asarray(t.x) if t.x is not None else (np.linspace(xmin, xmax, len(t.y), endpoint=False) if xmin is not None and xmax is not None else np.arange(len(t.y)))
             if ax.projection == "3d":
-                mpl.plot3d(x, t.y, t.z, name=name, color=t.color, linestyle="solid", linewidth=t.width, alpha=t.alpha)
+                style = dict(linestyle="none", marker=".", markersize=3) if t.kind == "scatter" else dict(linestyle="solid", linewidth=t.width)
+                mpl.plot3d(x, t.y, t.z, name=name, color=t.color, alpha=t.alpha, **style)
             elif t.kind == "scatter":
                 mpl.scatter(x, t.y, name=name, color=t.color, marker=".", linestyle="none", linewidth=0)
             else:
@@ -322,6 +494,8 @@ class PlotPane:
         if ax.image is not None:
             names.add("img")
             self._draw_image(i, ax, mpl, xmin, xmax)
+        if ax.surface is not None and self._draw_surface(ax, mpl):
+            names.add("surf")
         names |= self._draw_marks(ax, mpl)
         for name in self.drawn.get(i, set()) - names: # e.g. a hold trace that was switched off
             art = mpl.art(name)
@@ -334,20 +508,47 @@ class PlotPane:
     def _draw_marks(self, ax: Axis, mpl) -> set:
         """Bands and markers as named artists, reused between frames (blitting only draws registered artists)"""
         names = set()
+        if ax.projection == "3d":
+            return self._draw_bands_3d(ax, mpl)
+        level = ax.image is None or ax.ymin is not None # a y span means something
         for n, b in enumerate(ax.bands):
             name = f"band{n}"
             art = mpl.art(name)
             if art is None:
-                art = Rectangle((b.lo, 0), b.hi - b.lo, 1, transform=mpl.ax.get_xaxis_transform(), zorder=1)
+                art = Rectangle((b.lo, 0), b.hi - b.lo, 1, zorder=1)
                 mpl.ax.add_patch(art)
                 mpl.add_artist(name, art)
-            art.set_xy((b.lo, 0))
+            if level and (b.ylo is not None or b.yhi is not None):
+                lo, hi = sorted(mpl.ax.get_ylim())
+                y0 = lo if b.ylo is None else b.ylo
+                y1 = hi if b.yhi is None else b.yhi
+                art.set_transform(mpl.ax.transData)
+            else: # the whole height
+                y0, y1 = 0.0, 1.0
+                art.set_transform(mpl.ax.get_xaxis_transform())
+            art.set_xy((b.lo, y0))
             art.set_width(b.hi - b.lo)
+            art.set_height(y1 - y0)
             art.set_facecolor(b.color)
             art.set_alpha(b.alpha)
             art.set_edgecolor("none")
             names.add(name)
         for n, m in enumerate(ax.markers):
+            if m.kind == "hline":
+                name, tname = f"hl{n}", f"hlt{n}"
+                tr = mpl.ax.get_yaxis_transform() # x in axes fractions, y in data
+                if mpl.art(name) is None:
+                    mpl.plot([0, 1], [m.y, m.y], name=name, color=m.color, linewidth=1, linestyle=(0, (6, 3)), transform=tr)
+                    mpl.add_artist(tname, mpl.ax.text(0.995, m.y, m.label, color=m.color, fontsize=8, ha="right", va="bottom",
+                                                      transform=tr, clip_on=True))
+                mpl.art(name).set_data([0, 1], [m.y, m.y])
+                mpl.art(name).set_color(m.color)
+                txt = mpl.art(tname)
+                txt.set_position((0.995, m.y))
+                txt.set_text(m.label)
+                txt.set_color(m.color)
+                names.update((name, tname))
+                continue
             if m.kind == "vline":
                 name = f"vl{n}"
                 art = mpl.art(name)
@@ -364,18 +565,279 @@ class PlotPane:
                 txt = mpl.ax.text(m.x, m.y, m.label, color=m.color, fontsize=8, ha="left", va="bottom", clip_on=True)
                 mpl.add_artist(f"mkt{n}", txt)
             art = mpl.art(name)
-            art.set_data([m.x], [m.y])
+            y = _mark_y(mpl.ax, m.y) # a marker off the level range sits at the edge, as in the web view
+            art.set_data([m.x], [y])
             art.set_color(m.color)
             txt = mpl.art(f"mkt{n}")
-            txt.set_position((m.x, m.y))
+            txt.set_position((m.x, y))
             txt.set_text(m.label)
             txt.set_color(m.color)
             names.update((name, f"mkt{n}"))
         return names
 
+    def _draw_surface(self, ax: Axis, mpl) -> bool:
+        """A Surface as a matplotlib surface colored by height, made again each frame (it can not be updated).
+        False when there is nothing to draw yet (a single row)"""
+        old = mpl.art("surf")
+        if old is not None:
+            old.remove()
+            del mpl.artists["surf"]
+        data = np.asarray(ax.surface.data) # type: ignore[union-attr]
+        rows, cols = data.shape
+        if rows < 2 or cols < 2:
+            return False
+        x = np.linspace(ax.xmin, ax.xmax, cols) # type: ignore[arg-type]
+        y = np.linspace(ax.ymin, ax.ymax, rows) # type: ignore[arg-type]
+        X, Y = np.meshgrid(x, y)
+        Z = ax.zmin + data / 255.0 * (ax.zmax - ax.zmin) # type: ignore[operator]
+        colors = cmap[ax.surface.cmap](data / 255.0) # type: ignore[union-attr]
+        surf = mpl.ax.plot_surface(X, Y, Z, facecolors=colors, rstride=1, cstride=1, linewidth=0, antialiased=False, shade=False)
+        mpl.add_artist("surf", surf)
+        return True
+
+    def _draw_bands_3d(self, ax: Axis, mpl) -> set:
+        """Bands on a 3d axis: boxes on the x / y floor (at zmin), the y span defaulting to the y range"""
+        names = set()
+        ylo, yhi = (ax.ymin, ax.ymax) if ax.ymin is not None else sorted(mpl.ax.get_ylim())
+        z = ax.zmin if ax.zmin is not None else min(mpl.ax.get_zlim()) # type: ignore
+        for n, b in enumerate(ax.bands):
+            name = f"band3d{n}"
+            y0 = ylo if b.ylo is None else b.ylo
+            y1 = yhi if b.yhi is None else b.yhi
+            verts = [[(b.lo, y0, z), (b.hi, y0, z), (b.hi, y1, z), (b.lo, y1, z)]]
+            art = mpl.art(name)
+            if art is None:
+                art = Poly3DCollection(verts)
+                mpl.ax.add_collection3d(art) # type: ignore
+                mpl.add_artist(name, art)
+            art.set_verts(verts)
+            art.set_facecolor(b.color)
+            art.set_edgecolor(b.color)
+            art.set_alpha(b.alpha)
+            names.add(name)
+        return names
+
+    # --- mouse: draw, move and resize markers (the logic is plots/drag.py, shared in spirit with the web view) --- #
+    def _mouse_axis(self, event) -> int:
+        """Index of the 2d axis under the pointer, -1 for none"""
+        frame = self.keep.get("frame")
+        if self.plotter is None or frame is None or event.inaxes is None:
+            return -1
+        for i, ax in enumerate(frame.axes):
+            if ax.projection == "2d" and self.plotter.ax(i).ax is event.inaxes:
+                return i
+        return -1
+
+    def _can_draw(self, i: int) -> bool:
+        """Can new markers be drawn on axis i (a frequency axis of a plot with markers)"""
+        frame = self.keep.get("frame")
+        return i >= 0 and frame is not None and self.plot.MARKERS and frame.axes[i].xfmt == "freq"
+
+    def _hit(self, i: int, event) -> Drag | None:
+        """The draggable mark under the pointer on axis i"""
+        if i < 0:
+            return None
+        return hit_test(self.keep["frame"].axes[i], i, self._to_px(i), event.x, event.y, self._to_py(i), self._level_py(i))
+
+    def _to_px(self, i: int):
+        tr = self.plotter.ax(i).ax.transData # type: ignore
+        return lambda v: float(tr.transform((v, 0.0))[0])
+
+    def _to_py(self, i: int):
+        frame = self.keep["frame"]
+        if frame.axes[i].image is not None and frame.axes[i].ymin is None: # time rows, markers span them
+            return None
+        ax = self.plotter.ax(i).ax # type: ignore
+        return lambda v: float(ax.transData.transform((0.0, _mark_y(ax, v)))[1]) # where the triangle is drawn
+
+    def _level_py(self, i: int):
+        """data y -> pixel y, None on an axis without levels"""
+        frame = self.keep["frame"]
+        if frame.axes[i].image is not None and frame.axes[i].ymin is None:
+            return None
+        tr = self.plotter.ax(i).ax.transData # type: ignore
+        return lambda v: float(tr.transform((0.0, v))[1])
+
+    def _data_xy(self, i: int, px: float, py: float) -> tuple[float, float]:
+        """Pixel -> data, clamped to the axis"""
+        ax = self.plotter.ax(i).ax # type: ignore
+        x, y = ax.transData.inverted().transform((px, py))
+        (x0, x1), (y0, y1) = sorted(ax.get_xlim()), sorted(ax.get_ylim())
+        return float(min(max(x, x0), x1)), float(min(max(y, y0), y1))
+
+    def _cursor(self, name: str):
+        if self.canvas_widget is not None and str(self.canvas_widget.cget("cursor")) != name:
+            self.canvas_widget.config(cursor=name)
+
+    def _on_press(self, event):
+        if event.button != 1 or self.drag is not None:
+            return
+        i = self._mouse_axis(event)
+        if i < 0:
+            return
+        d = self._hit(i, event)
+        x, y = self._data_xy(i, event.x, event.y)
+        if d is None:
+            if self.keep["tool"] == "off" or not self._can_draw(i):
+                return
+            d = Drag(i, "new", x, x)
+        d.start = y if d.mode == "level" else x
+        self.drag = d
+        if d.mode == "move":
+            self._cursor("fleur")
+
+    def _on_motion(self, event):
+        d = self.drag
+        if d is not None and not d.committed:
+            x, y = self._data_xy(d.i, event.x, event.y)
+            if d.mode == "level":
+                d.to(x, event.y - self._level_py(d.i)(d.start), y) # type: ignore[misc]
+            else:
+                d.to(x, event.x - self._to_px(d.i)(d.start))
+            self.hover = (d.i, event.x, event.y)
+            self._redraw()
+            return
+        i = self._mouse_axis(event)
+        self.hover = (i, event.x, event.y) if i >= 0 else None
+        cursor = ""
+        hit = self._hit(i, event)
+        if hit is not None:
+            cursor = {"move": "fleur", "level": "sb_v_double_arrow"}.get(hit.mode, "sb_h_double_arrow")
+        elif self._can_draw(i) and self.keep["tool"] != "off":
+            cursor = "crosshair"
+        self._cursor(cursor)
+        self._redraw()
+
+    def _on_release(self, event):
+        d = self.drag
+        if event.button != 1 or d is None or d.committed:
+            return
+        to_px = self._to_px(d.i)
+        lo, hi = d.span
+        action = commit(self.keep["tool"], d, abs(to_px(hi) - to_px(lo)) >= MIN_DRAG_PX)
+        if action is None:
+            self.drag = None
+        else:
+            d.committed = True # keep showing where it was dropped until a frame shows it (or a moment passes)
+            op, what, params = action
+            if op == "add":
+                ok = self._marker_op(lambda: self.ctrl.add_marker(self.pid, what, **params))
+            elif op == "plot":
+                ok = self._marker_op(lambda: self._set_plot(params))
+            else:
+                ok = self._marker_op(lambda: self.ctrl.set_marker_params(self.pid, what, params))
+            if not ok:
+                self.drag = None
+            else:
+                self.pane.master.after(1500, lambda: self._expire(d))
+        self._cursor("")
+        self._redraw()
+
+    def _set_plot(self, params: dict):
+        """A dragged (or clicked) mark of the plot itself: its settings. The widgets follow, the sidebar's too: a
+        found signal's box sets the global analysis settings"""
+        for key, value in params.items():
+            self.ctrl.set_plot(self.pid, key, value)
+        self.ctrl.refresh()
+
+    def _expire(self, d: Drag):
+        if self.drag is d:
+            self.drag = None
+            self._redraw()
+
+    def _on_leave(self, _event):
+        self.hover = None
+        if self.drag is None:
+            self._cursor("")
+            self._redraw()
+
+    def _redraw(self):
+        """Draw the latest frame again, with the drag and hover readout, between frames"""
+        frame = self.keep.get("frame")
+        if frame is None or self.plotter is None or _signature(frame) != self.sig:
+            return
+        for i, ax in enumerate(frame.axes):
+            self._draw_axis(i, preview(ax, self.drag, i))
+        self._draw_hover(frame)
+        self.plotter.update()
+
+    def _hover_text(self, frame: Frame, i: int, x: float, y: float) -> str:
+        ax = frame.axes[i]
+        if ax.xfmt == "freq":
+            fx, name = fmt_hz, "f"
+        elif ax.xfmt == "time":
+            x0, x1 = self.plotter.ax(i).ax.get_xlim() # type: ignore
+            fx, name = (lambda v: fmt_time(v, x1 - x0)), "t"
+        else:
+            fx, name = (lambda v: f"{v:.4g}"), "x"
+        d = self.drag
+        if d is not None and d.i == i and d.mode not in ("marker", "level"):
+            lo, hi = d.span
+            lines = [f"{fx(lo)} – {fx(hi)}", f"width {fx(hi - lo)}   center {fx((lo + hi) / 2)}"]
+        else:
+            lines = [f"{name} {fx(x)}"]
+        if ax.image is None:
+            unit = str(getattr(self.plot, "unit", "") or "")
+            fy = (_log10_label if ax.yfmt == "log10" else fmt_hz if ax.yfmt == "freq" else (lambda v: fmt_hz(10.0 ** v))
+                  if ax.yfmt == "logfreq" else (lambda v: f"{v:.2f}"))
+            lines.append(f"cursor {fy(y)} {unit}".strip())
+            if ax.traces and d is None:
+                t = ax.traces[-1] # the plot's own trace is the last one
+                ty = np.asarray(t.y)
+                if len(ty):
+                    if t.x is not None:
+                        k = int(np.argmin(np.abs(np.asarray(t.x) - x)))
+                    else:
+                        x0, x1 = self.plotter.ax(i).ax.get_xlim() # type: ignore
+                        k = int(round((x - x0) / ((x1 - x0) or 1.0) * len(ty))) # spaced as _draw_axis draws them
+                    lines.append(f"trace  {fy(float(ty[min(max(k, 0), len(ty) - 1)]))} {unit}".strip())
+        return "\n".join(lines)
+
+    def _draw_hover(self, frame: Frame):
+        """Dashed crosshair and a readout of the pointer, named artists so blitting draws them"""
+        for i, ax in enumerate(frame.axes):
+            if ax.projection != "2d":
+                continue
+            mpl = self.plotter.ax(i) # type: ignore
+            show = self.hover is not None and self.hover[0] == i
+            if mpl.art("hov_t") is None:
+                if not show:
+                    continue
+                style = dict(color="white", alpha=0.35, linewidth=1, linestyle=(0, (3, 3)))
+                mpl.add_artist("hov_v", mpl.ax.axvline(0, **style))
+                mpl.add_artist("hov_h", mpl.ax.axhline(0, **style))
+                mpl.add_artist("hov_t", mpl.ax.text(0.99, 0.98, "", transform=mpl.ax.transAxes, ha="right", va="top",
+                                                    fontsize=8, color="#eee", zorder=5,
+                                                    bbox=dict(facecolor="#0a0a0a", alpha=0.8, edgecolor="#555")))
+            v, h, t = mpl.art("hov_v"), mpl.art("hov_h"), mpl.art("hov_t")
+            if not show:
+                for art in (v, h, t):
+                    art.set_visible(False)
+                continue
+            x, y = self._data_xy(i, self.hover[1], self.hover[2]) # type: ignore
+            v.set_xdata([x, x])
+            h.set_ydata([y, y])
+            t.set_text(self._hover_text(frame, i, x, y))
+            v.set_visible(True)
+            h.set_visible(ax.image is None)
+            t.set_visible(True)
+
+    def _x_ticks(self, ax: Axis, mpl):
+        """What to do with the x ticks when the x range changes"""
+        if ax.xfmt == "freq" and ax.xlog: # decades where the log scale puts them, labeled as frequencies
+            return lambda lo, hi: mpl.ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: fmt_hz(v)))
+        if ax.xfmt == "freq":
+            return lambda lo, hi: self._freq_ticks(mpl, lo, hi)
+        if ax.xfmt == "time": # one unit for every tick, picked from the span
+            return lambda lo, hi: mpl.ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: fmt_time(v, hi - lo)))
+        return None
+
     def _freq_ticks(self, mpl, lo, hi):
-        ticks = np.linspace(lo, hi, 5)
-        mpl.ax.set_xticks(ticks, [str(Frequency.get(f)) for f in ticks])
+        """As many ticks as fit the axis' width (up to 5), labeled short: 62.5k, -1.2M"""
+        width = mpl.ax.get_window_extent().width
+        n = int(np.clip(width // 85 + 1, 2, 5))
+        ticks = np.linspace(lo, hi, n)
+        mpl.ax.set_xticks(ticks, [_hz_tick(f) for f in ticks])
 
     def _draw_image(self, i: int, ax: Axis, mpl, xmin, xmax):
         im: Image = ax.image # type: ignore
@@ -406,6 +868,4 @@ class PlotPane:
 
     def close(self):
         """Release the figure, the widgets go with their frame"""
-        if self.plotter is not None:
-            plt.close(self.plotter.fig)
-            self.plotter = None
+        self.plotter = None

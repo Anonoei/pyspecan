@@ -1,18 +1,11 @@
 """Controller for FILE sink"""
-import argparse
-
-from ...utils import args
-from .sink import Sink, args_sink
-
-from ...utils import dialog
-from ...utils.time import strfmt_td
-from ...model.sink.file import FORMATS
-
 import datetime as dt
 
-def args_file(parser: argparse.ArgumentParser):
-    sink = args.get_group(parser, "Sink (FILE)")
-    args_sink(sink)
+from ...model.sink.file import FORMATS
+from ...utils import dialog
+from ...utils.time import strfmt_td
+from .sink import Sink
+
 
 class SinkFile(Sink):
     def __init__(self, ctrl):

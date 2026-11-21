@@ -1,14 +1,8 @@
 import tkinter as tk
 import tkinter.ttk as ttk
 
-from ...backend.tk import widgets
+from .sink import Sink
 
-from ...utils import args
-from .sink import Sink, args_sink
-
-def args_live(parser):
-    sink = args.get_group(parser, "Sink (LIVE)")
-    args_sink(sink)
 
 class SinkLive(Sink):
     __slots__ = (
@@ -84,7 +78,7 @@ class SinkLive(Sink):
             w.destroy()
         self.cl_stage_vars = {}
         self.cl_stage_ents = {}
-        for i, (name, st) in enumerate(stages.items()):
+        for i, name in enumerate(stages):
             var = tk.StringVar(self.cl_fr_stages)
             ttk.Label(self.cl_fr_stages, text=f"Rx {name} Gain (dB):").grid(row=i,column=0, sticky=tk.W)
             ent = ttk.Entry(self.cl_fr_stages, textvariable=var, width=5)

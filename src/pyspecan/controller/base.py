@@ -21,12 +21,20 @@ from .. import logger
 from ..model.model import Model
 from ..model.sink.file import FORMATS
 from ..obj import Frequency
-from ..plots import PlotSet, Source, available, plot_kwargs
-from ..plots.frame import Frame, LINE, SCATTER, IMAGE
+from ..plots import CATEGORIES, GLOBAL_SETTINGS, PLOTS, PlotSet, Source, available, layout, layout_from_kwargs
+from ..plots.frame import IMAGE, LINE, SCATTER, Frame
+from ..utils import args
 from ..utils.time import strfmt_td
+
 
 class ControllerConfig:
     show = 50.0 # [ms] between frames
+
+def args_controller(parser):
+    """Options every view's controller takes"""
+    ctrl = args.get_group(parser, "Playback")
+    ctrl.add_argument("--show", default=ControllerConfig.show, type=float, help="[ms] time between frames")
+    return ctrl
 
 class Controller:
     """Parent controller class"""
@@ -37,9 +45,13 @@ class Controller:
         self.model = model
         self.view = view
         self.source = Source(model)
-        self.plots = PlotSet(self.source, **plot_kwargs(kwargs))
+        self.plots = PlotSet(self.source)
+        spec = layout_from_kwargs(kwargs)
+        layout.validate(spec, self.plot_types)
+        self.plots.apply(spec)
 
         self.lock = threading.RLock() # guards model + plots
+        self.latest: dict[str, Frame] = {} # each plot's last frame, what export writes
         self.playing = False
         self.running = True
         self.message = ""
@@ -71,10 +83,39 @@ class Controller:
         self.plots.move(pid, target, where)
 
     def set_plot(self, pid: str, key: str, value):
+        """Change a plot setting, plots linked to it (or every plot, for a global) follow"""
         with self.lock:
-            self.plots.get(pid).set(key, value)
+            self.plots.set(pid, key, value)
             if key != "enabled": # pausing a plot must not draw it
                 self.redraw()
+
+    def save_layout(self) -> str:
+        """The plots, their settings, links and markers as json, for --layout or load_layout"""
+        with self.lock:
+            return layout.dumps(self.plots.to_spec())
+
+    def load_layout(self, text: str):
+        """Replace the plots by a saved layout (json text), nothing changes when it is invalid"""
+        spec = layout.loads(text)
+        layout.validate(spec, self.plot_types)
+        with self.lock:
+            self.plots.apply(spec)
+            self.redraw()
+        self.state_changed()
+
+    def link_plot(self, pid: str, target: str) -> str:
+        """Link `pid` to `target`: they share level / processing settings, the auto ref level and markers"""
+        with self.lock:
+            lid = self.plots.link(pid, target)
+            self.redraw()
+        self.state_changed()
+        return lid
+
+    def unlink_plot(self, pid: str):
+        with self.lock:
+            self.plots.unlink(pid)
+            self.redraw()
+        self.state_changed()
 
     def _markers(self, pid: str):
         plot = self.plots.get(pid)
@@ -98,6 +139,47 @@ class Controller:
             self._markers(pid).set(mid, key, value)
             self.redraw()
 
+    def render(self) -> dict:
+        """The plots' frames for the current block, kept as each one's latest"""
+        frames = self.plots.update(self.log)
+        self.latest.update(frames)
+        for pid in [p for p in self.latest if p not in self.plots.plots]: # removed plots
+            del self.latest[pid]
+        return frames
+
+    def export(self, pid: str, what: str = "csv") -> str:
+        """Plot `pid`'s latest frame as text: "csv" its traces, "table" its marker table, "json" all of it"""
+        from ..plots.export import FORMATS
+        if what not in FORMATS:
+            raise ValueError(f"export as {what!r}? one of {', '.join(FORMATS)}")
+        self.plots.get(pid) # an unknown plot raises
+        frame = self.latest.get(pid)
+        if frame is None:
+            raise ValueError(f"{pid} has drawn nothing yet: step or play first")
+        text = FORMATS[what](frame)
+        if not text:
+            raise ValueError(f"{pid} has no {what} to export")
+        return text
+
+    def plot_action(self, pid: str, action: str):
+        """One of a plot's ACTIONS (a PSD's "store ref")"""
+        with self.lock:
+            plot = self.plots.get(pid)
+            if action not in plot.ACTIONS:
+                raise ValueError(f"{plot.NAME} has no action {action!r}, it has: {', '.join(plot.ACTIONS) or 'none'}")
+            plot.act(action)
+            self.redraw()
+
+    def marker_action(self, pid: str, mid: str, action: str):
+        """A marker's action (a peak marker's next / prev peak) on the plot's latest trace"""
+        with self.lock:
+            plot = self.plots.get(pid)
+            markers = self._markers(pid)
+            if plot.last is None:
+                raise ValueError("no trace yet: step or play first")
+            markers.act(mid, action, plot, plot.last, plot.bin_freqs(len(plot.last)))
+            self.redraw()
+
     def set_marker_params(self, pid: str, mid: str, values: dict):
         """Several settings of one marker at once, one redraw (a mouse drag edits center and width together)"""
         with self.lock:
@@ -109,7 +191,7 @@ class Controller:
         with self.lock:
             if self.playing or self.source.seq == 0: # playing: the next block shows it, nothing read yet: nothing to draw
                 return
-            self.deliver(self.plots.update(self.log), self.get_status())
+            self.deliver(self.render(), self.get_status())
 
     def reset_plots(self):
         with self.lock:
@@ -139,6 +221,16 @@ class Controller:
             })
         return status
 
+    def plot_info(self) -> dict:
+        """{plot type: its category and what it does} for the plot types this view draws, see plots.base.About"""
+        return {name: PLOTS.get(name).about() for name in self.plot_types}
+
+    def plot_groups(self) -> list[tuple[str, list[str]]]:
+        """[(category, plot types)] in CATEGORIES order, only the ones that have any"""
+        info = self.plot_info()
+        return [(c, [n for n in self.plot_types if info[n]["category"] == c]) for c in CATEGORIES
+                if any(info[n]["category"] == c for n in self.plot_types)]
+
     def get_state(self) -> dict:
         with self.lock:
             sink = self.sink
@@ -155,6 +247,8 @@ class Controller:
                 "sweep_samples": self.model.get_sweep_samples(),
                 "show": self.time_show,
                 "plot_types": self.plot_types,
+                "plot_info": self.plot_info(),
+                "categories": list(CATEGORIES),
                 **self.plots.describe(),
             }
             radio = sink.status()
@@ -259,6 +353,9 @@ class Controller:
                 self.source.reset()
             elif key == "path":
                 self.set_path(value)
+            elif key in {g.key for g in GLOBAL_SETTINGS}:
+                self.plots.set_global(key, value)
+                self.redraw()
             elif key == "fmt":
                 self._need_file()
                 if value not in FORMATS:
@@ -308,7 +405,7 @@ class Controller:
             self.plots.reset()
             self.state_changed()
         self.source.tick()
-        self.deliver(self.plots.update(self.log), self.get_status())
+        self.deliver(self.render(), self.get_status())
         return True
 
     def tick(self) -> bool:
@@ -358,9 +455,14 @@ class Controller:
         self.thread = threading.Thread(target=self._stream, name="stream", daemon=True)
         self.thread.start()
 
+    QUIT_WAIT = 3.0 # [s] the stream thread gets to finish its block (a radio read waits at most 2 s) before the sink closes
+
     def quit(self):
         self.running = False
         self.playing = False
+        t = self.thread
+        if t is not None and t is not threading.current_thread() and t.is_alive():
+            t.join(timeout=self.QUIT_WAIT) # closing the radio under a read in progress would fail that read
         try:
             self.sink.close() # a radio on a server is detached from, not left streaming
         except Exception as e:

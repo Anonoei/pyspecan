@@ -1,6 +1,5 @@
-from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 from .ax import Ax, BlitAx
 
@@ -9,13 +8,10 @@ from .ax import Ax, BlitAx
 class _Plot:
     """Generic plotting parent"""
     __slots__ = ("_fig", "_canv", "_axs")
-    def __init__(self, fig: Figure = plt.figure()):
+    def __init__(self, fig: Figure):
         self._fig = fig
         self._canv = fig.canvas
         self._axs = {}
-
-    def show(self):
-        print(f"axs: {self._axs}")
 
     def update(self):
         """Update plot"""
@@ -41,13 +37,13 @@ class _Plot:
 
     def cla(self, name=None):
         if name is None:
-            for xname, ax in self._axs.items():
+            for ax in self._axs.values():
                 ax.cla()
         else:
             self.ax(name).cla()
 
 class Plot(_Plot):
-    def __init__(self, fig: Figure = plt.figure()):
+    def __init__(self, fig: Figure):
         super().__init__(fig)
         for i, ax in enumerate(fig.axes):
             self._axs[i] = Ax(ax, self)
@@ -55,7 +51,7 @@ class Plot(_Plot):
 class BlitPlot(_Plot):
     """Plot supporting blitting"""
     __slots__ = ("_bg", "_cid")
-    def __init__(self, fig: Figure = plt.figure()):
+    def __init__(self, fig: Figure):
         super().__init__(fig)
         for i, ax in enumerate(fig.axes):
             self._axs[i] = BlitAx(ax, self)
@@ -86,7 +82,7 @@ class BlitPlot(_Plot):
         self._draw_animated()
 
     def _draw_animated(self):
-        for xname, ax in self._axs.items():
+        for ax in self._axs.values():
             # in zorder like a normal draw (image under lines), a stable sort keeps the creation order within one
             for art in sorted(ax.artists.values(), key=lambda a: a.get_zorder()):
                 self._fig.draw_artist(art)

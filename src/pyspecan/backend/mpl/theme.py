@@ -1,10 +1,10 @@
 """Configure matplotlib Style
 """
-import matplotlib.pyplot as plt
+import matplotlib.style as mstyle
 
 theme = {
-    "Light": lambda: plt.style.use("default"),
-    "Dark": lambda: plt.style.use("dark_background"),
+    "Light": lambda: mstyle.use("default"),
+    "Dark": lambda: mstyle.use("dark_background"),
 }
 
 def get(name: str):

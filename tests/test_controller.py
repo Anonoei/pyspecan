@@ -1,11 +1,13 @@
 """Controller core, model block sizing and the console renderer, against a real file sink"""
+import json
+
 import numpy as np
 import pytest
 
 from pyspecan.config import Sink
+from pyspecan.controller.base import Controller
 from pyspecan.model.model import GetModel
 from pyspecan.plots.frame import Axis, Frame, Image, Trace
-from pyspecan.controller.base import Controller
 from pyspecan.view.CUI.draw import draw_frame
 
 FS = 10_000
@@ -116,7 +118,10 @@ def test_tick_paces_and_stops_at_the_end(capture):
 def test_plot_types_follow_the_views_features(capture):
     c = make(capture)
     c.FEATURES = {"line"}
-    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "CCDF", "Power vs Time"]
+    from pyspecan.plots.settings import HAVE_RPPS
+    dsp = ["Error Vector", "Error Vector Spectrum", "Network Analyzer", "Impulse Response"] if HAVE_RPPS else [] # the optional DSP plots
+    assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "Scope", "Frequency vs Time", "CCDF", "Power vs Time", "Occupancy",
+                            "Phase Noise", "Analog Demod", *dsp]
     with pytest.raises(ValueError):
         c.add_plot("Spectrogram")
 
@@ -176,6 +181,7 @@ def test_playback_failures_say_why(capture, capsys):
 
 def test_draw_frame_shows_markers_bands_and_readout():
     import re
+
     from pyspecan.plots.frame import Band, Marker
     x = np.linspace(-1, 1, 400)
     ax = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", ymin=-100, ymax=0, traces=[Trace(np.sin(x*9)*50-50)],
@@ -189,6 +195,47 @@ def test_draw_frame_shows_markers_bands_and_readout():
     assert len(lines) <= 24 + 1 and all(len(l) <= 80 for l in lines)
     ccdf = Frame([Axis(ymin=-6, ymax=0, yfmt="log10", traces=[Trace(np.linspace(-6, 0, 20))])])
     assert "1e-3" in "\n".join(draw_frame(ccdf, [None], 60, 20, False))
+
+def test_draw_frame_shows_marks_on_images():
+    import re
+
+    from pyspecan.plots.frame import Band, Image, Marker
+    data = np.full((20, 100), 128, dtype=np.uint8)
+    spg = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", image=Image(data),
+               markers=[Marker(-3e3, kind="vline", label="M2")], bands=[Band(1e3, 3e3, label="ch")])
+    for color in (False, True):
+        lines = [re.sub(r"\x1b\[[0-9;]*m", "", l) for l in draw_frame(Frame([spg]), [data], 60, 12, color)]
+        body = lines[:-1]
+        assert all(l.count("│") >= 4 for l in body[1:-1]) # the axis bar, two band edges and the marker
+        assert "M2" in body[0] and "ch" in body[-1]
+        assert all(len(l) <= 60 for l in lines)
+    pst = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", ymin=-100, ymax=0, image=Image(data), markers=[Marker(0.0, -50.0, "M1")])
+    text = "\n".join(draw_frame(Frame([pst]), [data], 60, 12, False))
+    assert "▼M1" in text
+
+def test_draw_frame_shows_level_lines_boxes_and_time():
+    import re
+
+    from pyspecan.plots.frame import Band, Image, Marker
+    strip = lambda ls: [re.sub(r"\x1b\[[0-9;]*m", "", l) for l in ls]
+    ax = Axis(xmin=-1e-3, xmax=1e-3, xfmt="time", ymin=-1, ymax=1, traces=[Trace(np.zeros(50))],
+              markers=[Marker(0.0, 0.5, "T", kind="hline")], bands=[Band(-5e-4, 5e-4, ylo=-0.5, yhi=0.0)])
+    lines = strip(draw_frame(Frame([ax]), [None], 60, 20, True))
+    assert "ms" in lines[-1] and "-1 ms" in lines[-1] # ticks in the unit of the span
+    assert any(l.rstrip().endswith("T") for l in lines) # the level's label at the right edge
+    data = np.full((20, 100), 128, dtype=np.uint8)
+    pst = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", ymin=-100, ymax=0, image=Image(data),
+               markers=[Marker(0.0, -50.0, "thr", kind="hline")], bands=[Band(-2e3, 2e3, ylo=-80.0, yhi=-20.0)])
+    text = "\n".join(strip(draw_frame(Frame([pst]), [data], 60, 14, False)))
+    assert "╌" in text and "thr" in text and "─" in text # level line, its label, the box's top / bottom
+    spg = Axis(xmin=-5e3, xmax=5e3, xfmt="freq", image=Image(data), markers=[Marker(0.0, -50.0, "thr", kind="hline")])
+    assert "thr" not in "\n".join(draw_frame(Frame([spg]), [data], 60, 14, False)) # no levels to draw it at
+
+def test_trace_points_are_one_per_bin():
+    from pyspecan.view.CUI.draw import _trace_x
+    ax = Axis(xmin=0.0, xmax=100.0)
+    np.testing.assert_allclose(_trace_x(Trace(np.zeros(4)), ax), [0, 25, 50, 75]) # as markers place bins, as tk draws them
+    np.testing.assert_allclose(_trace_x(Trace(np.zeros(3)), Axis()), [0, 1, 2])
 
 # --- markers edited by the mouse --- #
 def test_marker_edits_redraw_the_current_block_while_stopped(capture):
@@ -211,8 +258,9 @@ def test_marker_edits_redraw_the_current_block_while_stopped(capture):
         c.set_marker_params(pid, "M1", {"freq": "1k", "nope": 1}) # nothing applied
 
 def test_marker_set_many_is_all_or_nothing():
-    from pyspecan.plots import PLOTS, Source
     from tests.test_plots import FakeModel
+
+    from pyspecan.plots import PLOTS, Source
     psd = PLOTS.get("PSD")(Source(FakeModel()))
     mid = psd.markers.add("channel", freq="100", bw="50")
     psd.markers.set_many(mid, {"freq": "200.5", "bw": "10"})
@@ -224,8 +272,10 @@ def test_marker_set_many_is_all_or_nothing():
 
 def test_frames_say_which_markers_the_mouse_can_edit():
     import json
+
+    from tests.test_plots import FakeModel, _two_tones, feed
+
     from pyspecan.plots import PLOTS, Source
-    from tests.test_plots import FakeModel, feed, _two_tones
     model = FakeModel(nfft=256)
     src = Source(model)
     for name in ("PSD", "Spectrogram"):
@@ -235,7 +285,7 @@ def test_frames_say_which_markers_the_mouse_can_edit():
         feed(src, model, _two_tones(2048))
         d = json.loads(json.dumps(plot.update().to_dict()))["axes"][0]
         by_owner = {m["owner"]: m for m in d["markers"] if m["owner"]}
-        assert set(by_owner) == {"M1"} and by_owner["M1"]["edit"] == "freq", name # only the point: the peak tracks, the others are bands
+        assert set(by_owner) == {"M1", "M2"} and by_owner["M1"]["edit"] == by_owner["M2"]["edit"] == "freq", name # point and (static) peak, the others are bands
         edits = {b["owner"]: b["edit"] for b in d["bands"] if b["edit"]}
         assert edits == {"M3": ["freq", "bw"], "M4": ["freq", "span"]}, name
 
@@ -262,3 +312,94 @@ def test_plot_settings_redraw_the_current_block_while_stopped(capture):
     c.playing = True
     c.set_plot(pid, "ref_level", "-10")
     assert len(c.ticks) == n + 1 # playing: the next block shows it
+
+def test_a_client_gone_mid_send_is_dropped_quietly():
+    import asyncio
+    import logging
+    pytest.importorskip("fastapi")
+    from pyspecan.controller.WEB.websocket import WebSocketManager
+    class Gone:
+        async def accept(self): pass
+        async def send_json(self, msg): raise RuntimeError("Cannot call send once a close message has been sent")
+    class Parent:
+        log = logging.getLogger("test")
+    ws = WebSocketManager(Parent())
+    async def run():
+        cid = await ws.connect(Gone())
+        assert await ws.send(cid, {"type": "state"}) is False and cid not in ws.connections
+        assert await ws.send(cid, {"type": "error"}) is False # already dropped: no KeyError
+    asyncio.run(run())
+
+def test_draw_frame_log_x_axis():
+    import re
+    ax = Axis(xmin=10.0, xmax=1e5, xlog=True, xfmt="freq", ymin=-100, ymax=0,
+              traces=[Trace(np.linspace(-20, -80, 50), np.geomspace(10, 1e5, 50))])
+    lines = [re.sub(r"\x1b\[[0-9;]*m", "", l) for l in draw_frame(Frame([ax]), [None], 60, 12, False)]
+    assert lines[-1].split()[0] == "10" and lines[-1].split()[-1] == "100k" and "1k" in lines[-1] # 10 .. 1k .. 100k evenly
+
+def test_marker_actions_through_the_controller_and_console(capture):
+    from pyspecan.controller.CUI.base import Controller as Console
+    class Both(Recorder): # the console's marker command on a recording controller
+        cmd_marker = Console.cmd_marker
+        _need = Console._need
+    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256)
+    c = Both(GetModel(Sink.FILE)(**kw), **kw)
+    pid = c.plots.layout[0][0]
+    mid = c.add_marker(pid, "peak")
+    with pytest.raises(ValueError, match="no trace yet"):
+        c.marker_action(pid, mid, "next")
+    c.command("next")
+    before = c.plots.get(pid).markers.items[mid]["params"]["freq"]
+    c.cmd_marker([pid, "act", mid, "next"]) # the console's "marker <id> act <marker> next"
+    assert c.plots.get(pid).markers.items[mid]["params"]["freq"] != before
+    with pytest.raises(ValueError, match="no action"):
+        c.marker_action(pid, mid, "sideways")
+
+def test_plot_actions_through_the_controller_and_console(capture):
+    from pyspecan.controller.CUI.base import Controller as Console
+    class Both(Recorder):
+        cmd_act = Console.cmd_act
+        _need = Console._need
+    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256)
+    c = Both(GetModel(Sink.FILE)(**kw), **kw)
+    pid = c.plots.layout[0][0]
+    assert c.get_state()["plots"][pid]["actions"] == ["store ref", "clear ref"]
+    c.command("next")
+    c.cmd_act([pid, "store", "ref"]) # the console's "act p1 store ref"
+    assert c.plots.get(pid).ref is not None
+    with pytest.raises(ValueError, match="no action"):
+        c.plot_action(pid, "sideways")
+
+
+def test_state_groups_the_plot_types(capture):
+    c = make(capture)
+    s = c.get_state()
+    assert set(s["plot_info"]) == set(s["plot_types"]) and s["categories"][0] == "Spectrum"
+    groups = c.plot_groups()
+    assert [n for _, names in groups for n in names] == [n for cat, _ in groups for n in s["plot_types"]
+                                                         if s["plot_info"][n]["category"] == cat] # by category, in order
+    assert sorted(n for _, names in groups for n in names) == sorted(s["plot_types"]) # each once
+
+def test_export_through_the_controller_and_console(capture, tmp_path):
+    from pyspecan.controller.CUI.base import Controller as Console
+    class Both(Recorder):
+        cmd_export = Console.cmd_export
+        _need = Console._need
+    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256)
+    c = Both(GetModel(Sink.FILE)(**kw), **kw)
+    pid = c.plots.layout[0][0]
+    with pytest.raises(ValueError, match="drawn nothing yet"):
+        c.export(pid, "csv")
+    c.command("next")
+    assert c.export(pid, "csv").startswith("axis,label,trace,x,y")
+    with pytest.raises(ValueError, match="no table"):
+        c.export(pid, "table") # no markers
+    with pytest.raises(ValueError, match="one of"):
+        c.export(pid, "xls")
+    out = tmp_path / "psd.json"
+    c.cmd_export([pid, "json", str(out)]) # the console's "export p1 json psd.json"
+    assert json.loads(out.read_text())["axes"]
+    c.del_plot(pid)
+    c.add_plot("Scope")
+    c.command("next")
+    assert pid not in c.latest # a removed plot's frame is let go

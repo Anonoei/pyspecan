@@ -29,6 +29,7 @@ let state = null;
 let layoutSig = "";
 const runtime = {};      // plot id -> {frame, canvas, images: {axis index: {w, h, buf, canvas}}}
 const settingsOpen = new Set();
+const sectionOpen = {}; // "plot id:section" -> open, sections start open and "Advanced" folds closed
 
 function fmtHz(v) {
     for (const [scale, suffix] of SI) {
@@ -44,6 +45,17 @@ function fmtHzFull(v) {
     return `${v.toFixed(1).replace(/\.0$/, "")} Hz`;
 }
 const fmtLog10 = (v) => { const [m, e] = (10 ** v).toExponential(0).split("e"); return `${m}e${+e}`; }; // y holds log10 of the value
+// seconds, in the unit that shows `span` (default: v itself), as plots.frame.fmt_time
+function fmtTime(v, span) {
+    const a = Math.abs(span ?? v);
+    const [scale, name] = a >= 1 ? [1, "s"] : a >= 1e-3 ? [1e-3, "ms"] : a >= 1e-6 ? [1e-6, "µs"] : [1e-9, "ns"];
+    return `${+(v / scale).toPrecision(4)} ${name}`;
+}
+// the x formatter of an axis over [xmin, xmax]
+const fmtXOf = (axis, xmin, xmax, full) => axis.xfmt === "freq" ? (full ? fmtHzFull : fmtHz)
+    : axis.xfmt === "time" ? (v) => fmtTime(v, xmax - xmin) : fmtNum;
+// trace point i's x: its own, or one point per bin across the axis' x range, or i without one (see plots.frame.Trace)
+const traceX = (s, i, axis) => (s.x ? s.x[i] : axis.xmin != null && axis.xmax != null ? axis.xmin + (i * (axis.xmax - axis.xmin)) / s.y.length : i);
 const fmtNum = (v) => (Math.abs(v) >= 1000 || (v !== 0 && Math.abs(v) < 0.01) ? v.toExponential(1) : +v.toFixed(2) + "");
 
 // --- connection --- //
@@ -105,9 +117,86 @@ function applyStatus(s) {
     }
 }
 
+// --- export: a plot's latest frame as a file (traces / table / everything from the server, the picture from its canvas) --- //
+const EXPORTS = [["csv", "Traces (CSV)"], ["table", "Table (CSV)"], ["json", "Frame (JSON)"], ["png", "Image (PNG)"]];
+function exportMenu(id, p) {
+    const sel = el("select", {id: `export-${id}`, className: "export-menu", title: "save this plot's latest frame"},
+        new Option("⤓", ""), ...EXPORTS.map(([v, label]) => new Option(label, v)));
+    sel.onchange = () => { const what = sel.value; sel.value = ""; if (what) exportPlot(id, p.name, what); };
+    return sel;
+}
+
+function download(href, name) {
+    const a = el("a", {href, download: name});
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+function exportPlot(id, name, what) {
+    if (what !== "png") { download(`/api/export/${id}?what=${what}`, ""); return; } // the server names the file
+    const rt = runtime[id];
+    if (!rt || !rt.canvas) return;
+    const stem = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    download(rt.canvas.toDataURL("image/png"), `pyspecan-${stem}.png`);
+}
+
+// --- the plot picker: plot types grouped by category, what each does in a card beside the list --- //
+let addMenuSig = null;
+function buildAddMenu(s) {
+    const sig = JSON.stringify([s.plot_types, s.categories]);
+    if (sig === addMenuSig) return;
+    addMenuSig = sig;
+    const info = s.plot_info || {};
+    const groups = (s.categories || ["Other"]).map((c) => [c, s.plot_types.filter((n) => (info[n] || {}).category === c)])
+        .filter(([, names]) => names.length);
+    const known = new Set(groups.flatMap(([, names]) => names));
+    const rest = s.plot_types.filter((n) => !known.has(n)); // a category this view does not know
+    if (rest.length) groups.push(["Other", rest]);
+    $("add-menu-list").replaceChildren(...groups.map(([c, names]) => el("div", {className: "add-menu-group"},
+        el("div", {className: "add-menu-cat", textContent: c}),
+        ...names.map((n) => {
+            const item = el("button", {className: "add-menu-item", textContent: n, title: aboutText(n, info[n]), role: "menuitem"});
+            item.dataset.name = n;
+            item.onmouseenter = item.onfocus = () => showAbout(n, info[n]);
+            item.onclick = () => { plotOp("add", {name: n}); toggleAddMenu(false); };
+            return item;
+        }))));
+    showAbout(null);
+}
+
+function toggleAddMenu(open) {
+    const menu = $("add-menu");
+    menu.hidden = open === undefined ? !menu.hidden : !open;
+    if (!menu.hidden) { showAbout(null); const first = menu.querySelector(".add-menu-item"); if (first) first.focus({preventScroll: true}); }
+}
+
+// what a plot does: the category, Data (its input and what is done to it), Shows, Use, and its cost
+function aboutCard(name, a) {
+    if (!a) return [el("p", {className: "muted", textContent: "Point at a plot to see what it does"})];
+    const part = (label, text) => (text ? [el("div", {className: "about-label", textContent: label}), el("p", {textContent: text})] : []);
+    return [el("div", {className: "about-name", textContent: name}), el("div", {className: "muted about-cat", textContent: a.category}),
+        ...part("Data", a.data), ...part("Shows", a.shows),
+        ...(a.use && a.use.length ? [el("div", {className: "about-label", textContent: "Use"}),
+            el("ul", {}, ...a.use.map((u) => el("li", {textContent: u})))] : []),
+        ...part("Cost", a.cost)];
+}
+function showAbout(name, a) { $("add-menu-info").replaceChildren(...aboutCard(name, a)); }
+
+// the same as plain text, for a native tooltip (the plot's name in its header, the menu items)
+function aboutText(name, a) {
+    if (!a) return name;
+    const lines = [`${name} (${a.category})`];
+    if (a.data) lines.push(`Data: ${a.data}`);
+    if (a.shows) lines.push(`Shows: ${a.shows}`);
+    if (a.use && a.use.length) lines.push("Use:", ...a.use.map((u) => `  • ${u}`));
+    if (a.cost) lines.push(`Cost: ${a.cost}`);
+    return lines.join("\n");
+}
+
 function applyState(s) {
     state = s;
-    fillSelect($("sel-add-plot"), ["", ...s.plot_types], (o) => o || "+ Add plot…");
+    buildAddMenu(s);
     setValue($("in-fs"), s.fs);
     setValue($("in-cf"), s.cf);
     setValue($("in-nfft"), s.nfft_exp);
@@ -126,7 +215,24 @@ function applyState(s) {
     }
     applyRadio(s.radio);
     applyStatus(s);
+    applyGlobals(s.globals);
     syncPlots(s);
+}
+
+// --- settings every plot shares (calibration), under the source settings --- //
+let globalsSig = null;
+function applyGlobals(g) {
+    if (!g) return;
+    const sig = JSON.stringify(g.fields);
+    if (sig !== globalsSig) {
+        globalsSig = sig;
+        const groups = {};
+        for (const f of g.fields) (groups[f.group] ||= []).push(f);
+        $("globals").replaceChildren(...Object.entries(groups).map(([name, fields]) =>
+            el("details", {className: "section", open: true}, el("summary", {textContent: name}),
+                ...fields.map((f) => fieldInput(`g-${f.key}`, f, (v) => set(f.key, v))))));
+    }
+    for (const f of g.fields) setValue($(`g-${f.key}`), g.settings[f.key]);
 }
 
 // --- the radio of a live sink --- //
@@ -162,7 +268,7 @@ async function loadRadios() {
 
 // --- plots --- //
 function syncPlots(s) {
-    const sig = JSON.stringify([s.layout, Object.entries(s.plots).map(([id, p]) => [id, p.name])]);
+    const sig = JSON.stringify([s.layout, Object.entries(s.plots).map(([id, p]) => [id, p.name, p.link, p.linkable])]);
     if (sig !== layoutSig) {
         layoutSig = sig;
         buildPlots(s);
@@ -242,15 +348,20 @@ function buildPlot(id, p) {
         $(`settings-${id}`).hidden = !settingsOpen.has(id);
     }});
     const del = el("button", {textContent: "✕", title: "remove plot", onclick: () => plotOp("del", {id})});
+    const exp = exportMenu(id, p);
+    const actions = (p.actions || []).map((a) => el("button", {textContent: a, title: a, className: "plot-action",
+        onclick: () => plotOp("act", {id, action: a})}));
     const ptime = el("span", {id: `ptime-${id}`, className: "muted"});
 
     const settings = el("div", {id: `settings-${id}`, className: "plot-settings", hidden: !settingsOpen.has(id)},
-        ...p.fields.map((f) => buildField(id, f)));
+        ...buildSections(id, p));
     rt.canvas = el("canvas");
     bindCanvas(id, rt.canvas);
     const header = el("div", {className: "plot-header", title: "drag to move"},
-        el("span", {className: "grip", textContent: "⠿"}), el("b", {textContent: p.name}), ptime,
-        el("span", {className: "right"}, ...(p.marker_kinds ? [toolMenu(id), markerMenu(id, p)] : []), pause, gear, del));
+        el("span", {className: "grip", textContent: "⠿"}),
+        el("b", {textContent: p.name, className: "plot-name", title: aboutText(p.name, ((state && state.plot_info) || {})[p.name])}),
+        ...linkChip(p), ptime,
+        el("span", {className: "right"}, ...(p.marker_kinds ? [toolMenu(id), markerMenu(id, p)] : []), ...linkMenu(id, p), ...actions, exp, pause, gear, del));
     rt.readout = el("div", {className: "readout", hidden: true});
     rt.table = el("div", {className: "mtable", hidden: true});
     rt.editor = el("div", {className: "marker-editor", id: `markers-${id}`, hidden: true});
@@ -280,6 +391,8 @@ function markerMenu(id, p) {
     return sel;
 }
 
+const ACTION_LABELS = {prev: "▲ prev", next: "▼ next", left: "◀ left", right: "▶ right"}; // a marker's actions, see MarkerKind.ACTIONS
+
 // one row of editable settings per marker, rebuilt only when the markers change
 function updateMarkers(id, p) {
     const rt = runtime[id];
@@ -302,25 +415,82 @@ function updateMarkers(id, p) {
             else input.onkeydown = (ev) => { if (ev.key === "Enter") { send_(input.value); input.blur(); } };
             return el("label", {className: "mk-field"}, el("span", {className: "muted", textContent: f.label + " "}), input);
         });
+        const actions = (m.actions || []).map((a) => el("button", {textContent: ACTION_LABELS[a] || a, title: `${a} peak`,
+            onclick: () => plotOp("marker_act", {id, marker: m.id, action: a})}));
         return el("div", {className: "mk-row"}, el("b", {textContent: m.id}), el("span", {className: "muted", textContent: m.kind}), ...fields,
-            el("button", {textContent: "✕", title: "remove marker", onclick: () => plotOp("marker_del", {id, marker: m.id})}));
+            ...actions, el("button", {textContent: "✕", title: "remove marker", onclick: () => plotOp("marker_del", {id, marker: m.id})}));
     }));
 }
 
-function buildField(id, f) {
+// --- links: linked plots share level / processing settings, the auto ref level and markers --- //
+function linkChip(p) {
+    if (!p.link) return [];
+    const others = state.links[p.link] || [];
+    return [el("span", {className: "link-chip", textContent: `🔗 ${p.link}`, title: `linked with ${others.join(", ")}`})];
+}
+
+function linkMenu(id, p) {
+    if (!p.linkable.length && !p.link) return [];
+    const sel = el("select", {className: "link-menu", title: "link to another plot: they share ref level, scale, VBW, window, unit and markers"},
+        new Option(p.link ? `Linked ${p.link}` : "Link…", ""),
+        ...(p.link ? [new Option("Unlink", "-")] : []),
+        ...p.linkable.filter((t) => !p.link || state.plots[t].link !== p.link)
+            .map((t) => new Option(`→ ${state.plots[t].name} (${t})`, t)));
+    sel.onchange = () => {
+        if (sel.value === "-") plotOp("unlink", {id});
+        else if (sel.value) plotOp("link", {id, target: sel.value});
+        sel.value = "";
+    };
+    return [sel];
+}
+
+// settings grouped into collapsible sections, rarely used ones folded under "Advanced"
+function buildSections(id, p) {
+    const groups = {};
+    for (const f of p.fields) (groups[f.group] ||= []).push(f);
+    return Object.entries(groups).map(([name, fields]) => {
+        const basic = fields.filter((f) => !f.advanced), adv = fields.filter((f) => f.advanced);
+        const children = basic.map((f) => buildField(id, f, p));
+        if (adv.length) children.push(section(`${id}:${name}:adv`, "Advanced", false, adv.map((f) => buildField(id, f, p)), "advanced"));
+        return section(`${id}:${name}`, name, true, children);
+    });
+}
+
+function section(key, title, dflt, children, cls = "") {
+    const d = el("details", {className: `section ${cls}`, open: sectionOpen[key] ?? dflt},
+        el("summary", {textContent: title}), el("div", {className: "section-body"}, ...children));
+    d.ontoggle = () => { sectionOpen[key] = d.open; };
+    return d;
+}
+
+function fieldInput(inputId, f, send_) {
     const input = f.kind === "select"
         ? el("select", {}, ...f.options.map((o) => new Option(o, o)))
         : el("input", {type: f.kind === "check" ? "checkbox" : f.kind === "number" ? "number" : "text",
                        placeholder: f.hint || "", min: f.min ?? "", max: f.max ?? "", step: f.step ?? "any"});
-    input.id = `f-${id}-${f.key}`;
-    const send_ = (v) => plotOp("set", {id, key: f.key, value: v});
+    input.id = inputId;
     if (f.kind === "check") input.onchange = () => send_(input.checked);
     else if (f.kind === "select") input.onchange = () => send_(input.value);
     else {
         input.onkeydown = (ev) => { if (ev.key === "Enter") { send_(input.value); input.blur(); } };
-        input.onblur = () => { for (const [i, p] of Object.entries(state.plots)) updatePlotControls(i, p); };
+        input.onblur = () => { // back to what is really set
+            if (!state) return;
+            applyGlobals(state.globals);
+            for (const [i, p] of Object.entries(state.plots)) updatePlotControls(i, p);
+        };
     }
-    return el("div", {className: "control-group"}, el("label", {htmlFor: input.id, textContent: f.label}), input);
+    const label = el("label", {htmlFor: input.id, textContent: f.label});
+    if (f.help) label.title = f.help;
+    return el("div", {className: "control-group"}, label, input);
+}
+
+function buildField(id, f, p) {
+    const group = fieldInput(`f-${id}-${f.key}`, f, (v) => plotOp("set", {id, key: f.key, value: v}));
+    if (p.link && f.scope === "link") {
+        group.classList.add("linked");
+        group.querySelector("label").title = `shared by link ${p.link}`;
+    }
+    return group;
 }
 
 function updatePlotControls(id, p) {
@@ -339,7 +509,14 @@ function applyFrame(data) {
         const pt = $(`ptime-${id}`);
         const name = state && state.plots[id] ? state.plots[id].name : "";
         if (pt) pt.textContent = `${frame.title && frame.title !== name ? frame.title + "  " : ""}${(frame.ptime * 1000).toFixed(1)} ms`;
-        frame.axes.forEach((axis, i) => { if (axis.image) applyImage(rt, i, axis.image); });
+        frame.axes.forEach((axis, i) => {
+            if (axis.image) applyImage(rt, i, axis.image);
+            if (axis.surface) { // a 3d surface's heights, decoded once
+                const bin = atob(axis.surface.data), b = new Uint8Array(bin.length);
+                for (let k = 0; k < bin.length; k++) b[k] = bin.charCodeAt(k);
+                axis.surface.bytes = b;
+            }
+        });
         applyReadout(rt, frame.readout || []);
         applyTable(rt, frame.table);
         drawPlot(id);
@@ -406,21 +583,41 @@ function pointerPos(rt, ev) {
 function axisAt(rt, py) {
     return (rt.geom || []).findIndex((g) => g && py >= g.y0 && py <= g.y0 + g.h);
 }
-const dataX = (g, px) => g.xmin + ((px - g.x0) / g.w) * (g.xmax - g.xmin);
-const pixX = (g, v) => g.x0 + ((v - g.xmin) / (g.xmax - g.xmin)) * g.w;
+// data x <-> pixel x of an axis' geometry (on a log axis, see Axis.xlog, in log10 of the values)
+const dataX = (g, px) => g.xlog ? 10 ** (Math.log10(g.xmin) + ((px - g.x0) / g.w) * Math.log10(g.xmax / g.xmin))
+    : g.xmin + ((px - g.x0) / g.w) * (g.xmax - g.xmin);
+const pixX = (g, v) => g.xlog ? g.x0 + (Math.log10(v / g.xmin) / Math.log10(g.xmax / g.xmin)) * g.w
+    : g.x0 + ((v - g.xmin) / (g.xmax - g.xmin)) * g.w;
+const dataY = (g, py) => g.ymax - ((py - g.y0) / g.h) * (g.ymax - g.ymin);
+const pixY = (g, v) => g.y0 + (1 - (v - g.ymin) / (g.ymax - g.ymin)) * g.h;
+const hasLevels = (g, axis) => !g.isImage || axis.ymin != null;
+// is pixel row py inside a band's y span (always for a band without one), as plots.drag._in_y
+function inBandY(g, axis, b, py) {
+    if ((b.ylo == null && b.yhi == null) || !hasLevels(g, axis)) return true;
+    const a = pixY(g, b.yhi ?? g.ymax), z = pixY(g, b.ylo ?? g.ymin);
+    return py >= Math.min(a, z) - EDGE_PX && py <= Math.max(a, z) + EDGE_PX;
+}
 
-// the marker or band edge under the pointer: {i, mode: "marker" | "left" | "right" | "move", owner, edit, lo, hi}
+// the marker, level line or band edge under the pointer: {i, mode: "marker" | "level" | "left" | "right" | "move", owner, edit, lo, hi}
+// (for "level" lo / hi are its y), as plots.drag.hit_test
 function hitTest(rt, px, py) {
     const i = axisAt(rt, py);
     if (i < 0 || !rt.frame) return null;
     const g = rt.geom[i], axis = rt.frame.axes[i];
+    if (!g || g.is3d) return null;
     for (const m of axis.markers || []) { // points first: they sit on top of the bands
-        if (!m.edit || Math.abs(pixX(g, m.x) - px) > EDGE_PX) continue;
+        if (!m.edit || m.kind === "hline" || Math.abs(pixX(g, m.x) - px) > EDGE_PX) continue;
         const ym = Math.min(Math.max(g.y0 + (1 - (m.y - g.ymin) / (g.ymax - g.ymin)) * g.h, g.y0 + 26), g.y0 + g.h); // as drawMarkers places the triangle
         if (m.kind === "vline" || g.isImage || Math.abs(py - (ym - 7)) <= 10)
             return {i, mode: "marker", owner: m.owner, edit: m.edit, lo: m.x, hi: m.x};
     }
-    const bands = (axis.bands || []).filter((b) => b.edit);
+    if (hasLevels(g, axis)) {
+        for (const m of axis.markers || []) {
+            if (m.edit && m.kind === "hline" && Math.abs(pixY(g, m.y) - py) <= EDGE_PX)
+                return {i, mode: "level", owner: m.owner, edit: m.edit, lo: m.y, hi: m.y};
+        }
+    }
+    const bands = (axis.bands || []).filter((b) => b.edit && inBandY(g, axis, b, py));
     for (const b of [...bands].reverse()) {
         const a = pixX(g, b.lo), z = pixX(g, b.hi);
         const near = (v) => Math.abs(v - px) <= EDGE_PX;
@@ -442,11 +639,19 @@ function dragged(rt, axis, i) {
     if (d.mode === "new") {
         return {...axis, bands: [...(axis.bands || []), {lo, hi, color: "#5cb85c", alpha: 0.15, label: "", edit: ["freq", "bw"]}]};
     }
+    const same = (m) => m.edit && m.owner === d.owner && m.edit === d.edit;
     if (d.mode === "marker") {
-        return {...axis, markers: (axis.markers || []).map((m) => (m.owner === d.owner && m.edit ? {...m, x: d.lo} : m))};
+        return {...axis, markers: (axis.markers || []).map((m) => (same(m) && m.kind !== "hline" ? {...m, x: d.lo} : m))};
+    }
+    if (d.mode === "level") {
+        return {...axis, markers: (axis.markers || []).map((m) => (same(m) && m.kind === "hline" ? {...m, y: d.lo} : m))};
     }
     return {...axis, bands: (axis.bands || []).map((b) => (b.owner === d.owner && b.edit && b.edit[1] === d.edit[1] ? {...b, lo, hi} : b))};
 }
+
+// can new markers be drawn on axis i: a frequency axis of a plot that has markers
+const canDraw = (id, rt, i) => rt.tool !== "off" && i >= 0 && !!rt.frame && rt.frame.axes[i].xfmt === "freq"
+    && !!(state.plots[id] && state.plots[id].markers);
 
 function bindCanvas(id, canvas) {
     canvas.style.touchAction = "none";
@@ -455,15 +660,31 @@ function bindCanvas(id, canvas) {
         const rt = runtime[id];
         [rt.hover_x, rt.hover_y] = pointerPos(rt, ev);
         rt.hover = true;
+        if (rt.turn) { // turning a 3d axis
+            const t = rt.turn, v = view3d(rt, t.i);
+            v.az = t.az - (rt.hover_x - t.px) * 0.5;
+            v.el = Math.min(90, Math.max(-90, t.el + (rt.hover_y - t.py) * 0.5));
+            drawPlot(id);
+            return;
+        }
         if (!rt.drag) {
             drawPlot(id);
             const [px, py] = pointerPos(rt, ev), hit = hitTest(rt, px, py);
             const i = axisAt(rt, py);
-            canvas.style.cursor = hit ? (hit.mode === "move" ? "grab" : "ew-resize")
-                : (rt.tool !== "off" && i >= 0 && rt.frame && rt.frame.axes[i].xfmt === "freq" ? "crosshair" : "");
+            if (i >= 0 && rt.geom[i] && rt.geom[i].is3d) { canvas.style.cursor = "grab"; return; }
+            canvas.style.cursor = hit ? (hit.mode === "move" ? "grab" : hit.mode === "level" ? "ns-resize" : "ew-resize")
+                : (canDraw(id, rt, i) ? "crosshair" : "");
             return;
         }
-        const g = rt.geom[rt.drag.i], x = dataX(g, Math.min(Math.max(pointerPos(rt, ev)[0], g.x0), g.x0 + g.w)), d = rt.drag;
+        const [qx, qy] = pointerPos(rt, ev), d = rt.drag, g = rt.geom[d.i];
+        const x = dataX(g, Math.min(Math.max(qx, g.x0), g.x0 + g.w));
+        if (d.mode === "level") {
+            const y = dataY(g, Math.min(Math.max(qy, g.y0), g.y0 + g.h));
+            d.lo = d.hi = y;
+            d.moved = d.moved || Math.abs(pixY(g, y) - pixY(g, d.startY)) > 2;
+            drawPlot(id);
+            return;
+        }
         if (d.mode === "left") d.lo = Math.min(x, d.hi);
         else if (d.mode === "right") d.hi = Math.max(x, d.lo);
         else if (d.mode === "move") { const dx = x - d.startX; d.lo = d.lo0 + dx; d.hi = d.hi0 + dx; }
@@ -476,27 +697,43 @@ function bindCanvas(id, canvas) {
         const rt = runtime[id];
         if (ev.button !== 0 || !rt.frame) return;
         const [px, py] = pointerPos(rt, ev);
+        const at = axisAt(rt, py);
+        if (at >= 0 && rt.geom[at] && rt.geom[at].is3d) { // turn the view
+            const v = view3d(rt, at);
+            rt.turn = {i: at, px, py, az: v.az, el: v.el};
+            canvas.setPointerCapture(ev.pointerId);
+            canvas.style.cursor = "grabbing";
+            ev.preventDefault();
+            return;
+        }
         let d = hitTest(rt, px, py);
         if (!d) {
             const i = axisAt(rt, py);
-            if (i < 0 || rt.tool === "off" || rt.frame.axes[i].xfmt !== "freq") return;
+            if (!canDraw(id, rt, i)) return;
             const g = rt.geom[i], x = dataX(g, px);
             d = {i, mode: "new", lo: x, hi: x};
         }
         const g = rt.geom[d.i], x = dataX(g, px);
-        rt.drag = {...d, startX: x, lo0: d.lo, hi0: d.hi, startPx: px, moved: false};
+        rt.drag = {...d, startX: x, startY: d.mode === "level" ? d.lo : dataY(g, py), lo0: d.lo, hi0: d.hi, startPx: px, moved: false};
         canvas.setPointerCapture(ev.pointerId);
         canvas.style.cursor = d.mode === "move" ? "grabbing" : canvas.style.cursor;
         ev.preventDefault();
     });
     const finish = (ev, cancel) => {
-        const rt = runtime[id], d = rt.drag;
+        const rt = runtime[id];
+        if (rt.turn) { rt.turn = null; canvas.style.cursor = "grab"; return; }
+        const d = rt.drag;
         if (!d) return;
-        if (cancel || !(d.moved || d.mode === "new")) rt.drag = null; // a plain click on a marker does nothing
+        // a plain click on a marker does nothing, on a box of the plot's (a found signal) it applies the box
+        if (cancel || !(d.moved || d.mode === "new" || (["move", "left", "right"].includes(d.mode) && !d.owner && Array.isArray(d.edit)))) rt.drag = null;
         else commitDrag(id, rt, d, rt.geom[d.i]);
         drawPlot(id);
     };
     canvas.addEventListener("pointerup", (ev) => finish(ev, false));
+    canvas.addEventListener("dblclick", (ev) => { // a 3d axis back to its first view
+        const rt = runtime[id], i = axisAt(rt, pointerPos(rt, ev)[1]);
+        if (i >= 0 && rt.geom[i] && rt.geom[i].is3d) { rt.view3d[i] = {...VIEW3D}; drawPlot(id); }
+    });
     canvas.addEventListener("pointercancel", (ev) => finish(ev, true));
 }
 
@@ -511,10 +748,12 @@ function commitDrag(id, rt, d, g) {
             const params = rt.tool === "obw" ? {freq: hz_((lo + hi) / 2), span: hz_(hi - lo)} : {freq: hz_((lo + hi) / 2), bw: hz_(hi - lo)};
             plotOp("marker_add", {id, kind: rt.tool, params});
         } else sent = false;
-    } else if (d.mode === "marker") {
-        plotOp("marker_set", {id, marker: d.owner, params: {[d.edit]: hz_(d.lo)}});
     } else {
-        plotOp("marker_set", {id, marker: d.owner, params: {[d.edit[0]]: hz_((lo + hi) / 2), [d.edit[1]]: hz_(Math.max(hi - lo, 1))}});
+        const params = d.mode === "level" ? {[d.edit]: +d.lo.toPrecision(6) + ""}
+            : d.mode === "marker" ? {[d.edit]: hz_(d.lo)}
+            : {[d.edit[0]]: hz_((lo + hi) / 2), [d.edit[1]]: hz_(Math.max(hi - lo, 1))};
+        if (d.owner) plotOp("marker_set", {id, marker: d.owner, params});
+        else for (const [key, value] of Object.entries(params)) plotOp("set", {id, key, value}); // a mark of the plot itself
     }
     if (!sent) { rt.drag = null; return; }
     // keep showing the dropped position until the server's state arrives (or a moment passes)
@@ -555,7 +794,7 @@ function drawPlot(id) {
     const axes = rt.frame.axes, ah = ch / axes.length;
     rt.geom = [];
     axes.forEach((axis, i) => {
-        const out = {};
+        const out = {view: view3d(rt, i)};
         drawAxis(ctx, dragged(rt, axis, i), rt.images[i], 0, i * ah, cw, ah, out);
         rt.geom[i] = out.geom;
     });
@@ -567,27 +806,29 @@ function drawHover(ctx, id, rt) {
     if (!rt.hover && !rt.drag) return;
     const i = rt.drag ? rt.drag.i : axisAt(rt, rt.hover_y);
     const g = rt.geom[i], axis = i >= 0 && rt.frame.axes[i];
-    if (!g || !axis) return;
+    if (!g || !axis || g.is3d) return;
     const px = Math.min(Math.max(rt.hover_x, g.x0), g.x0 + g.w), py = Math.min(Math.max(rt.hover_y, g.y0), g.y0 + g.h);
     const inside = rt.hover_x >= g.x0 && rt.hover_x <= g.x0 + g.w && rt.hover_y >= g.y0 && rt.hover_y <= g.y0 + g.h;
     if (!inside && !rt.drag) return;
-    const fx = axis.xfmt === "freq" ? fmtHzFull : fmtNum, x = dataX(g, px);
+    const fx = fmtXOf(axis, g.xmin, g.xmax, true), x = dataX(g, px);
+    const xname = axis.xfmt === "freq" ? "f" : axis.xfmt === "time" ? "t" : "x";
     const lines = [];
     const unit = (state.plots[id] && state.plots[id].settings.unit) || "";
-    if (rt.drag && rt.drag.mode !== "marker") {
+    if (rt.drag && rt.drag.mode !== "marker" && rt.drag.mode !== "level") {
         const lo = Math.min(rt.drag.lo, rt.drag.hi), hi = Math.max(rt.drag.lo, rt.drag.hi);
         lines.push(`${fx(lo)} – ${fx(hi)}`, `width ${fx(hi - lo)}   center ${fx((lo + hi) / 2)}`);
     } else {
-        lines.push(`f ${fx(x)}`);
+        lines.push(`${xname} ${fx(x)}`);
     }
     if (!g.isImage) {
         const y = g.ymax - ((py - g.y0) / g.h) * (g.ymax - g.ymin);
-        const fy = axis.yfmt === "log10" ? fmtLog10 : (v) => v.toFixed(2);
+        const fy = axis.yfmt === "log10" ? fmtLog10 : axis.yfmt === "freq" ? fmtHzFull : axis.yfmt === "logfreq" ? (v) => fmtHzFull(10 ** v)
+            : (v) => v.toFixed(2);
         lines.push(`cursor ${fy(y)} ${unit}`.trim());
         const t = (axis.traces || [])[axis.traces.length - 1]; // the plot's own trace is the last one
         if (t && t.y.length && !rt.drag) {
             const k = t.x ? t.x.reduce((b, v, n) => (Math.abs(v - x) < Math.abs(t.x[b] - x) ? n : b), 0)
-                          : Math.round(((x - g.xmin) / (g.xmax - g.xmin)) * (t.y.length - 1));
+                          : Math.round(((x - g.xmin) / (g.xmax - g.xmin)) * t.y.length);
             lines.push(`trace  ${fy(t.y[Math.min(Math.max(k, 0), t.y.length - 1)])} ${unit}`.trim());
         }
     }
@@ -607,7 +848,7 @@ function drawHover(ctx, id, rt) {
     ctx.restore();
 }
 
-function drawTraces(ctx, axis, xOf, yOf, x0, w) {
+function drawTraces(ctx, axis, xOf, yOf) {
     for (const s of axis.traces) {
         const n = s.y.length;
         ctx.strokeStyle = ctx.fillStyle = s.color;
@@ -619,7 +860,7 @@ function drawTraces(ctx, axis, xOf, yOf, x0, w) {
         }
         ctx.beginPath();
         for (let i = 0; i < n; i++) {
-            const x = s.x ? xOf(s.x[i]) : x0 + (i / (n - 1)) * w;
+            const x = xOf(traceX(s, i, axis));
             const y = yOf(s.y[i]);
             if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
@@ -628,21 +869,26 @@ function drawTraces(ctx, axis, xOf, yOf, x0, w) {
 }
 
 function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
+    if (axis.projection === "3d") return drawAxis3d(ctx, axis, ox, oy, W, H, out);
     let x0 = ox + MARGIN.l, y0 = oy + MARGIN.t, w = W - MARGIN.l - MARGIN.r, h = H - MARGIN.t - MARGIN.b;
     if (w <= 10 || h <= 10) return;
+    const isImage = !!axis.image;
+    const bar = isImage && axis.ymin != null && w > 160; // a level axis image gets a color bar (relative hits)
+    if (bar) w -= 44;
     if (axis.square) {
         const side = Math.min(w, h);
         x0 += (w - side) / 2; w = side; h = side;
     }
-    const isImage = !!axis.image;
     const [xmin, xmax] = isImage ? [axis.xmin ?? 0, axis.xmax ?? 1] : extent(axis, "x");
     const [ymin, ymax] = isImage && axis.ymin == null ? [0, 1] : extent(axis, "y");
-    const xOf = (v) => x0 + ((v - xmin) / (xmax - xmin)) * w;
+    const xlog = !!axis.xlog && xmin > 0 && xmax > xmin;
+    const lx0 = xlog ? Math.log10(xmin) : 0, lspan = xlog ? Math.log10(xmax) - lx0 : 1;
+    const xOf = xlog ? (v) => x0 + ((Math.log10(v) - lx0) / lspan) * w : (v) => x0 + ((v - xmin) / (xmax - xmin)) * w;
     const yOf = (v) => y0 + (1 - (v - ymin) / (ymax - ymin)) * h;
-    const fmtX = axis.xfmt === "freq" ? fmtHz : fmtNum;
-    const fmtY = axis.yfmt === "log10" ? fmtLog10 : fmtNum;
+    const fmtX = fmtXOf(axis, xmin, xmax, false);
+    const fmtY = axis.yfmt === "log10" ? fmtLog10 : axis.yfmt === "freq" ? fmtHz : axis.yfmt === "logfreq" ? (v) => fmtHz(10 ** v) : fmtNum;
     const labelY = !isImage || axis.ymin != null; // a scrolling image has no y values to label
-    out.geom = {x0, y0, w, h, xmin, xmax, ymin, ymax, isImage};
+    out.geom = {x0, y0, w, h, xmin, xmax, ymin, ymax, isImage, xlog};
 
     ctx.font = "12px sans-serif";
     ctx.lineWidth = 1;
@@ -655,11 +901,25 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
         ctx.textAlign = "right";
         ctx.fillText(fmtY(ymax - (i / ny) * (ymax - ymin)), x0 - 6, y + 4);
     }
-    for (let i = 0; i <= nx; i++) {
-        const x = x0 + (i / nx) * w;
-        if (!isImage) { ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + h); ctx.stroke(); }
-        ctx.textAlign = i === 0 ? "left" : i === nx ? "right" : "center";
-        ctx.fillText(fmtX(xmin + (i / nx) * (xmax - xmin)), x, y0 + h + 16);
+    if (xlog) { // a line at every decade (labeled) and its 2..9 (faint)
+        for (let d = Math.floor(lx0); d <= Math.ceil(lx0 + lspan); d++) {
+            for (let m = 1; m < 10; m++) {
+                const v = m * 10 ** d;
+                if (v < xmin || v > xmax) continue;
+                const x = xOf(v);
+                ctx.globalAlpha = m === 1 ? 1 : 0.35;
+                ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + h); ctx.stroke();
+                ctx.globalAlpha = 1;
+                if (m === 1) { ctx.textAlign = "center"; ctx.fillText(fmtX(v), x, y0 + h + 16); }
+            }
+        }
+    } else {
+        for (let i = 0; i <= nx; i++) {
+            const x = x0 + (i / nx) * w;
+            if (!isImage) { ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + h); ctx.stroke(); }
+            ctx.textAlign = i === 0 ? "left" : i === nx ? "right" : "center";
+            ctx.fillText(fmtX(xmin + (i / nx) * (xmax - xmin)), x, y0 + h + 16);
+        }
     }
     ctx.strokeRect(x0, y0, w, h);
 
@@ -668,11 +928,12 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
             ctx.imageSmoothingEnabled = false;
             ctx.drawImage(image.canvas, x0, y0, w, h);
         }
-        drawBands(ctx, axis, xOf, x0, y0, w, h);
+        if (bar) drawColorbar(ctx, axis.image.cmap, x0 + w + 8, y0, 10, h);
+        drawBands(ctx, axis, xOf, isImage && axis.ymin == null ? null : yOf, x0, y0, w, h);
         if (axis.ymin != null && axis.traces.length) { // traces over a level axis image (persistence)
             ctx.save();
             ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
-            drawTraces(ctx, axis, xOf, yOf, x0, w);
+            drawTraces(ctx, axis, xOf, yOf);
             ctx.restore();
         }
         drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h);
@@ -681,53 +942,217 @@ function drawAxis(ctx, axis, image, ox, oy, W, H, out = {}) {
     }
     ctx.save();
     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
-    drawBands(ctx, axis, xOf, x0, y0, w, h);
-    drawTraces(ctx, axis, xOf, yOf, x0, w);
+    drawBands(ctx, axis, xOf, isImage && axis.ymin == null ? null : yOf, x0, y0, w, h);
+    drawTraces(ctx, axis, xOf, yOf);
     ctx.restore(); // also restores globalAlpha
     drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h);
     drawOffscale(ctx, axis, x0, y0, w, h);
 }
 
-// shaded x spans (channels), under the traces
-function drawBands(ctx, axis, xOf, x0, y0, w, h) {
+// the color map of a level image, 0 (bottom) to 1 (top): the share of the brightest pixel's hits, as tk's color bar
+function drawColorbar(ctx, cmap, x, y, w, h) {
+    const lut = lutFor(cmap);
+    for (let r = 0; r < h; r++) {
+        const c = lut[Math.round((1 - r / Math.max(h - 1, 1)) * 255)];
+        ctx.fillStyle = `rgb(${c & 255},${(c >> 8) & 255},${(c >> 16) & 255})`;
+        ctx.fillRect(x, y + r, w, 1);
+    }
+    ctx.strokeStyle = GRID; ctx.strokeRect(x, y, w, h);
+    ctx.fillStyle = TEXT; ctx.textAlign = "left"; ctx.font = "11px sans-serif";
+    for (const v of [0, 0.5, 1]) ctx.fillText(v.toFixed(1), x + w + 3, y + (1 - v) * (h - 8) + 8);
+}
+
+// --- 3d axes: an orthographic view of the data box, turned by dragging, a double click resets it --- //
+const VIEW3D = {az: -60, el: 28};
+function view3d(rt, i) {
+    rt.view3d = rt.view3d || {};
+    return rt.view3d[i] || (rt.view3d[i] = {...VIEW3D});
+}
+
+// data (x, y, z) -> pixel [px, py] in the box (x0, y0, w, h), for the axis' ranges, box aspect and the view
+function projector(axis, view, x0, y0, w, h) {
+    const r = {x: extent(axis, "x"), y: extent(axis, "y"), z: extent(axis, "z")};
+    const asp = axis.aspect || [1, 1, 1], am = Math.max(...asp);
+    const a = asp.map((v) => v / am);
+    const az = view.az * Math.PI / 180, el = view.el * Math.PI / 180;
+    const ca = Math.cos(az), sa = Math.sin(az), ce = Math.cos(el), se = Math.sin(el);
+    const unit = (x, y, z) => [((x - r.x[0]) / (r.x[1] - r.x[0]) - 0.5) * a[0], ((y - r.y[0]) / (r.y[1] - r.y[0]) - 0.5) * a[1],
+                                ((z - r.z[0]) / (r.z[1] - r.z[0]) - 0.5) * a[2]];
+    const raw = (x, y, z) => { // screen x, screen y (up), depth (away from the viewer)
+        const [X, Y, Z] = unit(x, y, z);
+        const depth = X * sa + Y * ca;
+        return [X * ca - Y * sa, Z * ce + depth * se, depth * ce - Z * se];
+    };
+    const corners = [];
+    for (const x of r.x) for (const y of r.y) for (const z of r.z) corners.push([x, y, z]);
+    const pr = corners.map((c) => raw(...c));
+    const sx = pr.map((p) => p[0]), sy = pr.map((p) => p[1]);
+    const lo = [Math.min(...sx), Math.min(...sy)], hi = [Math.max(...sx), Math.max(...sy)];
+    const s = 0.86 * Math.min(w / (hi[0] - lo[0] || 1), h / (hi[1] - lo[1] || 1));
+    const cx = x0 + w / 2 - s * (lo[0] + hi[0]) / 2, cy = y0 + h / 2 + s * (lo[1] + hi[1]) / 2;
+    const P = (x, y, z) => { const p = raw(x, y, z); return [cx + s * p[0], cy - s * p[1]]; };
+    P.depth = (x, y, z) => raw(x, y, z)[2];
+    P.r = r;
+    return P;
+}
+
+function drawAxis3d(ctx, axis, ox, oy, W, H, out) {
+    const x0 = ox + 8, y0 = oy + 8, w = W - 16, h = H - 16;
+    if (w <= 20 || h <= 20) return;
+    const P = projector(axis, out.view || VIEW3D, x0, y0, w, h), r = P.r;
+    out.geom = {x0: ox, y0: oy, w: W, h: H, is3d: true};
+    const line = (a, b) => { const p = P(...a), q = P(...b); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); };
+    ctx.lineWidth = 1; ctx.strokeStyle = GRID; ctx.font = "11px sans-serif"; ctx.fillStyle = TEXT;
+    // the floor's grid and the box: the edges at the back are drawn, the ones in front would hide the data
+    const [xa, xb] = r.x, [ya, yb] = r.y, [za, zb] = r.z;
+    for (let k = 0; k <= 4; k++) {
+        const x = xa + (k / 4) * (xb - xa), y = ya + (k / 4) * (yb - ya);
+        line([x, ya, za], [x, yb, za]); line([xa, y, za], [xb, y, za]);
+    }
+    const backX = P.depth(xa, 0, 0) > P.depth(xb, 0, 0) ? xa : xb, backY = P.depth(0, ya, 0) > P.depth(0, yb, 0) ? ya : yb;
+    for (let k = 0; k <= 4; k++) { // the two back walls
+        const z = za + (k / 4) * (zb - za);
+        line([backX, ya, z], [backX, yb, z]); line([xa, backY, z], [xb, backY, z]);
+    }
+    line([backX, backY, za], [backX, backY, zb]);
+    // labels on the front edges of the floor, z up the back corner
+    const frontY = backY === ya ? yb : ya, frontX = backX === xa ? xb : xa;
+    const fx = fmtXOf(axis, xa, xb, false), fy = axis.yfmt === "freq" ? fmtHz : fmtNum;
+    ctx.textAlign = "center";
+    for (let k = 0; k <= 4; k += 2) {
+        const x = xa + (k / 4) * (xb - xa), p = P(x, frontY, za);
+        ctx.fillText(fx(x), p[0], p[1] + 14);
+        const y = ya + (k / 4) * (yb - ya), q = P(frontX, y, za);
+        ctx.fillText(fy(y), q[0] + (q[0] > x0 + w / 2 ? 18 : -18), q[1] + 12);
+        const z = za + (k / 4) * (zb - za), t = P(backX, backY, z);
+        ctx.fillText(fmtNum(z), t[0] + (t[0] > x0 + w / 2 ? 22 : -22), t[1] + 4);
+    }
+    if (axis.ylabel) { const q = P(frontX, (ya + yb) / 2, za); ctx.fillText(axis.ylabel, q[0] + (q[0] > x0 + w / 2 ? 40 : -40), q[1] + 26); }
+    if (axis.surface) drawSurface(ctx, axis.surface, P);
+    // bands lie on the floor
+    for (const b of axis.bands || []) {
+        const lo = Math.max(b.lo, xa), hi = Math.min(b.hi, xb), yl = b.ylo ?? ya, yh = b.yhi ?? yb;
+        if (hi <= lo) continue;
+        const pts = [[lo, yl], [hi, yl], [hi, yh], [lo, yh]].map(([x, y]) => P(x, y, za));
+        ctx.globalAlpha = b.alpha ?? 0.15; ctx.fillStyle = b.color;
+        ctx.beginPath(); pts.forEach((p, k) => (k ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]))); ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+    for (const s of axis.traces || []) {
+        const n = s.y.length;
+        ctx.strokeStyle = ctx.fillStyle = s.color; ctx.globalAlpha = s.alpha ?? 1; ctx.lineWidth = s.width ?? 1.5;
+        const z = (k) => (s.z ? s.z[k] : za);
+        if (s.kind === "scatter") {
+            for (let k = 0; k < n; k++) { const p = P(traceX(s, k, axis), s.y[k], z(k)); ctx.fillRect(p[0] - 1, p[1] - 1, 2, 2); }
+        } else {
+            ctx.beginPath();
+            for (let k = 0; k < n; k++) { const p = P(traceX(s, k, axis), s.y[k], z(k)); if (k) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); }
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = TEXT; ctx.textAlign = "left";
+    ctx.fillText("drag to turn", ox + 6, oy + H - 6);
+}
+
+// a height field as a surface of quads colored by height, drawn back to front so the near ones cover the far ones
+function drawSurface(ctx, sf, P) {
+    const rows = sf.rows, cols = sf.cols, b = sf.bytes;
+    if (!b || rows < 2 || cols < 2) return;
+    const [xa, xb] = P.r.x, [ya, yb] = P.r.y, [za, zb] = P.r.z;
+    const pts = new Float32Array(rows * cols * 2);
+    for (let r = 0; r < rows; r++) {
+        const y = ya + (r / (rows - 1)) * (yb - ya);
+        for (let c = 0; c < cols; c++) {
+            const p = P(xa + (c / (cols - 1)) * (xb - xa), y, za + (b[r * cols + c] / 255) * (zb - za));
+            pts[(r * cols + c) * 2] = p[0]; pts[(r * cols + c) * 2 + 1] = p[1];
+        }
+    }
+    const lut = lutFor(sf.cmap), css = new Array(256);
+    for (let v = 0; v < 256; v++) { const c = lut[v]; css[v] = `rgb(${c & 255},${(c >> 8) & 255},${(c >> 16) & 255})`; }
+    const rowsBack = P.depth(0, yb, 0) > P.depth(0, ya, 0), colsBack = P.depth(xb, 0, 0) > P.depth(xa, 0, 0);
+    const order = (n, back) => (back ? [...Array(n - 1).keys()].reverse() : [...Array(n - 1).keys()]);
+    const rOrder = order(rows, rowsBack), cOrder = order(cols, colsBack);
+    ctx.lineWidth = 0.6;
+    for (const r of rOrder) {
+        for (const c of cOrder) {
+            const k = [r * cols + c, r * cols + c + 1, (r + 1) * cols + c + 1, (r + 1) * cols + c];
+            const v = Math.max(b[k[0]], b[k[1]], b[k[2]], b[k[3]]);
+            ctx.fillStyle = ctx.strokeStyle = css[v]; // the edge in the same color hides the seams between quads
+            ctx.beginPath();
+            ctx.moveTo(pts[k[0] * 2], pts[k[0] * 2 + 1]);
+            for (let q = 1; q < 4; q++) ctx.lineTo(pts[k[q] * 2], pts[k[q] * 2 + 1]);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+    }
+}
+
+// shaded x spans (channels), or boxes when they have a y span (`yOf` null: no levels, y spans are ignored), under the traces
+function drawBands(ctx, axis, xOf, yOf, x0, y0, w, h) {
     ctx.save();
     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
     ctx.textAlign = "left";
     for (const b of axis.bands || []) {
         const a = Math.max(xOf(b.lo), x0), z = Math.min(xOf(b.hi), x0 + w);
-        if (z <= a) continue;
+        const boxed = yOf && (b.ylo != null || b.yhi != null);
+        const top = boxed && b.yhi != null ? Math.max(yOf(b.yhi), y0) : y0;
+        const btm = boxed && b.ylo != null ? Math.min(yOf(b.ylo), y0 + h) : y0 + h;
+        if (z <= a || btm <= top) continue;
         ctx.globalAlpha = b.alpha ?? 0.15;
         ctx.fillStyle = b.color;
-        ctx.fillRect(a, y0, z - a, h);
+        ctx.fillRect(a, top, z - a, btm - top);
         ctx.globalAlpha = 1;
-        if (b.edit) { // a band the mouse can move / resize: show its edges
+        if (b.edit || boxed) { // a band the mouse can move / resize, or a box: show its edges
             ctx.strokeStyle = b.color; ctx.globalAlpha = 0.7; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(a, y0); ctx.lineTo(a, y0 + h); ctx.moveTo(z, y0); ctx.lineTo(z, y0 + h); ctx.stroke();
+            if (boxed) ctx.strokeRect(a, top, z - a, btm - top);
+            else { ctx.beginPath(); ctx.moveTo(a, top); ctx.lineTo(a, btm); ctx.moveTo(z, top); ctx.lineTo(z, btm); ctx.stroke(); }
             ctx.globalAlpha = 1;
         }
-        if (b.label) { ctx.fillStyle = b.color; ctx.fillText(b.label, a + 3, y0 + h - 5); }
+        if (b.label) { ctx.fillStyle = b.color; ctx.fillText(b.label, a + 3, btm - 5); }
     }
     ctx.restore();
 }
 
-// markers: a triangle on the point with its label, or a vertical line
+// markers: a triangle on the point with its label, a vertical line, or a dashed level line (not on an image without levels)
 function drawMarkers(ctx, axis, xOf, yOf, x0, y0, w, h) {
     ctx.save();
     ctx.beginPath(); ctx.rect(x0, y0, w, h); ctx.clip();
     ctx.lineWidth = 1;
     ctx.textAlign = "left";
+    // labels step out of each other's way: one that would overlap an earlier one moves a line up (down at the top edge)
+    const placed = [];
+    const label = (text, x, y, step) => {
+        const wd = ctx.measureText(text).width, ht = 12;
+        let yy = y;
+        for (let k = 0; k < 6; k++) {
+            const hit = placed.some((r) => x < r.x + r.w + 2 && r.x < x + wd + 2 && yy - ht < r.y && r.y - ht < yy);
+            if (!hit) break;
+            yy += step;
+        }
+        placed.push({x, y: yy, w: wd});
+        ctx.fillText(text, x, yy);
+    };
     for (const m of axis.markers || []) {
+        ctx.strokeStyle = ctx.fillStyle = m.color;
+        if (m.kind === "hline") {
+            const y = yOf(m.y);
+            if ((axis.image && axis.ymin == null) || y < y0 || y > y0 + h) continue;
+            ctx.setLineDash([6, 3]);
+            ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke();
+            ctx.setLineDash([]);
+            if (m.label) { ctx.textAlign = "right"; ctx.fillText(m.label, x0 + w - 3, y - 3); ctx.textAlign = "left"; }
+            continue;
+        }
         const x = xOf(m.x);
         if (x < x0 || x > x0 + w) continue;
-        ctx.strokeStyle = ctx.fillStyle = m.color;
         if (m.kind === "vline") {
             ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + h); ctx.stroke();
-            if (m.label) ctx.fillText(m.label, x + 3, y0 + 12);
+            if (m.label) label(m.label, x + 3, y0 + 12, 13);
             continue;
         }
         const y = Math.min(Math.max(yOf(m.y), y0 + 26), y0 + h);
         ctx.beginPath(); ctx.moveTo(x, y - 2); ctx.lineTo(x - 5, y - 11); ctx.lineTo(x + 5, y - 11); ctx.closePath(); ctx.fill();
-        if (m.label) ctx.fillText(m.label, Math.min(x + 6, x0 + w - 24), y - 13);
+        if (m.label) label(m.label, Math.min(x + 6, x0 + w - 24), y - 13, y - 13 - 13 > y0 + 10 ? -13 : 13);
     }
     ctx.restore();
 }
@@ -756,8 +1181,16 @@ function bindInputs() {
     $("btn-reset").onclick = () => cmd("reset");
     $("btn-prev").onclick = () => cmd("prev");
     $("btn-next").onclick = () => cmd("next");
-    const add = $("sel-add-plot");
-    add.onchange = () => { if (add.value) plotOp("add", {name: add.value}); add.value = ""; };
+    $("btn-add-plot").onclick = (ev) => { ev.stopPropagation(); toggleAddMenu(); };
+    document.addEventListener("click", (ev) => { if (!$("add-menu").hidden && !ev.target.closest(".add-menu")) toggleAddMenu(false); });
+    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !$("add-menu").hidden) toggleAddMenu(false); });
+    const layoutFile = $("in-layout");
+    $("btn-layout-load").onclick = () => layoutFile.click();
+    layoutFile.onchange = async () => {
+        const file = layoutFile.files[0];
+        layoutFile.value = ""; // picking the same file again still loads it
+        if (file) plotOp("layout_load", {text: await file.text()});
+    };
     const sld = $("sld-samp");
     sld.addEventListener("pointerdown", () => (seeking = true));
     sld.addEventListener("change", () => { seeking = false; set("samp", sld.value); });

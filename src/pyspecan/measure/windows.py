@@ -3,6 +3,7 @@ from functools import lru_cache
 
 import numpy as np
 
+
 def _cosine_sum(n: int, coeffs: tuple[float, ...]) -> np.ndarray:
     """Symmetric generalised cosine window (same convention as np.blackman)"""
     if n <= 1:

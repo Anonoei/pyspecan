@@ -9,33 +9,31 @@ import pathlib
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from ...utils import args
 from ...model.model import Model
 from ...plots import colormap
-from ...plots.frame import Frame, LINE, SCATTER, IMAGE
+from ...plots.frame import IMAGE, LINE, SCATTER, THREE_D, Frame
+from ...utils import args
 from ...view.WEB.base import View as GUI
-from ..base import Controller as _Controller, ControllerConfig
-
+from ..base import Controller as _Controller
 from .api import API
 from .websocket import WebSocketManager
+
 
 def args_ctrl(parser):
     ctrl = args.get_group(parser, "View (WEB)")
     ctrl.add_argument("-p", "--port", type=int, default=8000, help="http port")
     ctrl.add_argument("--host", default="127.0.0.1", help="bind address, use 0.0.0.0 to expose on the network")
     ctrl.add_argument("--root", default=None, help="restrict the browser's file picker to this directory")
-    ctrl.add_argument("--show", default=ControllerConfig.show, type=float, help="[ms] time between frames")
     return ctrl
 
 class Controller(_Controller):
     """WEB Controller"""
-    FEATURES = {LINE, SCATTER, IMAGE}
+    FEATURES = {LINE, SCATTER, IMAGE, THREE_D} # 3d: drawn by app.js, turned with the mouse
 
     def __init__(self, model: Model, view: GUI, **kwargs):
         super().__init__(model, view, **kwargs)
         self.view: GUI = self.view # type hints
         self.root = pathlib.Path(kwargs["root"]).resolve() if kwargs.get("root") else None
-        self.add_plot("PSD")
 
         self.ws = WebSocketManager(self)
         self.api = API(self)
@@ -54,7 +52,7 @@ class Controller(_Controller):
             client_id = await self.ws.connect(websocket)
             try:
                 await self.ws.send(client_id, {"type": "state", "data": self.get_state()})
-                while True:
+                while client_id in self.ws.connections: # a failed send drops the client
                     msg = json.loads(await websocket.receive_text())
                     if msg.get("type") == "ack":
                         self.ws.ack(client_id)
@@ -116,7 +114,7 @@ class Controller(_Controller):
                 except OSError:
                     continue
         except PermissionError:
-            raise ValueError("permission denied")
+            raise ValueError("permission denied") from None
         entries.sort(key=lambda e: (not e["dir"], e["name"].lower()))
         parent = d.parent if d.parent != d and self._allowed(d.parent) else None
         return {"path": str(d), "parent": str(parent) if parent else None, "entries": entries}
@@ -152,12 +150,22 @@ class Controller(_Controller):
                 self.set_plot_type(msg["id"], msg["name"])
             elif op == "move":
                 self.move_plot(msg["id"], msg.get("target"), msg["where"])
+            elif op == "link":
+                self.link_plot(msg["id"], msg["target"])
+            elif op == "unlink":
+                self.unlink_plot(msg["id"])
+            elif op == "layout_load":
+                self.load_layout(msg["text"])
             elif op == "set":
                 self.set_plot(msg["id"], msg["key"], msg.get("value"))
             elif op == "marker_add":
                 self.add_marker(msg["id"], msg["kind"], **(msg.get("params") or {}))
             elif op == "marker_del":
                 self.del_marker(msg["id"], msg["marker"])
+            elif op == "act":
+                self.plot_action(msg["id"], msg["action"])
+            elif op == "marker_act":
+                self.marker_action(msg["id"], msg["marker"], msg["action"])
             elif op == "marker_set" and "params" in msg:
                 self.set_marker_params(msg["id"], msg["marker"], msg["params"])
             elif op == "marker_set":

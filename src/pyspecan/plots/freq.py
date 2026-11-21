@@ -9,15 +9,16 @@ from ..obj import Frequency
 from ..utils.vbw import vbw_rows
 from . import colormap
 from .base import Plot
-from .frame import RED, BLUE, Frame, Marker, Trace
+from .frame import BLUE, GREEN, RED, Axis, Frame, Marker, Trace
 from .settings import Setting
+
 
 def _ref_level(value):
     if str(value).strip().lower() in ("", "auto"):
         return "auto"
     return float(value)
 
-SETTING_CMAP = Setting("cmap", "Colors", "select", default="magma", options=tuple(colormap.names()), flags=("--cmap",), help="image color map")
+SETTING_CMAP = Setting("cmap", "Colors", "select", default="magma", options=tuple(colormap.names()), help="image color map", group="Display")
 
 def to_psd(spectra: np.ndarray, fs: float, window: str = "blackman", unit: str = "dB/Hz", cal_db: float = 0.0, ext_gain_db: float = 0.0) -> np.ndarray:
     """(k, nfft) complex spectra of x * `window` -> dB in `unit`, corrected for the window's power"""
@@ -68,21 +69,30 @@ class FreqPlot(Plot):
     unsmoothed trace, and call `apply_markers(frame)` with the frame they built.
     """
     MARKERS = True
+    LINK_DOMAIN = "spectrum"
     SETTINGS = (
-        Setting("ref_level", "Ref level", "text", default="auto", coerce=_ref_level, hint="auto", flags=("-rl", "--ref_level"), help="ref level (number or 'auto')"),
-        Setting("scale_div", "Scale / div", "number", default=10.0, min=0.0001, step=1, flags=("-sd", "--scale_div"), help="scale per division"),
-        Setting("vbw", "VBW", "number", default=10.0, min=0, step=1, reset=True, flags=("-vb", "--vbw"), help="video bandwidth"),
-        Setting("window", "Window", "select", default="blackman", options=tuple(WindowLUT), reset=True, flags=("-w", "--window"), help="FFT window function"),
-        Setting("unit", "Unit", "select", default="dB/Hz", options=units.UNITS, reset=True, flags=("--unit",), help="level unit"),
-        Setting("cal_db", "Cal (dBm @ 0 dBFS)", "number", default=0.0, step=1, reset=True, flags=("--cal_db",), help="dBm reading of a full scale tone, for the dBm units"),
-        Setting("ext_gain", "Ext gain (dB)", "number", default=0.0, step=1, reset=True, flags=("--ext_gain",), help="gain ahead of the receiver, removed from dBm readings"),
+        Setting("ref_level", "Ref level", "text", default="auto", coerce=_ref_level, hint="auto", help="ref level (number or 'auto')",
+                group="Level", scope="link"),
+        Setting("scale_div", "Scale / div", "number", default=10.0, min=0.0001, step=1, help="scale per division",
+                group="Level", scope="link"),
+        Setting("unit", "Unit", "select", default="dB/Hz", options=units.UNITS, reset=True, help="level unit",
+                group="Level", scope="link"),
+        Setting("vbw", "VBW", "number", default=10.0, min=0, step=1, reset=True, help="video bandwidth",
+                group="Processing", scope="link"),
+        Setting("window", "Window", "select", default="blackman", options=tuple(WindowLUT), reset=True, help="FFT window function",
+                group="Processing", scope="link"),
     )
 
     def __init__(self, source, **kwargs):
-        from .markers import MarkerSet # markers import this module
-        self.markers = MarkerSet(self)
+        from .markers import MarkerSet  # markers import this module
+        self.own_markers = MarkerSet()
         self.last = None
         super().__init__(source, **kwargs)
+
+    @property
+    def markers(self):
+        """The link's shared markers while linked, each member measures them on its own trace"""
+        return self.link.markers if self.link is not None and self.link.markers is not None else self.own_markers
 
     def reset(self):
         self._auto = None # resolved level while ref_level is "auto"
@@ -91,6 +101,8 @@ class FreqPlot(Plot):
     def changed(self, key):
         if key == "ref_level":
             self._auto = None
+            if self.link is not None:
+                self.link.auto = None
 
     def smooth(self, psd: np.ndarray) -> np.ndarray:
         """`psd` ((n,) or (k, n)) smoothed by the vbw"""
@@ -112,6 +124,15 @@ class FreqPlot(Plot):
         fmin, _ = self.source.freq_range()
         return fmin + np.arange(n) * (self.source.fs / n)
 
+    def reduced(self, y: np.ndarray, points: int, mode: str = "peak") -> tuple[np.ndarray | None, np.ndarray]:
+        """`y` (one value per bin) through the detector, with the frequency of each group's center.
+        x is None when nothing was reduced (one point per bin, see Trace)"""
+        n = len(y)
+        x, out = detector.reduce(y, points, mode)
+        if len(out) >= n:
+            return None, out
+        return self.bin_freqs(n)[0] + x * (self.source.fs / n), out
+
     def density_lin(self, y_db: np.ndarray) -> np.ndarray:
         """Trace in the plot's unit -> linear power per Hz, so integrating over frequency gives power"""
         lin = units.db_to_lin(y_db)
@@ -127,9 +148,12 @@ class FreqPlot(Plot):
         levels) a marker is a vertical line"""
         if self.last is None:
             return
-        marks, bands, table = self.markers.evaluate(self.last, self.bin_freqs(len(self.last)))
+        marks, bands, table = self.markers.evaluate(self, self.last, self.bin_freqs(len(self.last)))
         ax = frame.axes[0]
-        ax.markers += [replace(m, y=0.0, kind="vline") if image and m.kind == "point" else m for m in marks]
+        if image:
+            marks = [replace(m, y=0.0, kind="vline") if m.kind == "point" else m for m in marks
+                     if m.kind != "hline" or ax.ymin is not None] # a level needs a level axis
+        ax.markers += marks
         ax.bands += bands
         frame.table = table
 
@@ -137,10 +161,16 @@ class FreqPlot(Plot):
         """The numeric ref level, "auto" is resolved from the first data seen"""
         if self.ref_level != "auto":
             return self.ref_level
-        if self._auto is None:
+        link = self.link
+        auto = link.auto if link is not None else self._auto
+        if auto is None: # linked plots use the level the first of them to render resolved
             vmax = float(np.nanmax(values)) if np.isfinite(values).any() else 0.0
-            self._auto = int(vmax * 0.9) if vmax < 0 else int(vmax * 1.1)
-        return self._auto
+            auto = int(vmax * 0.9) if vmax < 0 else int(vmax * 1.1)
+            if link is not None:
+                link.auto = auto
+            else:
+                self._auto = auto
+        return auto
 
     def y_range(self, values) -> tuple[float, float]:
         top = self.resolve_ref(values)
@@ -157,8 +187,8 @@ class FreqPlot(Plot):
 class HoldMixin:
     """Min / max hold traces"""
     SETTINGS = (
-        Setting("show_max", "Max hold", "check", default=True),
-        Setting("show_min", "Min hold", "check", default=True),
+        Setting("show_max", "Max hold", "check", default=True, group="Trace"),
+        Setting("show_min", "Min hold", "check", default=True, group="Trace"),
     )
 
     def reset_hold(self):
@@ -197,10 +227,12 @@ class HoldMixin:
 class TraceMixin:
     """Averaging and the display detector, for the plots that show a trace"""
     SETTINGS = (
-        Setting("avg", "Average", "select", default="off", options=("off", "power", "log", "exp"), flags=("--avg",), help="trace averaging"),
-        Setting("avg_count", "Avg count", "int", default=10, min=1, max=10000, flags=("--avg_count",), help="traces averaged"),
-        Setting("detector", "Detector", "select", default="peak", options=detector.MODES, flags=("--detector",), help="how bins are reduced to display points"),
-        Setting("points", "Points", "int", default=1001, min=0, max=65536, step=100, hint="0 = all bins", flags=("--points",), help="display points, 0 for every bin"),
+        Setting("avg", "Average", "select", default="off", options=("off", "power", "log", "exp"), help="trace averaging", group="Processing"),
+        Setting("avg_count", "Avg count", "int", default=10, min=1, max=10000, help="traces averaged", group="Processing"),
+        Setting("detector", "Detector", "select", default="peak", options=detector.MODES, help="how bins are reduced to display points",
+                group="Trace", advanced=True),
+        Setting("points", "Points", "int", default=1001, min=0, max=65536, step=100, hint="0 = all bins", help="display points, 0 for every bin",
+                group="Trace", advanced=True),
     )
 
     def reset_avg(self):
@@ -216,13 +248,73 @@ class TraceMixin:
         return self._avg.update(rows)
 
     def shrink(self, traces: list[Trace]) -> list[Trace]:
-        """Pass traces through the detector, only what is displayed is reduced"""
+        """Pass traces through the detector, only what is displayed is reduced. A reduced trace gets the
+        frequency of each group's center as x, so it lines up with the markers (which use bin frequencies)"""
         for t in traces:
             if t.x is None:
-                _, t.y = detector.reduce(t.y, self.points, self.detector) # type: ignore
+                t.x, t.y = self.reduced(t.y, self.points, self.detector) # type: ignore
         return traces
 
     def avg_readout(self) -> list[tuple[str, str]]:
         if self.avg == "off" or self.avg_count <= 1: # type: ignore
             return []
         return [("Avg", f"{self._avg.n}/{self.avg_count} ({self.avg})")] # type: ignore
+
+
+REF_COLOR = "#a0a0a0"
+FLOOR = -300.0 # where a reference has no value (outside the span it was stored over)
+
+class RefMixin:
+    """A stored reference trace drawn under the live one, and trace math against it (live - ref, in dB, on an axis of
+    its own). "store ref" keeps the live trace (averaged and smoothed, full resolution) with its frequencies, so a
+    retune or another FFT size still lines it up; a change of level unit drops it"""
+    ACTIONS = ("store ref", "clear ref")
+    SETTINGS = (
+        Setting("ref_show", "Show ref", "check", default=True, group="Reference", help="draw the stored reference trace"),
+        Setting("math", "Trace math", "select", default="off", options=("off", "live - ref"), group="Reference",
+                help="live - ref: the difference in dB under the spectrum"),
+    )
+
+    def act(self, action):
+        if action == "store ref":
+            if self.last is None: # type: ignore
+                raise ValueError("nothing to store yet: step or play first")
+            n = len(self.last) # type: ignore
+            self.ref = (self.bin_freqs(n), self.smooth(self.last).copy(), self.unit) # type: ignore
+        elif action == "clear ref":
+            self.ref = None
+        else:
+            super().act(action) # type: ignore
+
+    def ref_on(self, n: int) -> np.ndarray | None:
+        """The reference on the current n bins (FLOOR where it was not stored), None without one"""
+        ref = getattr(self, "ref", None)
+        if ref is None:
+            return None
+        if ref[2] != self.unit: # type: ignore
+            self.ref = None
+            return None
+        return np.interp(self.bin_freqs(n), ref[0], ref[1], left=FLOOR, right=FLOOR) # type: ignore
+
+    def ref_frame(self, frame: Frame, live: np.ndarray):
+        """Add the reference trace to the frame's first axis and, with trace math, the difference axis below it"""
+        rf = self.ref_on(len(live))
+        if rf is None:
+            if self.math != "off": # type: ignore
+                frame.readout.append(("Trace math", "store a reference first"))
+            return
+        ax = frame.axes[0]
+        xr, yr = self.reduced(rf, self.points, self.detector) # type: ignore
+        xr = self.bin_freqs(len(live)) if xr is None else xr # type: ignore
+        keep = yr > FLOOR + 1
+        if self.ref_show: # type: ignore
+            ax.traces.insert(0, Trace(yr[keep], xr[keep], color=REF_COLOR, name="ref", width=1.0))
+        if self.math == "live - ref": # type: ignore
+            _, yl = self.reduced(live, self.points, self.detector) # type: ignore
+            d = (yl - yr)[keep]
+            lim = max(3.0, float(np.ceil(np.max(np.abs(d)) * 1.2))) if len(d) else 3.0
+            frame.axes.append(Axis(xmin=ax.xmin, xmax=ax.xmax, xfmt="freq", ymin=-lim, ymax=lim, ylabel="live - ref (dB)",
+                                   traces=[Trace(d, xr[keep], color=GREEN, name="diff")],
+                                   markers=[Marker(0.0, 0.0, "", REF_COLOR, kind="hline")]))
+            if len(d):
+                frame.readout.append(("live - ref", f"mean {d.mean():+.2f}, max {d.max():+.2f}, min {d.min():+.2f} dB"))

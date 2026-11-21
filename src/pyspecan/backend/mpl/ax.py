@@ -1,5 +1,6 @@
 from matplotlib.axes import Axes
 
+
 class Ax:
     def __init__(self, ax: Axes, parent=None):
         self.parent = parent
@@ -41,11 +42,9 @@ class Ax:
             self.add_artist(name, line)
         else:
             line = self.art(name)
-            if len(args) == 2:
-                line.set_data(*args) # type: ignore
-            else:
-                print(f"plot args: {len(args)}")
-                print(f"plot kwargs: {kwargs}")
+            if len(args) != 2:
+                raise TypeError(f"{name}: an update takes 2 data arrays, got {len(args)}")
+            line.set_data(*args) # type: ignore
         return line
 
     def plot3d(self, *args, **kwargs):
@@ -59,11 +58,9 @@ class Ax:
             self.add_artist(name, line)
         else:
             line = self.art(name)
-            if len(args) == 3:
-                line.set_data_3d(*args) # type: ignore
-            else:
-                print(f"plot args: {len(args)}")
-                print(f"plot kwargs: {kwargs}")
+            if len(args) != 3:
+                raise TypeError(f"{name}: an update takes 3 data arrays, got {len(args)}")
+            line.set_data_3d(*args) # type: ignore
         return line
 
     def scatter(self, *args, **kwargs):
@@ -77,11 +74,9 @@ class Ax:
             self.add_artist(name, line)
         else:
             line = self.art(name)
-            if len(args) == 2:
-                line.set_data(*args) # type: ignore
-            else:
-                print(f"plot args: {len(args)}")
-                print(f"plot kwargs: {kwargs}")
+            if len(args) != 2:
+                raise TypeError(f"{name}: an update takes 2 data arrays, got {len(args)}")
+            line.set_data(*args) # type: ignore
         return line
 
     def imshow(self, *args, **kwargs):

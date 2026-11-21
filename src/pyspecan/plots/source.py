@@ -14,7 +14,7 @@ asking for the same (mode, nfft, window) get the same frames, computed once per 
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
-from ..utils.window import WindowLUT
+from ..measure.windows import WindowLUT
 
 
 class Stream:
@@ -51,6 +51,7 @@ class Source:
     def __init__(self, model):
         self.model = model
         self.seq = 0
+        self.epoch = 0 # bumped by reset(): plots keeping their own sample history drop it when it changes
         self._streams: dict[tuple, Stream] = {}
 
     # --- per tick --- #
@@ -61,6 +62,7 @@ class Source:
 
     def reset(self):
         """Forget carried samples, call after the sample position jumps"""
+        self.epoch += 1
         self._streams.clear()
 
     # --- model view --- #

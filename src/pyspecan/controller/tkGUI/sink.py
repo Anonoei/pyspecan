@@ -1,7 +1,5 @@
 from ... import logger
 
-def args_sink(parser):
-    pass
 
 class Sink:
     """tkGUI controller for a model sink"""

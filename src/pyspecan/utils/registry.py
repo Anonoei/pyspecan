@@ -17,6 +17,13 @@ class Registry(Generic[T]):
             return item
         return deco
 
+    def unregister(self, name: str) -> T:
+        """Remove and return `name`, raises ValueError when it is not registered"""
+        try:
+            return self._items.pop(name)
+        except KeyError:
+            raise ValueError(f"unknown {self.kind} {name!r}") from None
+
     def get(self, name: str) -> T:
         try:
             return self._items[name]

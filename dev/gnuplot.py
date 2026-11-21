@@ -1,5 +1,5 @@
 import subprocess
-import numpy as np
+
 
 def plot(data):
     d_str = " ".join([f"{d}" for d in data])

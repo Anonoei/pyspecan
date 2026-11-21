@@ -1,5 +1,6 @@
 import importlib
 
+
 def GetController(view, sink):
     return importlib.import_module(f".controller.{view.path}", "pyspecan").GetController(sink)
 

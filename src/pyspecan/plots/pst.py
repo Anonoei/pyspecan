@@ -1,33 +1,48 @@
 import numpy as np
 
 from ..utils import matrix
-from .base import plot
-from .freq import FreqPlot, SETTING_CMAP
-from .frame import Axis, Frame, Image, Trace, IMAGE, LINE, RED, YELLOW
+from .base import About, plot
+from .frame import IMAGE, LINE, RED, YELLOW, Axis, Frame, Image, Trace
+from .freq import SETTING_CMAP, FreqPlot
 from .settings import Setting, override
+
 
 @plot("Persistence")
 class PST(FreqPlot):
     """Persistence histogram of the block's overlapped frames, the chance of a frame passing each frequency / level pixel,
     with the live trace and a max hold over it"""
     TITLE = "Persistence"
+    CATEGORY = "Spectrum"
+    ABOUT = About(
+        data='Every overlapped (realtime) frame of the block as a dB trace, drawn into a frequency / '
+             'level histogram: brightness is how often frames pass each cell, cells lit earlier fade as a'
+             ' ghost',
+        shows='A density of level against frequency (color: how often), the live trace and a max hold '
+              'over it',
+        use=(
+            'Catch intermittent and bursty signals a normal sweep averages away',
+            'See a signal hidden under another (two levels at one frequency)',
+            'Spot frequency hopping or agile emitters',
+        ),
+        cost=16,
+    )
     FEATURES = frozenset({IMAGE, LINE})
     SETTINGS = override(FreqPlot.SETTINGS, vbw={"default": 0.0}) + (
         SETTING_CMAP.with_(default="hot"),
-        Setting("x", "Width", "int", default=0, min=0, max=8192, flags=("--x",), help="histogram x pixels (0: one per FFT bin)"),
-        Setting("y", "Height", "int", default=600, min=16, max=4096, flags=("--y",), help="histogram y pixels"),
-        Setting("style", "Style", "select", default="vector", options=("vector", "dot"), reset=True, flags=("--style",),
-                help="vector joins neighbouring bins, dot plots only the bins"),
-        Setting("ghost", "Ghost", "number", default=0.35, min=0.0, max=1.0, step=0.05, flags=("--ghost",),
-                help="how bright pixels that were lit earlier but are not now stay, 0 hides them"),
-        Setting("persistence", "Ghost time (s)", "number", default=0.0, min=0.0, max=600.0, step=1, flags=("--persistence",),
-                help="signal time for the ghost to fade away (0: it stays until reset)"),
-        Setting("contrast", "Contrast", "number", default=1000.0, min=1.0, max=100000.0, step=100, flags=("--contrast",),
-                help="how far rare hits are lifted: a pixel needs about 1/contrast of the frames to show, higher shows rarer events"),
-        Setting("show_live", "Live trace", "check", default=False, flags=("--show_live",), help="the latest FFT over the histogram"),
-        Setting("show_max", "Max hold", "check", default=False, flags=("--show_max",), help="max hold trace over the histogram"),
-        Setting("hold_alpha", "Max hold intensity", "number", default=0.5, min=0.05, max=1.0, step=0.05, flags=("--hold_alpha",),
-                help="opacity of the max hold trace, 1 can not be told from the live trace"),
+        Setting("x", "Width", "int", default=0, min=0, max=8192, help="histogram x pixels (0: one per FFT bin)", group="Display", advanced=True),
+        Setting("y", "Height", "int", default=600, min=16, max=4096, help="histogram y pixels", group="Display", advanced=True),
+        Setting("style", "Style", "select", default="vector", options=("vector", "dot"), reset=True,
+                help="vector joins neighbouring bins, dot plots only the bins", group="Display", advanced=True),
+        Setting("ghost", "Ghost", "number", default=0.35, min=0.0, max=1.0, step=0.05,
+                help="how bright pixels that were lit earlier but are not now stay, 0 hides them", group="Display"),
+        Setting("persistence", "Ghost time (s)", "number", default=0.0, min=0.0, max=600.0, step=1,
+                help="signal time for the ghost to fade away (0: it stays until reset)", group="Display"),
+        Setting("contrast", "Contrast", "number", default=1000.0, min=1.0, max=100000.0, step=100,
+                help="how far rare hits are lifted: a pixel needs about 1/contrast of the frames to show, higher shows rarer events", group="Display", advanced=True),
+        Setting("show_live", "Live trace", "check", default=False, help="the latest FFT over the histogram", group="Trace"),
+        Setting("show_max", "Max hold", "check", default=False, help="max hold trace over the histogram", group="Trace"),
+        Setting("hold_alpha", "Max hold intensity", "number", default=0.5, min=0.05, max=1.0, step=0.05,
+                help="opacity of the max hold trace, 1 can not be told from the live trace", group="Trace"),
     )
 
     def reset(self):

@@ -8,8 +8,7 @@ import tkinter as tk
 from tkinter import ttk
 
 from ... import logger
-from ...view.tkGUI.panels import PanelView, PanelChild, Panel
-
+from ...view.tkGUI.panels import Panel, PanelChild, PanelView
 from .plot import PlotPane
 
 BAR = 10 # [px] thickness of the drop indicator
@@ -78,7 +77,7 @@ class PanelController:
 
     def toggle_settings(self, pid: str):
         pane = self.panes[pid].pane
-        if pane.fr_sets.winfo_ismapped():
+        if pane.fr_sets.winfo_manager(): # packed, mapped or not: a pane just added may not be drawn yet
             pane.fr_sets.forget()
         else:
             pane.fr_sets.pack(side=tk.LEFT, fill=tk.Y, before=pane.fr_main)
@@ -138,6 +137,16 @@ class PanelController:
             if not self.ctrl.running: # the window is closing
                 return
             pane.render()
+
+    def refresh(self):
+        """Show every plot's current values (a linked or global change reaches several plots)"""
+        for pane in self.panes.values():
+            pane.refresh()
+
+    def rebuild_settings(self):
+        """Rebuild every settings column, links decide which widgets are shared"""
+        for pane in self.panes.values():
+            pane.build_settings()
 
     def on_reset(self):
         for pane in self.panes.values():

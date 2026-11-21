@@ -1,4 +1,5 @@
 """Spectrum measurement math (numpy only, no knowledge of plots or views)"""
+from . import trigger
 from .average import Averager
 from .ccdf import CCDF
 from .channel import acpr, band_power, obw, xdb_bw

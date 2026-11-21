@@ -131,3 +131,37 @@ def test_averager():
     a.reset()
     assert a.n == 0
     assert m.Averager("off").update(np.array([[1.0, 2.0]])).tolist() == [1.0, 2.0]
+
+# --- trigger --- #
+from pyspecan.measure import trigger as trig
+
+
+def test_trigger_finds_edges_interpolated():
+    ramp = np.array([-1.0, -0.5, 0.0, 0.5, 1.0, 0.5, 0.0, -0.5, -1.0])
+    np.testing.assert_allclose(trig.find(ramp, 0.25, "rising"), [2.5])
+    np.testing.assert_allclose(trig.find(ramp, 0.25, "falling"), [5.5])
+
+def test_trigger_on_sine_and_spacing():
+    sig = np.sin(2*np.pi*np.arange(1000)/100 + 0.1)
+    rising = trig.find(sig, 0.0, "rising")
+    assert len(rising) == 10
+    np.testing.assert_allclose(np.diff(rising), 100, atol=1e-3)
+    thinned = trig.find(sig, 0.0, "rising", spacing=250)
+    np.testing.assert_allclose(np.diff(thinned), 300, atol=1e-3) # next crossing at least 250 later
+    with pytest.raises(ValueError):
+        trig.find(sig, 0.0, "sideways")
+
+def test_trigger_signal_sources():
+    x = np.array([3+4j], dtype=np.complex64)
+    assert trig.signal(x, "I")[0] == 3 and trig.signal(x, "Q")[0] == 4 and trig.signal(x, "Mag")[0] == 5
+
+def test_envelope_keeps_short_spikes():
+    sig = np.zeros(10_000)
+    sig[1234] = 7.0
+    sig[8000] = -3.0
+    mn, mx = trig.envelope(sig, 100)
+    assert len(mn) == len(mx) == 100
+    assert mx.max() == 7.0 and mn.min() == -3.0
+    assert np.count_nonzero(mx) == 1 and np.count_nonzero(mn) == 1
+    small = np.arange(5.0)
+    assert trig.envelope(small, 100)[0] is small

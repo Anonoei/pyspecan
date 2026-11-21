@@ -1,68 +1,71 @@
 from enum import Enum
 
+
 class Sink(Enum):
-    """Sink modes"""
+    """Sink modes, `value` is the command line name"""
     NONE = "none"
     FILE = "file"
     LIVE = "live"
     TCPIQ = "tcpiq"
 
     @classmethod
-    def choices(cls):
-        """return sink choices"""
-        arr = []
-        for inst in cls:
-            if inst == cls.NONE:
-                continue
-            arr.append(inst.name)
-        return arr
+    def choices(cls) -> list[str]:
+        """Command line names"""
+        return [inst.value for inst in cls if inst != cls.NONE]
 
     @classmethod
-    def get(cls, option: str):
-        for inst in cls:
-            if inst.name == option:
-                return inst
-        return cls.NONE
+    def get(cls, option) -> "Sink":
+        """The sink named `option` (any case), NONE when there is none"""
+        if isinstance(option, cls):
+            return option
+        option = str(option).lower()
+        return next((inst for inst in cls if option in (inst.name.lower(), inst.value)), cls.NONE)
+
+    @classmethod
+    def normalize(cls, option: str) -> str:
+        """argparse type: the command line name for `option`, unknown names pass through for argparse to reject"""
+        inst = cls.get(option)
+        return option if inst == cls.NONE else inst.value
 
 class View(Enum):
-    """Specan views"""
+    """Specan views: (names, the first is the command line one), import path"""
     NONE = (("none",), None)
-    CUI = (("c", "cui"), "cui")
+    CUI = (("cui", "c"), "cui")
     tkGUI = (("tk", "tkgui"), "tk_gui")
-    WEB = (("w", "web"), "web")
+    WEB = (("web", "w"), "web")
 
     @property
     def path(self):
         """return view import path name"""
         return self.value[1]
 
-    @classmethod
-    def get(cls, option: str):
-        """return view instance"""
-        for inst in cls:
-            if inst.name == option or option in inst.value[0]:
-                return inst
-        return cls.NONE
+    @property
+    def cli(self) -> str:
+        return self.value[0][0]
 
     @classmethod
-    def choices(cls):
-        """return view choices"""
-        arr = []
-        for inst in cls:
-            if inst == cls.NONE:
-                continue
-            for i in inst.value[0]:
-                arr.append(i)
-            arr.append(inst.name)
-        return arr
+    def get(cls, option) -> "View":
+        """The view named `option` (its name or an alias, any case), NONE when there is none"""
+        if isinstance(option, cls):
+            return option
+        option = str(option).lower()
+        return next((inst for inst in cls if option == inst.name.lower() or option in inst.value[0]), cls.NONE)
+
+    @classmethod
+    def choices(cls) -> list[str]:
+        """Command line names"""
+        return [inst.cli for inst in cls if inst != cls.NONE]
+
+    @classmethod
+    def normalize(cls, option: str) -> str:
+        """argparse type: the command line name for `option`, unknown names pass through for argparse to reject"""
+        inst = cls.get(option)
+        return option if inst == cls.NONE else inst.cli
 
 
 class config:
     """Global variables for convenience"""
     __instance = None
-
-    SENTINEL = object()
-    SINK: Sink = Sink.NONE
 
     MON_MEM: bool = False
     PROFILE: bool = False

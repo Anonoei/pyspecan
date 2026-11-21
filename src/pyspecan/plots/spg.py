@@ -1,19 +1,21 @@
+from collections import deque
+from dataclasses import replace
+
 import numpy as np
 
-from .base import plot
-from .freq import FreqPlot, SETTING_CMAP
-from .frame import Axis, Frame, Image, IMAGE
-from .settings import Setting
+from .base import About, plot
+from .frame import BLUE, IMAGE, LINE, THREE_D, YELLOW, Axis, Frame, Image, Surface, Trace
+from .freq import SETTING_CMAP, FreqPlot
+from .settings import Setting, override
+
 
 class _Spectrogram(FreqPlot):
     """Spectrogram, newest on top. Subclasses pick how the block is framed (FRAMING) and reduced"""
     FEATURES = frozenset({IMAGE})
     FRAMING = "swept"
-    SETTINGS = tuple(
-        s.with_(reset=True) if s.key in ("ref_level", "scale_div") else s for s in FreqPlot.SETTINGS
-    ) + (
+    SETTINGS = override(FreqPlot.SETTINGS, ref_level={"reset": True}, scale_div={"reset": True}) + (
         SETTING_CMAP,
-        Setting("max_count", "Max count", "int", default=256, min=1, max=4096, reset=True),
+        Setting("max_count", "History", "int", default=256, min=1, max=4096, reset=True, group="Display", hint="rows"),
     )
 
     def reset(self):
@@ -46,6 +48,19 @@ class _Spectrogram(FreqPlot):
 class SPG(_Spectrogram):
     """One row per refresh: the last swept frame of the block, the trace the PSD plot draws"""
     TITLE = "Spectrogram"
+    CATEGORY = "Time-frequency"
+    ABOUT = About(
+        data="One PSD row per refresh (the block's last frame), smoothed by the VBW, scaled to the level "
+             'range',
+        shows='Frequency across, time downward (newest on top), level as color; markers as vertical '
+              'lines, found signals boxed',
+        use=(
+            'Watch signals come and go',
+            'Measure burst lengths and repetition',
+            'See frequency drift, sweeps and hops',
+        ),
+        cost=0.39,
+    )
 
     def raw_rows(self):
         return self.psd_rows("swept", smooth=False)[-1:]
@@ -54,7 +69,123 @@ class SPG(_Spectrogram):
 class RTSPG(_Spectrogram):
     """One row per block: the mean of its overlapped (realtime) frames"""
     TITLE = "RT Spectrogram"
+    CATEGORY = "Time-frequency"
+    ABOUT = About(
+        data='One row per block: the mean of all its overlapped (realtime) frames, so nothing between '
+             'refreshes is missed',
+        shows='Frequency across, time downward (newest on top), level as color',
+        use=('Watch activity without gaps between refreshes', 'See short events a swept spectrogram can skip'),
+        cost=0.78,
+    )
 
     def raw_rows(self):
         rows = self.psd_rows("rt", smooth=False)
         return rows.mean(axis=0, keepdims=True) if len(rows) else rows
+
+@plot("3D Spectrogram")
+class SPG3D(FreqPlot):
+    """A waterfall in 3d: the last rows as lines over frequency (x), age (y) and level (z), newest in front.
+    Markers measure the newest row, channel bands lie on the floor"""
+    TITLE = "3D Spectrogram"
+    CATEGORY = "Time-frequency"
+    ABOUT = About(
+        data='The last PSD rows (reduced by a peak detector), kept as a history',
+        shows='Each row as a line over frequency (x), age (y) and level (z), newest in front, channel '
+              'bands on the floor. Drag to turn it, double click to reset',
+        use=("See how a spectrum's shape changes over time at a glance", 'Present a classic waterfall'),
+        cost=0.48,
+    )
+    FEATURES = frozenset({LINE, THREE_D})
+    SETTINGS = FreqPlot.SETTINGS + (
+        Setting("framing", "Rows", "select", default="swept", options=("swept", "rt"), reset=True, group="Display",
+                help="swept: the last frame of each refresh, rt: the mean of the block's overlapped frames"),
+        Setting("max_count", "History", "int", default=32, min=2, max=256, reset=True, group="Display", hint="rows"),
+        Setting("points", "Points", "int", default=256, min=16, max=4096, step=64, group="Display", advanced=True,
+                help="display points per row (peak detector)"),
+    )
+
+    def reset(self):
+        super().reset()
+        self.rows: deque = deque(maxlen=self.max_count) # (x, y) of the reduced rows, newest first
+
+    def render(self):
+        raw = self.psd_rows("swept" if self.framing == "swept" else "rt", smooth=False)
+        if not len(raw):
+            return None
+        self.last = raw[-1] if self.framing == "swept" else raw.mean(axis=0)
+        x, y = self.reduced(self.smooth(self.last), self.points)
+        if self.rows and len(self.rows[0][1]) != len(y): # the fft size changed
+            self.rows.clear()
+        self.rows.appendleft((x, y))
+        btm, top = self.y_range(self.last)
+        fmin, fmax = self.source.freq_range()
+        traces = []
+        for age in range(len(self.rows) - 1, -1, -1): # oldest (at the back) first, the newest drawn last
+            rx, ry = self.rows[age]
+            if rx is None:
+                rx = fmin + np.arange(len(ry)) * ((fmax - fmin) / len(ry))
+            newest = age == 0
+            traces.append(Trace(np.full(len(ry), float(age)), rx, z=np.clip(ry, btm, top), name=f"r{age}",
+                                color=YELLOW if newest else BLUE, width=1.5 if newest else 1.0,
+                                alpha=1.0 if newest else max(0.15, 0.8 * (1 - age / self.max_count))))
+        frame = Frame([Axis(
+            xmin=fmin, xmax=fmax, xfmt="freq", ymin=0, ymax=self.max_count - 1, zmin=btm, zmax=top,
+            ylabel="rows ago", projection="3d", aspect=(2.0, 1.2, 0.7), traces=traces,
+        )], title=self.TITLE, readout=self.rbw_readout(len(self.last)))
+        self.apply_markers(frame)
+        frame.axes[0].bands = [replace(b, ylo=None, yhi=None) for b in frame.axes[0].bands] # y is age here, not level
+        return frame
+
+@plot("Surface Spectrogram")
+class SurfaceSpectrogram(FreqPlot):
+    """A 3d surface spectrogram: the spectrogram as a solid surface over frequency (x) and age (y), its height and its
+    color the level, newest in front. Turn it to look along the time or the frequency axis. Channel bands lie on the
+    floor, markers measure the newest row"""
+    TITLE = "Surface Spectrogram"
+    CATEGORY = "Time-frequency"
+    ABOUT = About(
+        data='The last PSD rows (reduced by a peak detector) joined into a surface',
+        shows='A solid surface over frequency and age, its height and color the level. Drag to turn it: '
+              'look along time or along frequency',
+        use=(
+            'See the spectral detail of a changing signal as a landscape',
+            'Compare peaks and floor across time from any angle',
+        ),
+        cost=0.41,
+    )
+    FEATURES = frozenset({THREE_D})
+    SETTINGS = FreqPlot.SETTINGS + (
+        SETTING_CMAP,
+        Setting("framing", "Rows", "select", default="swept", options=("swept", "rt"), reset=True, group="Display",
+                help="swept: the last frame of each refresh, rt: the mean of the block's overlapped frames"),
+        Setting("max_count", "History", "int", default=64, min=4, max=512, reset=True, group="Display", hint="rows"),
+        Setting("points", "Points", "int", default=192, min=16, max=2048, step=32, reset=True, group="Display", advanced=True,
+                help="cells across the frequency axis (peak detector)"),
+    )
+
+    def reset(self):
+        super().reset()
+        self.rows: deque = deque(maxlen=self.max_count) # reduced rows in dB, newest first
+
+    def render(self):
+        raw = self.psd_rows("swept" if self.framing == "swept" else "rt", smooth=False)
+        if not len(raw):
+            return None
+        self.last = raw[-1] if self.framing == "swept" else raw.mean(axis=0)
+        _, y = self.reduced(self.smooth(self.last), self.points)
+        if self.rows and len(self.rows[0]) != len(y):
+            self.rows.clear()
+        self.rows.appendleft(y)
+        btm, top = self.y_range(self.last)
+        fmin, fmax = self.source.freq_range()
+        grid = np.array(self.rows) # (age, cols), age 0 the newest: row 0 at y = 0, in front
+        data = (np.clip((grid - btm) / (top - btm), 0.0, 1.0) * 255).astype(np.uint8)
+        frame = Frame([Axis(
+            xmin=fmin, xmax=fmax, xfmt="freq", ymin=0, ymax=max(len(self.rows) - 1, 1), zmin=btm, zmax=top,
+            ylabel="rows ago", projection="3d", aspect=(2.0, 1.4, 0.7), surface=Surface(data, self.cmap),
+        )], title=self.TITLE, readout=self.rbw_readout(len(self.last)))
+        self.apply_markers(frame)
+        ax = frame.axes[0]
+        ax.bands = [replace(b, ylo=None, yhi=None) for b in ax.bands] # y is age here, not level
+        ax.markers = [] # points in 3d are not drawn: the table has them
+        return frame
