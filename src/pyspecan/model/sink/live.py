@@ -297,7 +297,7 @@ class SinkLive(Sink):
             x = x[shown:]
             # the stream index counts lost samples too: a block follows the last one shown when it starts where that
             # ended (meta.next_index), with nothing lost inside it
-            start = meta.index + shown + sum(k for at, k in meta.gaps if 0 < at <= shown)
+            start = meta.index_at(shown)
             self.contiguous = start == self._next_index and not any(at > shown for at, _ in meta.gaps)
             self._next_index = meta.next_index
             self.hw_time = meta.hw_time
