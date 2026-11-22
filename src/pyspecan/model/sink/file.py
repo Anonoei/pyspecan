@@ -69,7 +69,7 @@ class SinkFile(Sink):
             self.note = ""
         except FileNotFoundError: # x.sigmf finds x.sigmf-data, anything else has to be there
             return
-        except ValueError: # neither says
+        except _err.UnknownFormat: # neither says
             dev = _File(path, DEFAULT_FORMAT)
             self.note = f"{path.name}: read as {DEFAULT_FORMAT}, its name does not say its format (choose one with -F / fmt)"
             self.log.warning(self.note)

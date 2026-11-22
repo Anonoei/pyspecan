@@ -17,10 +17,11 @@ def args_tcpiq(sink):
                       help="what the sender sends: cf32 (two float32, GNU Radio), ci16 (two int16), cu8 (RTL-SDR)... (default: cf32)")
 
 class SinkTcpIq(Sink):
-    __slots__ = ("dev", "timeout")
+    __slots__ = ("dev", "timeout", "_prev")
     def __init__(self, model, **kwargs):
         super().__init__(model, **kwargs)
         self.timeout = float(kwargs.get("tcp_timeout", 1.0))
+        self._prev = None # the last block's RxMeta, to tell whether the next follows it
         host = kwargs.get("tcp_host", None)
         port = int(kwargs.get("tcp_port", 1234))
         listen = bool(kwargs.get("tcp_listen", False))
@@ -45,17 +46,14 @@ class SinkTcpIq(Sink):
     def name(self):
         return "tcpiq"
 
-    MISMATCH = 0.1 # measured this far off the declared rate (as pysdrlib warns): say so
-
     def measured_rate(self) -> float | None:
         """Samples per second arriving over the last second or so (pysdrlib), None until known. Only a sender paced in
         real time arrives at its sample rate (nc replaying a file arrives at network speed): it is shown, never applied"""
         return self.dev.measured_rate
 
     def stream_status(self) -> dict:
-        rate, fs = self.measured_rate(), float(self._Fs.raw)
-        return {"peer": self.dev.peer, "measured": rate, "declared": fs,
-                "mismatch": rate is not None and abs(rate / fs - 1) > self.MISMATCH}
+        return {"peer": self.dev.peer, "measured": self.measured_rate(), "declared": float(self._Fs.raw),
+                "mismatch": bool(self.dev.rate_mismatch)}
 
     def _set_fs(self, fs):
         return self.dev.set_rx_sample_rate(fs)
@@ -63,15 +61,15 @@ class SinkTcpIq(Sink):
         return self.dev.set_rx_freq(cf)
 
     def next(self, count: int):
-        from .live import block_time
         try:
             x, meta = self.dev.read(count, timeout=self.timeout, meta=True)
         except _err.Timeout:
             return False
         except _err.Lost as e: # the server closed the stream, or stopped answering
             raise ConnectionError(f"the TCP IQ stream is gone: {e}") from None
-        self.contiguous = self.block_index is not None and meta.index == self.block_index + count and not meta.gaps
-        self.block_index, self.block_time = meta.index, block_time(meta)
+        self.contiguous = self._prev is not None and meta.follows(self._prev) and not meta.gaps
+        self._prev = meta
+        self.block_index, self.block_time = meta.index, meta.wall_time
         self._samples = np.asarray(x)
         return True
 

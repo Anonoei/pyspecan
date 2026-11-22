@@ -111,14 +111,6 @@ def test_blocks_follow_each_other_unless_samples_were_lost_or_skipped(radio):
     live = sink.live_status()
     assert live["dropped"] == 57 and live["skipped"] == 2943 and live["recording"] is None
 
-def test_a_block_is_timed_by_the_radio_when_its_clock_holds_a_date_else_by_the_host():
-    from pyspecan.model.sink.live import block_time
-    m = RxMeta(index=0, count=10, freq=1e8, rate=1e6, time=time.monotonic() - 0.5, hw_time=1.8e9)
-    assert block_time(m, 0.25) == 1.8e9 + 0.25
-    m = RxMeta(index=0, count=10, freq=1e8, rate=1e6, time=time.monotonic() - 0.5, hw_time=12.0) # counting from power-up
-    assert abs(block_time(m) - (time.time() - 0.5)) < 0.05
-    assert block_time(RxMeta(index=0, count=10, freq=1e8, rate=1e6)) is None
-
 def test_a_break_skips_a_sequence_number_so_streams_start_over(radio):
     c = Recorder(radio, nfft=256)
     c.add_plot("PSD")
