@@ -9,7 +9,7 @@ from ..frame import (
 )
 from ..freq import fmt_hz
 from ..settings import Setting
-from .analyzer import SPAN, Lock, NoLock, Selection, analyzer, rrc
+from .analyzer import SPAN, Lock, NoLock, Selection, analyzer
 
 SETTING_DECAY = Setting("decay", "Decay", "number", default=0.6, min=0.0, max=1.0, step=0.05, group="Display",
                         help="how much of the earlier blocks stays each refresh, 0 shows only the latest")
@@ -60,32 +60,18 @@ class DSPPlot(Plot):
         return Frame(axes, title=self.TITLE, readout=[*self.sel_readout(sel), ("Lock", why)])
 
 
-def errors(lk: Lock) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Per symbol: (error vector, EVM %, magnitude error %, phase error degrees) against the decided points"""
-    d = lk.decisions()
-    e = lk.syms - d
-    rms = float(np.sqrt(np.mean(np.abs(lk.points)**2))) or 1.0
-    mag = (np.abs(lk.syms) - np.abs(d)) / np.maximum(np.abs(d), 1e-12) * 100
-    ph = np.degrees(np.angle(lk.syms * np.conj(d)))
-    return e, np.abs(e) / rms * 100, mag, ph
-
-
 def error_summary(lk: Lock) -> list[tuple[str, str]]:
-    """What a VSA's error summary shows: peak EVM (and where), MER, magnitude / phase error, IQ offset, gain imbalance
-    and quadrature error"""
-    e, evm, mag, ph = errors(lk)
-    k = int(np.argmax(evm))
-    rms_evm = float(np.sqrt(np.mean(evm**2))) or 1e-9
-    s = lk.syms
-    out = [("EVM pk", f"{evm[k]:.1f}% (symbol {k} of {len(evm)})"), ("MER", f"{-20 * np.log10(rms_evm / 100):.1f} dB"),
-           ("Mag err", f"{np.sqrt(np.mean(mag**2)):.2f}% rms"), ("Phase err", f"{np.sqrt(np.mean(ph**2)):.2f}° rms"),
-           ("IQ offset", f"{20 * np.log10(max(abs(np.mean(e)), 1e-9)):.1f} dBc")]
-    if len(lk.points) > 2 and np.std(lk.points.imag) > 0: # a two dimensional constellation
-        ideal = np.std(lk.points.real) / np.std(lk.points.imag)
-        out.append(("Gain imb", f"{20 * np.log10(np.std(s.real) / max(np.std(s.imag), 1e-12) / ideal):+.2f} dB"))
-        rho = float(np.mean(s.real * s.imag) / max(np.std(s.real) * np.std(s.imag), 1e-12))
-        out.append(("Quad err", f"{np.degrees(np.arcsin(np.clip(rho, -1, 1))):+.2f}°"))
-    out.append(("Symbols", str(len(s))))
+    """What a VSA's error summary shows (rpps' Lock.summary()): peak EVM (and where), MER, magnitude / phase error, IQ
+    offset, and for a two dimensional constellation gain imbalance and quadrature error"""
+    s = lk.rpps.summary() # type: ignore
+    out = [("EVM pk", f"{s.evm_peak_pct:.1f}% (symbol {s.evm_peak_at} of {s.n})"), ("MER", f"{s.mer_db:.1f} dB"),
+           ("Mag err", f"{s.mag_err_rms_pct:.2f}% rms"), ("Phase err", f"{s.phase_err_rms_deg:.2f}° rms"),
+           ("IQ offset", f"{s.iq_offset_db:.1f} dBc")]
+    if s.gain_imbalance_db is not None:
+        out.append(("Gain imb", f"{s.gain_imbalance_db:+.2f} dB"))
+    if s.quad_error_deg is not None:
+        out.append(("Quad err", f"{s.quad_error_deg:+.2f}°"))
+    out.append(("Symbols", str(s.n)))
     return out
 
 
@@ -109,10 +95,12 @@ def eye_points(lk: Lock, cols: int = 128) -> tuple[np.ndarray, np.ndarray]:
 
 def matched(lk: Lock, up: int) -> tuple[np.ndarray, np.ndarray]:
     """(time in symbols from the first instant, matched filter output) of the selection's waveform, `up` times finer
-    than its samples: unit rms at the symbol instants, the carrier offset and phase taken out"""
-    xr = lk.derotated()
+    than its samples: unit rms at the symbol instants, the carrier offset and phase taken out. rpps' Lock.matched gives
+    the same exactly, but evaluates the filter at every point: ~20x the cost at an eye diagram's density"""
+    from rpps.signal.filters import rrc_pulse
+    xr = lk.rpps.derotated() # type: ignore
     L = int(np.ceil(SPAN * lk.sps))
-    h = rrc(np.arange(-L, L + 1) / lk.sps, lk.beta)
+    h = rrc_pulse(np.arange(-L, L + 1) / lk.sps, lk.beta)
     h = h / np.sqrt(np.sum(h**2))
     z = np.convolve(xr, h, "same")[L:-L] # unit rms at the symbol instants (the lock's gain is in xr already)
     n = len(z)
@@ -128,24 +116,10 @@ def matched(lk: Lock, up: int) -> tuple[np.ndarray, np.ndarray]:
     return t[edge:-edge], zu[edge:-edge]
 
 
-def reference(lk: Lock) -> np.ndarray:
-    """The waveform the decided symbols make through the ideal (root raised cosine) transmit pulse, on x's samples"""
-    d = lk.decisions()
-    S = SPAN * lk.sps
-    width = int(np.ceil(2 * S)) + 2
-    idx = np.ceil(lk.centres - S).astype(np.int64)[:, None] + np.arange(width)
-    w = rrc((idx - lk.centres[:, None]) / lk.sps, lk.beta)
-    w /= np.sqrt(np.sum(w**2, axis=1, keepdims=True))
-    r = np.zeros(len(lk.x), complex)
-    ok = (idx >= 0) & (idx < len(r))
-    np.add.at(r, idx[ok], (d[:, None] * w)[ok])
-    return r
-
-
 def pair(lk: Lock) -> tuple[np.ndarray, np.ndarray]:
     """(received, ideal) waveforms without their ends, where the ideal lacks the symbols outside the record"""
     cut = int(np.ceil(2 * SPAN * lk.sps))
-    x, r = lk.derotated(), reference(lk)
+    x, r = lk.rpps.derotated(), lk.rpps.reference() # type: ignore
     return (x[cut:-cut], r[cut:-cut]) if len(x) > 4 * cut else (x, r)
 
 

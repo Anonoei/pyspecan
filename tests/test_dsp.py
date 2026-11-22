@@ -226,6 +226,7 @@ def test_nothing_to_lock_says_why():
         assert why == "no signal found" or "no symbol rate" in why, f.readout
 
 @need_rpps
+@pytest.mark.filterwarnings("error") # no 0/0 on silence
 def test_silence_chosen_by_hand_says_why_and_raises_nothing():
     model, src, plots = setup("Constellation", "Cyclic Spectrum", dsp_freq="150k", dsp_bw="60k")
     con, cyc = run(model, src, plots, np.zeros(BLOCK * 4, np.complex64))

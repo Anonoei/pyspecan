@@ -11,7 +11,7 @@ from ..frame import (
     Trace,
 )
 from ..settings import Setting
-from .common import SETTING_DECAY, DSPPlot, error_summary, errors, pair, welch
+from .common import SETTING_DECAY, DSPPlot, error_summary, pair, welch
 
 
 @plot("Error Vector")
@@ -39,7 +39,8 @@ class ErrorVector(DSPPlot):
         sel, lk, why = self.analyse()
         if lk is None:
             return self.empty([Axis(ylabel="EVM (%)"), Axis(ylabel="Mag err (%)"), Axis(ylabel="Phase err (deg)")], sel, why)
-        _, evm, mag, ph = errors(lk)
+        e = lk.rpps.errors() # type: ignore
+        evm, mag, ph = e.evm_pct, e.mag_pct, e.phase_deg
         n = min(self.count, len(evm))
         k = np.arange(n, dtype=float) # counted from the first one shown
         def sym(v, least):

@@ -47,16 +47,14 @@ class Selection:
 
 @dataclass
 class Lock:
-    """The selection's symbols. x: the baseband samples they came from (at Fs), centres: each symbol's instant in x,
-    syms: frequency / phase / gain corrected (unit rms), points: the constellation (unit rms). rpps: its rpps.sync.Lock"""
+    """The selection's symbols. centres: each symbol's instant in the baseband samples (at Fs), syms: frequency / phase /
+    gain corrected (unit rms), points: the constellation (unit rms). rpps: its rpps.sync.Lock, for what is measured from
+    it (errors, summary, matched filter, reference waveform)"""
     mod: str
     baud: float
     sps: float
     beta: float
     cfo: float      # Hz
-    phase: float    # rad, at the first symbol
-    gain: float
-    x: np.ndarray
     Fs: float
     centres: np.ndarray
     syms: np.ndarray
@@ -69,17 +67,8 @@ class Lock:
     def of(cls, lk, x: np.ndarray, Fs: float) -> "Lock":
         """From an rpps.sync.Lock of x"""
         d = lk.det
-        return cls(d.mod, float(d.baud), float(d.sps), float(d.beta), float(d.cfo), float(d.phase), float(d.gain), x, Fs,
+        return cls(d.mod, float(d.baud), float(d.sps), float(d.beta), float(d.cfo), Fs,
                    lk.centres, lk.symbols, lk.points, float(lk.quality.esn0_db), float(lk.quality.evm_pct), lk)
-
-    def derotated(self) -> np.ndarray:
-        """x with the carrier offset and phase taken out, scaled so the symbols are unit rms"""
-        n = np.arange(len(self.x))
-        return self.x * np.exp(-2j*np.pi*self.cfo*(n - self.centres[0])/self.Fs - 1j*self.phase) / self.gain
-
-    def decisions(self) -> np.ndarray:
-        """The nearest constellation point to each symbol"""
-        return self.points[np.argmin(np.abs(self.syms[:, None] - self.points[None, :]), axis=1)]
 
 def analyzer(source) -> "Analyzer":
     """The analyzer every plot of `source` shares"""
@@ -87,10 +76,6 @@ def analyzer(source) -> "Analyzer":
     if an is None:
         an = source._dsp_analyzer = Analyzer(source)
     return an
-
-def rrc(t: np.ndarray, beta: float) -> np.ndarray:
-    from rpps.signal.filters import rrc_pulse
-    return rrc_pulse(t, beta)
 
 class Analyzer:
     def __init__(self, source):
