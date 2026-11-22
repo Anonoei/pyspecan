@@ -23,7 +23,8 @@ Every plot, by the category pickers list it under (*italic*: with RPPS, see [DSP
 ## Spectrum
 
 - PSD: four analyzer traces, each clear/write, average, max hold, min hold, view or blank, a marker trace, detector, a
-  stored reference trace and trace math ("store ref" and the `math` setting, live - ref on its own axis).
+  stored reference trace and trace math ("store ref" and the `math` setting, live - ref on its own axis), and a gate
+  (`trig_mode` gated, see [below](#gated-spectrum-and-marker-trend)).
 - Persistence, FFT.
 - With a live radio, Sweep: a span wider than the sample rate. The radio is stepped across `start` to `stop`, the
   middle 80% of each step kept and joined into one trace with the PSD's traces and markers, then tuned back. Heavy:
@@ -37,7 +38,7 @@ frequencies, in frequency at low ones).
 
 ## Time domain
 
-IQ, IQ 3D, PMF, Phasor, IQ Density, and Scope.
+IQ, IQ 3D, PMF, Phasor, IQ Density, Scope, and Autocorrelation.
 
 The Scope is an oscilloscope: samples against time, with a trigger (auto, normal, single) and up to `overlay`
 triggered sweeps from each block drawn together. `roll` mode is an untriggered strip chart that shows every sample as
@@ -48,13 +49,35 @@ a min/max envelope.
 - For faster updates, lower the samples per block and the frame interval together, e.g. `-st 20 --show 20` (about 50
   updates/s). Faster than the screen can redraw only adds lag.
 
+Autocorrelation is |R(lag)| over the block, averaged over blocks (`decay`): a repetition makes a peak at its period,
+which the readout lists with its rate (R1, R2...). An OFDM signal's cyclic prefix correlates at the useful symbol
+length Tu, a preamble or frame at its period, a pulse train at its repetition interval; noise has only the spike at 0.
+`span` sets the largest lag (one FFT by default, at most half the block).
+
 ## Measurements and analog demodulation
 
-- Measurements: CCDF, Power vs Time, Occupancy, Phase Noise (L(f) on a log offset axis, integrated phase noise and
-  jitter).
+- Measurements: CCDF, Power vs Time, Occupancy, Marker Trend (see below), Phase Noise (L(f) on a log offset axis,
+  integrated phase noise and jitter).
 - Analog demodulation: Frequency vs Time; with RPPS, Analog Demod (`mode` AM / FM / PM / USB / LSB against time and its
   spectrum, depth / deviation, the carrier offset, and the modulating tone and SINAD when one tone carries it).
 - Digital demodulation, modulation quality, channel and signal analysis: with RPPS, see [DSP plots](dsp.md).
+
+## Gated spectrum and Marker Trend
+
+A PSD with `trig_mode` gated takes only the FFT frames that fit while the signal is on, so a burst's spectrum is not
+diluted by the time it is off, and no frame cut by a burst's edge splatters over the span. The gate opens when the
+power (dBFS, smoothed over nfft / 16 samples) reaches `gate_level` ("auto": halfway between each block's floor and
+peaks), `gate_delay` after it rises, for `gate_length` (blank: until it falls). Under the spectrum the block's power
+against time shows the level as a line to drag and the open spans in green; the readout says how many frames went in.
+A block with none leaves the traces as they were, like an analyzer waiting for its trigger.
+
+Marker Trend is a PSD (the same traces, gate and markers) with each marker's numbers kept block by block and drawn
+against time under it, one axis per unit: a level and frequency, a channel's power, ACPR in dBc, OBW in Hz, THD, a
+limit's margin. Link it to a PSD to trend the markers set there, and turn its own `spectrum` off.
+
+```python
+--8<-- "examples/gated.py"
+```
 
 ## Markers
 

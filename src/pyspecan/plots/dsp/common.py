@@ -1,5 +1,9 @@
 """What the DSP plots share: their base class (the selection, its lock, why there is none), the symbols' errors,
-the matched filter's waveform, the ideal waveform of the decided symbols and the link's response from it"""
+the matched filter's waveform, the ideal waveform of the decided symbols and the link's response from it, and `Job`:
+an analysis too slow for a render (a second or more) on a thread of its own"""
+import threading
+import time
+
 import numpy as np
 
 from ..base import Plot
@@ -132,3 +136,64 @@ class ResponseMixin:
         f = (np.arange(nfft) - nfft // 2) * (lk.Fs / nfft)
         edge = (1 + lk.beta) * lk.baud / 2
         return f, (np.abs(f) <= edge) & (self.srr > 1e-3 * self.srr.max())
+
+
+class Job:
+    """Work too slow to run in a render (rpps' blind searches take seconds) on a thread of its own, one run at a time.
+    A plot submits the newest block's inputs whenever the last run is done and draws the latest result meanwhile, so
+    the view stays live and the result lags by about one run. The work must only read what it is given (a copy of
+    the samples), never the source or the analyzer. A failure is kept as `error` (shown in the plot's readout)"""
+    def __init__(self, name: str):
+        self.name = name
+        self.result = None
+        self.error = ""
+        self.took: float | None = None  # seconds the last run took
+        self.runs = 0
+        self._gen = 0                   # bumped by clear(): a run started before it is dropped
+        self._thread: threading.Thread | None = None
+
+    @property
+    def busy(self) -> bool:
+        return self._thread is not None and self._thread.is_alive()
+
+    def submit(self, fn, *args) -> bool:
+        """Run fn(*args) on a new thread unless one is running, True when it started"""
+        if self.busy:
+            return False
+        gen = self._gen
+        def run():
+            t0 = time.monotonic()
+            try:
+                out, err = fn(*args), ""
+            except ValueError as e: # rpps says why it can't (too few bursts, no frames...)
+                out, err = None, str(e)
+            except Exception as e: # pylint: disable=broad-exception-caught
+                out, err = None, f"{type(e).__name__}: {e}"
+            if gen == self._gen:
+                self.result, self.error, self.took = out, err, time.monotonic() - t0
+                self.runs += 1
+        self._thread = threading.Thread(target=run, name=f"pyspecan {self.name}", daemon=True)
+        self._thread.start()
+        return True
+
+    def clear(self):
+        """Forget the result; a run under way finishes unseen"""
+        self._gen += 1
+        self.result, self.error, self.took = None, "", None
+
+    def wait(self, timeout: float | None = None):
+        """Until the run under way (if any) is done"""
+        t = self._thread
+        if t is not None:
+            t.join(timeout)
+
+    def readout(self) -> list[tuple[str, str]]:
+        """How far along it is: running, how long the last run took, why it failed"""
+        out = []
+        if self.error:
+            out.append(("Analysis", self.error))
+        if self.busy:
+            out.append(("Status", "analysing..." if self.result is None and not self.error else "updating"))
+        if self.took is not None:
+            out.append(("Took", f"{self.took:.2f} s"))
+        return out

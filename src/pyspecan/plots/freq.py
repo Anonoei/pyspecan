@@ -87,6 +87,7 @@ class FreqPlot(Plot):
         from .markers import MarkerSet  # markers import this module
         self.own_markers = MarkerSet()
         self.last = None
+        self.marker_values: dict = {}
         super().__init__(source, **kwargs)
 
     @property
@@ -145,10 +146,10 @@ class FreqPlot(Plot):
 
     def apply_markers(self, frame: Frame, image: bool = False):
         """Add the markers' marks, bands and table to the frame's first axis. On an image axis (no
-        levels) a marker is a vertical line"""
+        levels) a marker is a vertical line. What they measured stays in `marker_values` ({"M1 level": (value, unit)})"""
         if self.last is None:
             return
-        marks, bands, table = self.markers.evaluate(self, self.last, self.bin_freqs(len(self.last)))
+        marks, bands, table, self.marker_values = self.markers.evaluate(self, self.last, self.bin_freqs(len(self.last)))
         ax = frame.axes[0]
         if image:
             marks = [replace(m, y=0.0, kind="vline") if m.kind == "point" else m for m in marks

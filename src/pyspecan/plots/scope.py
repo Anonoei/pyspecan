@@ -16,35 +16,12 @@ from .base import About, Plot, plot
 from .frame import BLUE, GREEN, RED, YELLOW, Axis, Frame, Marker, Trace, fmt_time
 from .freq import fmt_hz, freq_text, hz
 from .reduce import COLS, envelope
-from .settings import Setting
+from .settings import Setting, parse_time, time_text
 
 MAX_SPAN = 1 << 22  # most samples one screen holds, bounds the carried history
 
 CHANNELS = ("I/Q", "I", "Q", "Mag", "Phase")
 MODES = ("auto", "normal", "single", "roll")
-_PREFIX = {"n": 1e-9, "u": 1e-6, "µ": 1e-6, "m": 1e-3}
-
-def parse_time(value) -> float:
-    """'10u', '2.5ms', '1e-3', '' -> seconds, 0 for blank or 'auto'"""
-    s = str(value).strip().lower().removesuffix("s").strip()
-    if s in ("", "auto", "0"):
-        return 0.0
-    mul = 1.0
-    if s[-1] in _PREFIX:
-        s, mul = s[:-1], _PREFIX[s[-1]]
-    try:
-        v = float(s) * mul
-    except ValueError:
-        raise ValueError(f"{value!r} is not a time, use e.g. 10u, 2m, 0.5") from None
-    if v < 0:
-        raise ValueError("time must not be negative")
-    return v
-
-def time_text(value) -> str:
-    """coerce for text settings holding a time, blank and 'auto' stay as given"""
-    parse_time(value)
-    return str(value).strip()
-
 def _per_div(value) -> str:
     s = str(value).strip().lower()
     if s in ("", "auto"):

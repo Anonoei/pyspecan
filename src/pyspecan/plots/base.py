@@ -26,7 +26,7 @@ class About:
 
     data: the input and what is done to it. shows: what is on the axes, what each trace or color means.
     use: things to use it for. cost: rendering a block costs about this many PSDs (tools/benchmark.py at its defaults:
-    1 MS/s, 1024 point FFT, 50 ms blocks), None to say nothing"""
+    1 MS/s, 1024 point FFT, 50 ms blocks), an analysis it runs in the background included; None to say nothing"""
     data: str
     shows: str
     use: tuple[str, ...] = ()

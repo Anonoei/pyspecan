@@ -12,6 +12,8 @@ FFT frames and the DSP plots one signal search and lock). The first blocks are a
 search), timed but left out of the median; "first" shows the first one. "realtime" is the median against the block's
 own duration: over 100% the plot can not keep up with live samples at this rate on its own. "declared" is the cost
 the plot's About says (its picker tooltip), marked "!" when the measured one is more than twice off it: update it.
+A plot that analyses in the background (a DSP plot's `job`) is waited for after each render and its run added: what it
+costs the machine, though the view does not wait for it.
 
 The blocks come from tools/demo.py's synthetic capture (QPSK, FM, tones, a burst, a chirp), the DSP plots analyse the
 QPSK at 150 kHz.
@@ -64,7 +66,14 @@ def run(name: str, settings: dict, a, data: np.ndarray, markers: tuple = ()) -> 
         src.tick()
         t0 = time.perf_counter()
         plot.update()
-        times.append(time.perf_counter() - t0)
+        took = time.perf_counter() - t0
+        job = getattr(plot, "job", None)
+        if job is not None: # its background run, started by this render
+            runs = job.runs
+            job.wait()
+            if job.runs > runs and job.took is not None:
+                took += job.took
+        times.append(took)
     return {"times": times}
 
 def stats(times: list, warmup: int) -> dict:

@@ -699,7 +699,7 @@ def test_scope_roll_fine_timebase_draws_samples():
     assert len(t.y) == 64 and t.x[-1] == 0.0
 
 def test_scope_time_parsing():
-    from pyspecan.plots.scope import parse_time
+    from pyspecan.plots.settings import parse_time
     assert parse_time("10u") == pytest.approx(1e-5)
     assert parse_time("2ms") == pytest.approx(2e-3)
     assert parse_time("auto") == 0.0 and parse_time("") == 0.0
@@ -1405,3 +1405,95 @@ def test_export_traces_table_and_json():
     rows = list(csv.reader(io.StringIO(traces_csv(iq))))
     assert rows[0][-1] == "z" and all(r[5] for r in rows[1:]) # 3d: z on every row
     assert table_csv(iq) == ""
+
+# --- gated spectrum, marker trend, autocorrelation --- #
+def bursty(n=8000, period=1000, on=300, f=0.2, seed=0):
+    """A tone on for `on` of every `period` samples, over weak noise"""
+    rng = np.random.default_rng(seed)
+    t = np.arange(n)
+    x = ((t % period) < on) * np.exp(2j * np.pi * f * t)
+    return (x + 1e-3 * (rng.standard_normal(n) + 1j * rng.standard_normal(n))).astype(np.complex64)
+
+def test_gated_psd_takes_only_the_frames_inside_the_burst():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    free = PLOTS.get("PSD")(src, t1_mode="average", avg_count=1000)
+    gated = PLOTS.get("PSD")(src, t1_mode="average", avg_count=1000, trig_mode="gated")
+    feed(src, model, bursty())
+    free.update()
+    frame = gated.update()
+    readout = dict(frame.readout)
+    assert readout["Gate"] == "32 frames in 8 openings" # 4 whole frames of 64 in each 300 sample burst
+    assert 4.0 < np.max(gated.last) - np.max(free.last) < 7.0 # not diluted by the 70% off (5.2 dB)
+    assert np.median(gated.last) < np.median(free.last) - 20 # no frame cut by a burst's edge splatters over the span
+    gate = frame.axes[-1]
+    assert gate.xfmt == "time" and len(gate.bands) == 8
+    level = next(mk for mk in gate.markers if mk.kind == "hline")
+    assert level.edit == "gate_level" # dragged to set the level
+    gated.set("gate_length", "0.05") # 50 samples at 1 kS/s: shorter than an FFT
+    gated.set("gate_level", "-20")
+    frame = gated.update()
+    assert dict(frame.readout)["Gate"] == "waiting: open shorter than an FFT"
+    assert gated.last is not None # the trace keeps what it had, like an analyzer waiting for its trigger
+
+def test_gated_psd_says_why_before_anything_passes():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    gated = PLOTS.get("PSD")(src, trig_mode="gated", gate_level="10")
+    feed(src, model, bursty())
+    frame = gated.update()
+    assert dict(frame.readout)["Gate"] == "waiting: never over the level"
+    assert frame.axes[-1].traces # the power to set the level by
+
+def test_marker_values_give_numbers_with_units():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    psd = PLOTS.get("PSD")(src, unit="dBFS")
+    psd.markers.add("peak", track=True)
+    psd.markers.add("obw")
+    psd.markers.add("limit", level=10)
+    feed(src, model, tone(640))
+    psd.update()
+    v = psd.marker_values
+    assert v["M1 level"][1] == "dBFS" and v["M1 level"][0] == pytest.approx(0.0, abs=1.5)
+    assert v["M1 freq"] == (pytest.approx(100.0, abs=10.0), "Hz")
+    assert v["M2 obw"][1] == "Hz" and v["M3 margin"][1] == "dB"
+
+def test_marker_trend_keeps_each_markers_numbers_over_time():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    tr = PLOTS.get("Marker Trend")(src, unit="dBFS")
+    frame = None
+    for i in range(3):
+        feed(src, model, tone(640, seed=i))
+        frame = tr.update()
+    assert dict(frame.readout)["Trend"] == "add a marker to trend what it measures"
+    tr.markers.add("peak", track=True)
+    tr.markers.add("channel", freq="100", bw="50")
+    for i in range(4):
+        feed(src, model, tone(640, seed=i) * (1 + i))
+        frame = tr.update()
+    assert [a.ylabel for a in frame.axes] == ["", "dBFS", "Hz"] # the spectrum, then one axis per unit
+    level = next(t for t in frame.axes[1].traces if t.name == "M1 level")
+    assert len(level.y) == 4 and np.all(np.diff(level.y) > 0) # louder every block
+    assert level.x[-1] == 0.0 and level.x[0] == pytest.approx(-3 * 0.64) # seconds ago (640 samples at 1 kS/s)
+    tr.markers.remove("M2")
+    tr.set("spectrum", False)
+    feed(src, model, tone(640))
+    frame = tr.update()
+    assert "M2 power" not in tr.trend
+    assert frame.axes[0].ylabel == "dBFS" and frame.table is not None # the table stays without the spectrum
+
+def test_autocorrelation_finds_a_repetition():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    ac = PLOTS.get("Autocorrelation")(src, span="0.2") # 200 lags at 1 kS/s
+    rng = np.random.default_rng(0)
+    word = rng.standard_normal(50) + 1j * rng.standard_normal(50)
+    feed(src, model, np.tile(word, 40).astype(np.complex64))
+    frame = ac.update()
+    readout = dict(frame.readout)
+    assert readout["R1"].startswith("50 ms (20 Hz)")
+    assert frame.axes[0].markers[0].x == pytest.approx(0.05)
+    ac.set("scale", "dB")
+    assert ac.update().axes[0].ymax == 0.0

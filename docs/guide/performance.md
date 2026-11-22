@@ -14,7 +14,9 @@ python tools/benchmark.py --json benchmark.json      # the numbers, to compare r
 ```
 
 The cost is what pickers show in a plot's tooltip (light under 2 PSDs, heavy from 10). The benchmark marks a plot
-whose measured cost is more than twice off the declared one: update its `ABOUT`.
+whose measured cost is more than twice off the declared one: update its `ABOUT`. A plot that analyses in the
+background (Waveform ID, Hopping, Bursts, Frame Raster, Signal Profile) is waited for and its run counted: the view
+does not wait for it, but the machine does the work.
 
 ## Keeping a layout live
 

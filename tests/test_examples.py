@@ -1,7 +1,7 @@
 """The worked examples in examples/ run and their own checks pass
 
-Each one is a script that asserts what it shows; this runs it as `python examples/<name>.py` would. dsp.py says it
-has nothing to do without rpps and stops. launch.py opens a view: it runs here with the console view, which ends when
+Each one is a script that asserts what it shows; this runs it as `python examples/<name>.py` would. dsp.py and
+bursts.py say they have nothing to do without rpps and stop. launch.py opens a view: it runs here with the console view, which ends when
 its input does."""
 import os
 import runpy
@@ -14,7 +14,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "examples"
 
-RUN = ["quickstart", "layout", "extension", "dsp"]
+RUN = ["quickstart", "layout", "extension", "gated", "dsp", "bursts"]
 
 @pytest.fixture
 def registries():

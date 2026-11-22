@@ -165,3 +165,49 @@ def test_envelope_keeps_short_spikes():
     assert np.count_nonzero(mx) == 1 and np.count_nonzero(mn) == 1
     small = np.arange(5.0)
     assert trig.envelope(small, 100)[0] is small
+
+# --- gate --- #
+def test_gate_spans_open_on_the_level_with_delay_and_length():
+    p = np.full(100, -60.0)
+    p[20:50] = p[70:90] = -10.0
+    assert m.trigger.gate_spans(p, -30.0) == [(20, 50), (70, 90)]
+    assert m.trigger.gate_spans(p, -30.0, delay=5) == [(25, 50), (75, 90)]
+    assert m.trigger.gate_spans(p, -30.0, delay=5, length=10) == [(25, 35), (75, 85)]
+    assert m.trigger.gate_spans(p, 0.0) == []
+    p[:5] = -10.0 # on from the start: no edge to delay from
+    assert m.trigger.gate_spans(p, -30.0, delay=5)[0] == (0, 5)
+
+def test_gate_frames_fit_inside_the_spans():
+    starts = m.trigger.frame_starts([(10, 50), (60, 70), (100, 164)], 16)
+    np.testing.assert_array_equal(starts, [10, 26, 100, 116, 132, 148]) # 148 ends at 164, the span's end
+
+def test_gate_power_and_auto_level():
+    x = np.zeros(1000, complex)
+    x[300:600] = 1.0
+    p = m.trigger.power_db(x)
+    assert p[400] == pytest.approx(0.0) and p[100] < -200
+    assert m.trigger.power_db(x, 10)[305] == pytest.approx(10 * np.log10(0.6), abs=1e-6) # smoothed over 10
+    lvl = m.trigger.auto_level(m.trigger.power_db(x + 1e-3))
+    assert -60 < lvl < 0
+
+# --- autocorrelation --- #
+def test_autocorr_is_one_at_zero_and_peaks_at_the_period():
+    rng = np.random.default_rng(0)
+    word = rng.standard_normal(37) + 1j * rng.standard_normal(37)
+    x = np.tile(word, 40) + 0.3 * (rng.standard_normal(37 * 40) + 1j * rng.standard_normal(37 * 40))
+    r = m.correlate.autocorr(x, 200)
+    assert r[0] == pytest.approx(1.0) and len(r) == 201
+    lag, v = m.correlate.peaks(r, 1)[0]
+    assert lag == 37 and v > 0.8
+
+def test_autocorr_of_noise_has_no_peak_over_its_floor():
+    rng = np.random.default_rng(1)
+    n = 20000
+    r = m.correlate.autocorr(rng.standard_normal(n) + 1j * rng.standard_normal(n), 500)
+    assert m.correlate.lobe_end(r) <= 2
+    assert m.correlate.peaks(r, 3, floor=4 / np.sqrt(n)) == []
+
+def test_autocorr_removes_dc():
+    x = np.ones(1000) + 0.01 * np.random.default_rng(2).standard_normal(1000)
+    assert m.correlate.autocorr(x, 10, remove_dc=False)[5] > 0.99
+    assert m.correlate.autocorr(x, 10)[5] < 0.2

@@ -407,3 +407,174 @@ def test_decode_says_why_it_cannot(tmp_path):
     c, pid = decoding(meta, profile="ieee80211b/long") # 22 MHz of channel at 2 MS/s
     c.step()
     assert "needs" in dict(c.latest[pid].readout)["Decode"]
+
+
+# --- what a signal is, and how it is cut in time (the background analyses) --- #
+def one(name, analysis: dict | None = None, **settings):
+    """A source and one plot with its own settings (and the Analysis globals)"""
+    from pyspecan.plots.base import default_globals
+    model = Model()
+    src = Source(model)
+    return model, src, [PLOTS.get(name)(src, globals=default_globals(**(analysis or {})), **settings)]
+
+def settled(model, src, plots, sig, blocks=4, block=BLOCK):
+    """Like run, each plot's background analysis waited for after every block, then rendered once more"""
+    for i in range(blocks):
+        model.samples = sig[i * block:(i + 1) * block]
+        src.tick()
+        for p in plots:
+            p.update()
+            p.job.wait(60)
+    return [p.update() for p in plots]
+
+def ofdm(n, nfft=64, cp=16, seed=0):
+    rng = np.random.default_rng(seed)
+    out = []
+    for _ in range(n // (nfft + cp) + 1):
+        X = np.zeros(nfft, complex)
+        X[4:nfft - 4] = QPSK[rng.integers(0, 4, nfft - 8)]
+        t = np.fft.ifft(X) * np.sqrt(nfft)
+        out.append(np.concatenate((t[-cp:], t)))
+    x = np.concatenate(out)[:n]
+    return (x + 0.01 * (rng.standard_normal(n) + 1j * rng.standard_normal(n))).astype(np.complex64)
+
+@need_rpps
+def test_waveform_id_names_a_single_carrier_by_its_cumulants():
+    model, src, plots = setup("Waveform ID")
+    frame, = settled(model, src, plots, capture(tone=False))
+    readout = dict(frame.readout)
+    assert readout["Is"] == "QPSK, a single carrier"
+    rows = {r.cells[0]: r.cells[1] for r in frame.table.rows}
+    assert rows["Cumulants"].startswith("QPSK") and rows["Lock"].startswith("qpsk at 50 kBd")
+    assert frame.axes[0].xfmt == "freq" and frame.axes[0].traces
+
+@need_rpps
+def test_waveform_id_finds_ofdm_by_its_cyclic_prefix():
+    model, src, plots = one("Waveform ID", {"dsp_freq": "0", "dsp_bw": "900k"})
+    frame, = settled(model, src, plots, ofdm(BLOCK * 4), blocks=2)
+    assert dict(frame.readout)["Is"].startswith("OFDM")
+    rows = {r.cells[0]: r.cells[1] for r in frame.table.rows}
+    assert "Tu 64.0" in rows["OFDM"] and "Lock" not in rows # not a single carrier: no lock tried
+
+@need_rpps
+def test_hopping_finds_the_hop_set_and_dwell():
+    rng = np.random.default_rng(3)
+    n, dwell = BLOCK * 4, 2000
+    f = np.repeat(rng.choice(np.arange(-4, 4) * 50e3, n // dwell + 1), dwell)[:n]
+    x = modulated(QPSK, n, 10e3, 0) * np.exp(2j * np.pi * np.cumsum(f) / FS)
+    x = (x + 0.01 * (rng.standard_normal(n) + 1j * rng.standard_normal(n))).astype(np.complex64)
+    model, src, plots = setup("Hopping")
+    frame, = settled(model, src, plots, x)
+    readout = dict(frame.readout)
+    assert readout["Hopping"] == "yes"
+    assert readout["Spacing"].startswith(("49.", "50.")) and readout["Dwell"].startswith("2.0")
+    assert frame.axes[0].image is not None and frame.axes[0].bands # dwells boxed on the short-time spectrum
+    assert len(frame.table.rows) >= 6 and len(frame.axes[1].bands) == len(frame.table.rows) # visits per channel
+
+@need_rpps
+def test_hopping_says_when_the_block_is_too_short():
+    model, src, plots = one("Hopping", nfft="2048")
+    model.samples = capture()[:4000]
+    src.tick()
+    frame = plots[0].update()
+    assert "shorter than 4 FFTs" in dict(frame.readout)["Hopping"]
+
+def tdma(bursts=10, period=5000, sym=300, sps=10, f0=50e3, seed=4):
+    """QPSK bursts sharing a 48 symbol preamble, one every `period` samples"""
+    from rpps.signal.filters.shaping import rrc_pulse
+    rng = np.random.default_rng(seed)
+    pre = QPSK[rng.integers(0, 4, 48)]
+    x = np.zeros(bursts * period, complex)
+    h = rrc_pulse(np.arange(-8 * sps, 8 * sps + 1) / sps, 0.35)
+    for k in range(bursts):
+        s = np.concatenate((pre, QPSK[rng.integers(0, 4, sym)]))
+        up = np.zeros(len(s) * sps, complex)
+        up[::sps] = s
+        w = np.convolve(up, h, "same") * np.exp(1j * rng.uniform(0, 2 * np.pi))
+        x[k * period + 100:k * period + 100 + len(w)] += w
+    x = x * np.exp(2j * np.pi * f0 * np.arange(len(x)) / FS)
+    return (x + 0.01 * (rng.standard_normal(len(x)) + 1j * rng.standard_normal(len(x)))).astype(np.complex64)
+
+@need_rpps
+def test_bursts_demodulates_each_burst_and_finds_the_frame():
+    model, src, plots = one("Bursts", {"dsp_freq": "50k", "dsp_bw": "160k"})
+    frame, = settled(model, src, plots, tdma(), blocks=1, block=50000) # 10 bursts a block
+    readout = dict(frame.readout)
+    assert readout["Mod"] == "qpsk" and readout["Baud"].startswith("100") and readout["Frame"] == "5 ms"
+    ok = [r for r in frame.table.rows if r.cells[4] != "-"]
+    assert len(ok) >= 2 and all(float(r.cells[4].rstrip("%")) < 15 for r in ok) # EVM
+    power, iq = frame.axes
+    assert power.bands and iq.square and {t.name for t in iq.traces} == {"data", "preamble"}
+
+@need_rpps
+def test_bursts_says_why_on_a_continuous_signal():
+    model, src, plots = setup("Bursts")
+    frame, = settled(model, src, plots, capture(tone=False), blocks=2)
+    assert "Analysis" in dict(frame.readout) and frame.axes[0].traces # rpps' reason, and the power it looked at
+
+def framed(n_frames=400, period=200, uw_len=24, sps=8, f0=100e3, seed=5):
+    from rpps.signal.filters.shaping import rrc_pulse
+    rng = np.random.default_rng(seed)
+    uw = QPSK[rng.integers(0, 4, uw_len)]
+    s = np.concatenate([np.concatenate((uw, QPSK[rng.integers(0, 4, period - uw_len)])) for _ in range(n_frames)])
+    up = np.zeros(len(s) * sps, complex)
+    up[::sps] = s
+    x = np.convolve(up, rrc_pulse(np.arange(-8 * sps, 8 * sps + 1) / sps, 0.35), "same")
+    x = x * np.exp(2j * np.pi * f0 * np.arange(len(x)) / FS)
+    return (x + 0.02 * (rng.standard_normal(len(x)) + 1j * rng.standard_normal(len(x)))).astype(np.complex64)
+
+@need_rpps
+def test_frame_raster_finds_the_period_and_unique_word_over_blocks():
+    model, src, plots = one("Frame Raster", interval=0) # every block
+    frame, = settled(model, src, plots, framed(), blocks=10)
+    readout = dict(frame.readout)
+    assert readout["Period"].startswith("200 symbols") and readout["Unique word"].startswith("24 symbols")
+    assert int(readout["Symbols"]) > 2 * BLOCK / 8 # more than one block's: gathered over contiguous blocks
+    raster, coherence = frame.axes
+    assert raster.image is not None and raster.xmax == 200
+    assert np.all(np.asarray(coherence.traces[0].y)[:24] > 0.9) # the unique word, at the start of every row
+
+@need_rpps
+def test_frame_raster_analyses_once_an_interval_of_signal():
+    model, src, plots = one("Frame Raster", interval=0.03) # 30 ms: every third 12.5 ms block
+    sig = framed()
+    runs = []
+    for i in range(10):
+        model.samples = sig[i * BLOCK:(i + 1) * BLOCK]
+        src.tick()
+        plots[0].update()
+        plots[0].job.wait(60)
+        runs.append(plots[0].job.runs)
+    started = np.flatnonzero(np.diff([0, *runs]))
+    assert len(started) <= 5 and np.all(np.diff(started) >= 3) # not every block: 37.5 ms of signal between them
+
+@need_rpps
+def test_signal_profile_captures_then_lists_the_steps():
+    model, src, plots = one("Signal Profile", capture=0.04)
+    sig = capture(tone=False)
+    model.samples = sig[:BLOCK]
+    src.tick()
+    first = plots[0].update()
+    assert dict(first.readout)["Status"].startswith("capturing") and first.axes[0].traces # the block meanwhile
+    frame, = settled(model, src, plots, sig, blocks=4)
+    steps = [r.cells[2] for r in frame.table.rows]
+    assert steps[:3] == ["", "channel", "acquire"] # a profile's head row, then its steps
+    assert "QPSK" in frame.table.rows[2].cells[3] and frame.axes[0].bands
+    plots[0].act("run") # again
+    assert dict(plots[0].update().readout)["Status"].startswith("capturing")
+
+@need_rpps
+def test_a_job_drops_the_result_of_an_old_selection():
+    import threading
+
+    from pyspecan.plots.dsp.common import Job
+    job, go = Job("test"), threading.Event()
+    job.submit(lambda: go.wait(5) and "old")
+    assert job.busy and not job.submit(lambda: "busy")
+    job.clear()
+    go.set()
+    job.wait(5)
+    assert job.result is None # finished unseen
+    job.submit(lambda: (_ for _ in ()).throw(ValueError("why not")))
+    job.wait(5)
+    assert job.error == "why not" and dict(job.readout())["Analysis"] == "why not"

@@ -69,6 +69,12 @@ class Context:
         i = int(np.clip(round((freq - self.freqs[0]) / self.df), 0, self.n - 1))
         return float(self.freqs[i]), float(self.trace[i])
 
+    def level_value(self, level: float, noise: bool = False) -> tuple[str, float, str]:
+        """("level", the level, its unit) as level_text shows it, for Result.values"""
+        if noise and not units.is_density(self.unit):
+            return ("level", float(level - 10 * np.log10(self.plot.rbw(self.n))), DENSITY_UNIT[self.unit])
+        return ("level", float(level), self.unit)
+
     def level_text(self, level: float, noise: bool = False) -> str:
         """A level in the plot's unit, `noise` shows it per Hz (divided by the RBW)"""
         if noise and not units.is_density(self.unit):
@@ -81,6 +87,7 @@ class Result:
     marks: list[Marker] = field(default_factory=list)
     bands: list[Band] = field(default_factory=list)
     at: tuple[float, float] | None = None # (freq, level), what a delta can refer to
+    values: list[tuple[str, float, str]] = field(default_factory=list) # (name, number, unit): what a trend plots
 
 class MarkerKind:
     NAME = ""
@@ -109,7 +116,8 @@ class Point(MarkerKind):
         if ctx.outside(want, want):
             return Result([[fmt_hz(want), "outside span"]])
         f, lvl = ctx.at(want)
-        return Result([[fmt_hz(f), ctx.level_text(lvl, p["noise"])]], [Marker(f, lvl, mid, self.COLOR, owner=mid, edit="freq")], at=(f, lvl))
+        return Result([[fmt_hz(f), ctx.level_text(lvl, p["noise"])]], [Marker(f, lvl, mid, self.COLOR, owner=mid, edit="freq")], at=(f, lvl),
+                      values=[ctx.level_value(lvl, p["noise"])])
 
 @marker_kind("peak")
 class Peak(MarkerKind):
@@ -154,7 +162,8 @@ class Peak(MarkerKind):
                 return Result([[fmt_hz(f), "outside span"]], line)
             lvl = float(np.interp(f, ctx.freqs, ctx.trace)) # at its frequency, whatever the trace does around it
         mark = Marker(f, lvl, mid, self.COLOR, owner=mid, edit="" if p["track"] else "freq")
-        return Result([[fmt_hz(f), ctx.level_text(lvl, p["noise"])]], [mark, *line], at=(f, lvl))
+        return Result([[fmt_hz(f), ctx.level_text(lvl, p["noise"])]], [mark, *line], at=(f, lvl),
+                      values=[ctx.level_value(lvl, p["noise"]), ("freq", f, "Hz")])
 
     def act(self, ctx, mid, p, action):
         found = self._peaks(ctx, p)
@@ -193,7 +202,7 @@ class Delta(MarkerKind):
         ref = ctx.found.get(str(p["ref"]).strip().upper())
         if ref is None:
             return Result([[fmt_hz(f), f"no marker {p['ref']}"]], mark, at=(f, lvl))
-        return Result([[fmt_hz(f - ref[0]), f"{lvl - ref[1]:+.2f} dB"]], mark, at=(f, lvl))
+        return Result([[fmt_hz(f - ref[0]), f"{lvl - ref[1]:+.2f} dB"]], mark, at=(f, lvl), values=[("delta", lvl - ref[1], "dB")])
 
 class _Band(MarkerKind):
     """Measurements over a frequency span"""
@@ -215,7 +224,8 @@ class ChannelPower(_Band):
         return Result([
             [f"{fmt_hz(c)} / {fmt_hz(bw)}", f"{units.lin_to_db(power):.2f} {POWER_UNIT[u]}"],
             ["", f"{units.lin_to_db(power / bw):.2f} {DENSITY_UNIT[u]}"],
-        ], [Marker(c, 0, mid, self.COLOR, kind="vline")], [Band(c - bw/2, c + bw/2, self.COLOR, label=mid, owner=mid, edit=("freq", "bw"))])
+        ], [Marker(c, 0, mid, self.COLOR, kind="vline")], [Band(c - bw/2, c + bw/2, self.COLOR, label=mid, owner=mid, edit=("freq", "bw"))],
+            values=[("power", float(units.lin_to_db(power)), POWER_UNIT[u])])
 
 @marker_kind("acpr")
 class ACPR(_Band):
@@ -237,15 +247,18 @@ class ACPR(_Band):
         lo, hi = ctx.edges
         bands = [Band(c - bw/2, c + bw/2, self.COLOR, label=mid, owner=mid, edit=("freq", "bw"))]
         rows = [[f"{fmt_hz(c)} / {fmt_hz(bw)}", f"{units.lin_to_db(main):.2f} {POWER_UNIT[ctx.unit]}"]]
+        values = [("power", float(units.lin_to_db(main)), POWER_UNIT[ctx.unit])]
         for o, l, u in zip(offsets, lower, upper, strict=True):
             for sign, dbc in ((-1, l), (1, u)):
                 centre = c + sign * o
                 inside = centre - adj/2 >= lo and centre + adj/2 <= hi # a channel cut by the span would read low
                 label = ("-" if sign < 0 else "+") + fmt_hz(o)
                 rows.append([label, f"{dbc:.2f} dBc" if inside else "outside span"])
+                if inside:
+                    values.append((label, float(dbc), "dBc"))
                 if lo <= centre <= hi:
                     bands.append(Band(centre - adj/2, centre + adj/2, BLUE, label=label))
-        return Result(rows, [Marker(c, 0, mid, self.COLOR, kind="vline")], bands)
+        return Result(rows, [Marker(c, 0, mid, self.COLOR, kind="vline")], bands, values=values)
 
 @marker_kind("obw")
 class OBW(_Band):
@@ -273,6 +286,7 @@ class OBW(_Band):
         bands.append(Band(f_lo, f_hi, self.COLOR, label=mid))
         marks = [Marker(f_lo, kind="vline", color=self.COLOR), Marker(f_hi, kind="vline", color=self.COLOR)]
         rows = [[f"{p['pct']:g}%", fmt_hz(f_hi - f_lo)]]
+        values = [("obw", float(f_hi - f_lo), "Hz")]
         sel = np.flatnonzero((freqs >= lo) & (freqs <= hi))
         if len(sel) and total > 0:
             centroid = float(np.sum(freqs[sel] * dens[sel]) / np.sum(dens[sel]))
@@ -281,7 +295,7 @@ class OBW(_Band):
             bands.append(Band(x_lo, x_hi, YELLOW, alpha=0.08))
             rows += [["centroid", f"{fmt_hz(centroid - c)} from center"], [f"-{p['xdb']:g} dB", fmt_hz(x_hi - x_lo)]]
         rows.append(["total", f"{units.lin_to_db(total):.2f} {POWER_UNIT[ctx.unit]}"])
-        return Result(rows, marks, bands)
+        return Result(rows, marks, bands, values=values)
 
 def _power(ctx, lvl: float) -> float:
     """A tone's level in the plot's power unit: a density unit reads a tone low by the RBW"""
@@ -327,7 +341,7 @@ class PeakTable(MarkerKind):
             at = at or (f, lvl)
             rows.append([f"P{k} {fmt_hz(f)}", ctx.level_text(lvl)])
             marks.append(Marker(f, lvl, f"{mid}.{k}", self.COLOR))
-        return Result(rows, marks, at=at)
+        return Result(rows, marks, at=at, values=[ctx.level_value(at[1]), ("freq", at[0], "Hz")])
 
 @marker_kind("harmonics")
 class Harmonics(MarkerKind):
@@ -361,9 +375,11 @@ class Harmonics(MarkerKind):
             total += 10 ** ((lvl - l0) / 10)
             rows.append([f"H{n} {fmt_hz(f)}", f"{lvl - l0:+.2f} dBc"])
             marks.append(Marker(f, lvl, f"H{n}", self.COLOR))
+        values = [ctx.level_value(l0)]
         if total:
             rows.append(["THD", f"{100 * np.sqrt(total):.3g}% ({10 * np.log10(total):.2f} dBc)"])
-        return Result(rows, marks, at=(f0, l0))
+            values.append(("THD", float(10 * np.log10(total)), "dBc"))
+        return Result(rows, marks, at=(f0, l0), values=values)
 
 @marker_kind("toi")
 class TOI(MarkerKind):
@@ -399,7 +415,7 @@ class TOI(MarkerKind):
             marks.append(Marker(f, lvl, name.replace("IM3 ", "I"), self.COLOR))
         if ips:
             rows.append(["TOI", f"{min(ips):.2f} {u}"])
-        return Result(rows, marks)
+        return Result(rows, marks, values=[("TOI", float(min(ips)), u)] if ips else [])
 
 @marker_kind("limit")
 class Limit(MarkerKind):
@@ -432,7 +448,7 @@ class Limit(MarkerKind):
         if not ok and bands:
             bands[0] = Band(lo, hi, self.COLOR, 0.18, owner=mid, edit=("freq", "span"))
         verdict = f"PASS, {margin:.2f} dB margin" if ok else f"FAIL by {-margin:.2f} dB"
-        return Result([[fmt_hz(f), verdict]], line + [Marker(f, worst, "worst", self.COLOR)], bands)
+        return Result([[fmt_hz(f), verdict]], line + [Marker(f, worst, "worst", self.COLOR)], bands, values=[("margin", float(margin), "dB")])
 
 class MarkerSet:
     """The markers of one plot, or of every plot of a link, M1, M2, ... in the order they were added.
@@ -525,12 +541,13 @@ class MarkerSet:
             raise ValueError(f"{item['kind']} has no action {action!r}, it has: {', '.join(kind.ACTIONS) or 'none'}")
         kind.act(Context(plot, trace, freqs), str(mid).upper(), item["params"], action)
 
-    def evaluate(self, plot, trace: np.ndarray, freqs: np.ndarray) -> tuple[list[Marker], list[Band], Table | None]:
-        """Markers and bands to draw and the table, for `plot`'s latest trace"""
+    def evaluate(self, plot, trace: np.ndarray, freqs: np.ndarray) -> tuple[list[Marker], list[Band], Table | None, dict]:
+        """Markers and bands to draw, the table, and the numbers measured ({"M1 level": (value, unit)}), for `plot`'s
+        latest trace"""
         if not self.items:
-            return [], [], None
+            return [], [], None, {}
         ctx = Context(plot, trace, freqs)
-        marks, bands, rows = [], [], []
+        marks, bands, rows, values = [], [], [], {}
         for mid, it in self.items.items():
             kind = self._kind(it["kind"])
             res = kind.evaluate(ctx, mid, it["params"])
@@ -538,6 +555,9 @@ class MarkerSet:
                 ctx.found[mid] = res.at
             marks += res.marks
             bands += res.bands
+            for name, v, unit in res.values:
+                if np.isfinite(v):
+                    values[f"{mid} {name}"] = (float(v), unit)
             for k, cells in enumerate(res.rows):
                 rows.append(TableRow(mid if k == 0 else "", [mid, it["kind"], *cells] if k == 0 else ["", "", *cells]))
-        return marks, bands, Table(COLUMNS, rows)
+        return marks, bands, Table(COLUMNS, rows), values

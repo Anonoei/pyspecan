@@ -20,6 +20,23 @@ even when it is installed).
 - "Cyclic Spectrum": the spectral correlation against cycle frequency and the spectral coherence image, with the
   symbol rate and carrier symmetry found blind (no lock needed).
 - "Symbol Table": the decided symbols.
+- "Waveform ID": what kind of signal the selection is, each of RPPS's tests in a table with why it holds: tones,
+  OFDM (subcarrier spacing, cyclic prefix and the system they fit), bursts (duty and period), the envelope statistic;
+  then the FSK parameters of a constant envelope signal, or the constellation a single carrier's symbols fit by their
+  higher order cumulants.
+- "Hopping": a frequency hopper over the whole span, its dwells boxed on a short-time spectrum, the visits to each
+  channel since the last reset, and the hop set's spacing, the dwell time and the hop rate.
+- "Bursts": TDMA bursts, each acquired on the preamble they share and demodulated on its own, boxed on the power
+  against time by slot, their symbols as one constellation, and per burst its start, length, carrier offset, EVM,
+  frame and slot.
+- "Frame Raster": the locked symbols wrapped at the period they repeat with, one frame a row from its unique word,
+  colored by the decided symbol (fixed fields show as stripes), with each position's coherence. The lock is followed
+  block by block, each block's symbols joining the last's with none dropped or repeated, and the last `symbols` kept,
+  so frames longer than a block show; a gap or a likely slip starts them over. `interval` searches less often (seconds
+  of signal between searches) for a long record.
+- "Signal Profile": every step that processes the selection (or every signal found), as far as RPPS's analysis tells:
+  channel, rate and modulation, timing, carrier, then the code and framing or a profile that decodes it, with what is
+  left unsolved and its likeliest candidates. It captures `capture` seconds, then profiles them; "run" does it again.
 - "Decode": a signal through one of RPPS's profiles (ADS-B, BLE advertising, AX.25, DVB-S/S2, CCSDS, LTE and NR to
   SIB1...): its messages as a table, newest first (time, kind, check, framing fields, payload in hex), and how many
   each block gave. `profile` picks one; left blank, the table lists them and which the sample rate can run. It decodes
@@ -38,10 +55,21 @@ python3 -m pyspecan -v web -f <file> -F cf32 -fs 1M \
 The plots of a layout share one signal search and one lock per block, so several DSP plots cost about as much as one
 (see [`pyspecan.plots.dsp`](../api/plots.md#pyspecan.plots.dsp)).
 
+Waveform ID, Hopping, Bursts, Frame Raster and Signal Profile run RPPS's analysis in the background: each render hands
+the newest block to it when the last run is done and draws the latest result, so the view stays live while a result
+lags by about one run. The readout says when it is still analysing, how long the last run took, and why it failed.
+
 ## From Python
 
 A QPSK signal and an FM carrier: the `signals` marker finds both, the Constellation locks to the one `dsp_freq` names.
 
 ```python
 --8<-- "examples/dsp.py"
+```
+
+A TDMA signal: Waveform ID finds the bursts and their period, Bursts demodulates each one. A script waits for the
+background analysis (`plot.job.wait()`) before reading a frame.
+
+```python
+--8<-- "examples/bursts.py"
 ```

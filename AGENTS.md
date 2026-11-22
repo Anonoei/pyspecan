@@ -57,7 +57,7 @@ Full picture: the `pyspecan` and `pyspecan.plots` docstrings.
 | `src/pyspecan/<pkg>/__init__.py` | **the package's documentation** (its docstring), rendered in the API reference |
 | `src/pyspecan/model/` | `Model`, sinks (`sink/file.py`, `live.py`, `tcpiq.py`) |
 | `src/pyspecan/plots/` | every plot (`psd`, `spg`, `pst`, `fft`, `iq`, `scope`, `measure`, `analog`, `timefreq`, `sweep`), `markers`, `settings`, `layout`, `export` |
-| `src/pyspecan/plots/dsp/` | plots on rpps: `analyzer` (shared search and lock), `signals`, `analog`, `demod`, `quality`, `channel`, `decode` |
+| `src/pyspecan/plots/dsp/` | plots on rpps: `analyzer` (shared search and lock), `common` (`DSPPlot`, the background `Job`), `signals`, `analog`, `demod`, `quality`, `channel`, `identify`, `structure`, `decode` |
 | `src/pyspecan/measure/` | numpy-only measurement math |
 | `src/pyspecan/controller/`, `view/` | `CUI`, `WEB` (`wire.py`: binary frame messages; `static/app.js`: the page), `tkGUI` |
 | `examples/` | self-checking scripts; the guides embed them; `tests/test_examples.py` runs them |

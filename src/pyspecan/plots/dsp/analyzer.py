@@ -8,7 +8,8 @@ Every plot of a source asks the same `Analyzer` (`analyzer(source)`), which work
 - `selection(freq, bw)`: the signal the "Analysis" globals name (`rpps.analysis.measure_band`), or the strongest one
   found (sticky: it stays the selection while it is there, so a close runner-up does not make it jump)
 - `baseband(sel)`: the selection shifted to 0 Hz, filtered and decimated (`Signal.channel`), the filter state
-  carried from block to block while they are contiguous, and a short history of it
+  carried from block to block while they are contiguous, and a short history of it; `block(sel)`: all of this
+  block's (for the analyses that need more than the history: bursts, waveform)
 - `lock(sel, mod, baud)`: its symbols (`rpps.sync.Lock`): a full search once, then followed block by block, searched
   again when rpps calls the lock stale (the signal changed rate, modulation or went away)
 
@@ -89,6 +90,7 @@ class Analyzer:
         self._bb_stream = None
         self._bb_seq = None
         self._bb = np.zeros(0, np.complex64)
+        self._bb_block = np.zeros(0, np.complex64) # all of this block's baseband
         self._bb_Fs = 0.0
         self._locks: dict = {}  # this block's Lock per lock key
         self._found: dict = {}  # lock key -> the rpps.sync.Lock followed from block to block
@@ -166,9 +168,16 @@ class Analyzer:
         x = np.asarray(out.data, dtype=np.complex64)
         if not go_on:
             x = x[ch.settle:] # the filters starting up
+        self._bb_block = x
         self._bb = np.concatenate((self._bb, x))[-HISTORY:]
         self._bb_key, self._bb_seq = key, src.seq
         return self._bb, self._bb_Fs
+
+    def block(self, sel: Selection) -> tuple[np.ndarray, float]:
+        """(the selection at baseband, its rate): all of this block's samples (after the filters settle when the
+        channel starts over)"""
+        _, Fs = self.baseband(sel)
+        return self._bb_block, Fs
 
     # --- symbols --- #
     def lock(self, sel: Selection, mod: str = "auto", baud_text: str = "") -> Lock | None:

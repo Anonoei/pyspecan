@@ -10,6 +10,8 @@ plots that analyse the one selected:
 | `demod` | Constellation, Eye Diagram, 3D Constellation, Vector Diagram, Constellation Density, Symbol Table |
 | `quality` | Error Vector, Error Vector Spectrum |
 | `channel` | Network Analyzer, Impulse Response, Cyclic Spectrum |
+| `identify` | Waveform ID (what kind of signal: tones, OFDM, bursts, constellation, FSK), Signal Profile (every step that processes it) |
+| `structure` | Hopping (a hopper's dwells and hop set), Bursts (TDMA bursts demodulated one by one), Frame Raster (the symbols' frame and unique word) |
 | `decode` | Decode: a signal through one of rpps' profiles, its messages as a table |
 
 The plots of one view share one `Analyzer` per `Source` (`analyzer.analyzer(source)`, used by `common.DSPPlot`): one signal search a block (`Analyzer.survey`),
@@ -17,13 +19,18 @@ the `Selection` (the signal at the "Analysis" globals `dsp_freq` / `dsp_bw`, or 
 and its `Lock` (modulation, symbol rate and symbols, on `rpps.sync.Lock`): found once, followed block by block, and
 searched again when it goes stale. So a layout of several DSP plots costs about one search and one lock.
 
+rpps' blind analyses that take a second or more (waveform tests, burst demodulation, frame search, hopping, signal
+profiles) run on a thread of their own (`common.Job`): the plot hands the newest block to it whenever the last run is
+done and draws the latest result meanwhile, so the view stays live and the result lags by about one run.
+
 Imported by pyspecan.plots only when rpps is installed (settings.HAVE_RPPS, `PYSPECAN_NO_RPPS=1` hides it); rpps itself
 is imported when they first run, so `import pyspecan` stays light. Nothing outside this package imports rpps.
 """
 # isort: off
 # the signals marker kind, then the plots by category (the order views list them in)
-from . import analyzer, signals, common, analog, demod, quality, channel, decode
+from . import analyzer, signals, common, analog, demod, quality, channel, identify, structure, decode
 # isort: on
 from .analyzer import Analyzer, Lock, Selection
 
-__all__ = ["analyzer", "signals", "common", "analog", "demod", "quality", "channel", "decode", "Analyzer", "Lock", "Selection"] # importing the modules registers them
+__all__ = ["analyzer", "signals", "common", "analog", "demod", "quality", "channel", "identify", "structure", "decode",
+           "Analyzer", "Lock", "Selection"] # importing the modules registers them

@@ -119,10 +119,10 @@ def test_plot_types_follow_the_views_features(capture):
     c = make(capture)
     c.FEATURES = {"line"}
     from pyspecan.plots.settings import HAVE_RPPS
-    dsp = ["Analog Demod", "Error Vector", "Error Vector Spectrum", "Network Analyzer", "Impulse Response", "Decode"] \
-        if HAVE_RPPS else [] # on rpps
+    dsp = ["Analog Demod", "Error Vector", "Error Vector Spectrum", "Network Analyzer", "Impulse Response",
+           "Waveform ID", "Signal Profile", "Decode"] if HAVE_RPPS else [] # on rpps
     assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "Scope", "Frequency vs Time", "CCDF", "Power vs Time", "Occupancy",
-                            "Phase Noise", *dsp] # no Sweep: a file is no radio
+                            "Marker Trend", "Autocorrelation", "Phase Noise", *dsp] # no Sweep: a file is no radio
     with pytest.raises(ValueError):
         c.add_plot("Spectrogram")
 
