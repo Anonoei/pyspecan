@@ -25,7 +25,7 @@ class AnalogDemod(Plot):
               'modulating tone and SINAD when one tone holds most of it',
         use=('Measure FM deviation, PM phase deviation or AM depth', "Check a modulating tone's frequency and distortion (SINAD)",
              'Listen in on SSB by eye: its audio against time and its spectrum'),
-        cost=15, # the whole span demodulated; a narrower bandwidth costs less
+        cost=9, # the whole span demodulated
     )
     SETTINGS = (
         Setting("mode", "Mode", "select", default="FM", options=MODES, reset=True, group="Demod", help="what is demodulated"),

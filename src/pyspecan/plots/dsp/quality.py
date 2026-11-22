@@ -29,7 +29,7 @@ class ErrorVector(DSPPlot):
             'Find the symbols with large errors (bursts of interference)',
             'Tell amplitude problems from phase problems',
         ),
-        cost=16,
+        cost=6,
     )
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("count", "Symbols", "int", default=500, min=16, max=20000, step=100, group="Display", help="latest symbols shown"),
@@ -70,7 +70,7 @@ class ErrorVectorSpectrum(DSPPlot):
              'pulse), its spectrum averaged',
         shows="The error's spectrum under the signal's, and the error to signal ratio in band",
         use=('Find interference or spurs hidden under the signal', 'See filter edges or a tilt causing errors'),
-        cost=20,
+        cost=10,
     )
     SETTINGS = DSPPlot.SETTINGS + (SETTING_DECAY.with_(default=0.7),)
 
