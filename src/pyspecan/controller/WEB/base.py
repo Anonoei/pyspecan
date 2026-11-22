@@ -159,14 +159,18 @@ class Controller(_Controller):
             else:
                 return f"unknown message type {kind!r}"
         except Exception as e: # also what the radio library raises (Busy, NotController...)
-            self.log.debug("bad message %s: %s", msg, e)
+            self.log.warning("client message %s failed: %s: %s", msg, type(e).__name__, e)
             self.state_changed() # resync the client's inputs
             return f"{type(e).__name__}: {e}"
         self.state_changed()
         return None
 
+    QUIET_PLOT_OPS = ("set", "marker_set", "marker_act") # every slider drag, every marker move: logged at debug
     def plot_command(self, op: str, msg: dict):
-        self.log.trace("plot_command(%s, %s)", op, msg)
+        if op in self.QUIET_PLOT_OPS:
+            self.log.debug("plot %s %s", op, msg)
+        else:
+            self.log.info("plot %s %s", op, {k: v for k, v in msg.items() if k not in ("type", "op", "text")})
         with self.lock:
             if op == "add":
                 self.add_plot(msg["name"], msg.get("row"))

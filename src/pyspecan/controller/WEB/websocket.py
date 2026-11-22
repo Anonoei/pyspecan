@@ -27,6 +27,7 @@ class WebSocketManager:
         self.last_ack: dict[int, float] = {}
         self.last_seq: dict[int, int] = {}   # the last frame sent to the client
         self.visible: dict[int, bool] = {}
+        self.peers: dict[int, tuple[str, float]] = {} # the client's address, when it connected (monotonic)
         self.loop: asyncio.AbstractEventLoop | None = None
         self._ids = itertools.count()
         self._seq = itertools.count(1)
@@ -41,14 +42,22 @@ class WebSocketManager:
         self.last_ack[client_id] = time.monotonic()
         self.last_seq[client_id] = -1
         self.visible[client_id] = True
-        self.log.info("client %s connected", client_id)
+        c = getattr(websocket, "client", None)
+        peer = f"{c.host}:{c.port}" if c is not None else "?"
+        self.peers[client_id] = (peer, time.monotonic())
+        headers = getattr(websocket, "headers", None)
+        agent = headers.get("user-agent", "") if headers is not None else ""
+        self.log.info("client %s connected from %s (%d connected)", client_id, peer, len(self.connections))
+        self.log.debug("client %s: %s", client_id, agent or "no user agent")
         return client_id
 
     def disconnect(self, client_id: int):
         for d in (self.in_flight, self.last_ack, self.last_seq, self.visible):
             d.pop(client_id, None)
+        peer, since = self.peers.pop(client_id, ("?", time.monotonic()))
         if self.connections.pop(client_id, None) is not None:
-            self.log.info("client %s disconnected", client_id)
+            self.log.info("client %s (%s) disconnected after %.0f s (%d connected)", client_id, peer,
+                          time.monotonic() - since, len(self.connections))
 
     def ack(self, client_id: int):
         """The client drew a frame"""
@@ -58,6 +67,8 @@ class WebSocketManager:
 
     def set_visible(self, client_id: int, visible: bool):
         if client_id in self.visible:
+            if self.visible[client_id] != bool(visible):
+                self.log.debug("client %s %s", client_id, "is shown" if visible else "is hidden (gets no frames)")
             self.visible[client_id] = bool(visible)
             if visible: # back from the background: whatever it had in flight was never drawn
                 self.in_flight[client_id] = 0
@@ -77,7 +88,8 @@ class WebSocketManager:
                 await websocket.send_bytes(message)
             else:
                 await websocket.send_json(message)
-        except Exception: # client went away mid-send, like in broadcast
+        except Exception as e: # client went away mid-send, like in broadcast
+            self.log.debug("client %s: send failed: %s", client_id, e)
             self.disconnect(client_id)
             return False
         return True
@@ -88,7 +100,8 @@ class WebSocketManager:
                 await websocket.send_bytes(data)
             else:
                 await websocket.send_text(data)
-        except Exception: # client went away mid-send
+        except Exception as e: # client went away mid-send
+            self.log.debug("client %s: send failed: %s", client_id, e)
             self.disconnect(client_id)
             return False
         return True
@@ -104,6 +117,7 @@ class WebSocketManager:
                     if self.in_flight.get(client_id, 0) >= MAX_IN_FLIGHT:
                         if time.monotonic() - self.last_ack.get(client_id, 0) < STALL:
                             continue # still busy, this frame is skipped
+                        self.log.debug("client %s stopped acknowledging frames, sending again", client_id)
                         self.in_flight[client_id] = 0 # it stopped acknowledging, don't starve it
                     self.in_flight[client_id] = self.in_flight.get(client_id, 0) + 1
                     out = lean if lean is not None and self.last_seq.get(client_id) == seq - 1 else data

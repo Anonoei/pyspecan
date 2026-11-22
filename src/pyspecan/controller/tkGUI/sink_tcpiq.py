@@ -15,7 +15,9 @@ class SinkTcpIq(Sink):
         st = status.get("stream")
         if st is None:
             return
-        text = f"From {st['peer']}" if st["peer"] else "Waiting for a sender"
+        where = f"listening on {st['address']}" if st["listen"] else f"server {st['address']}"
+        text = (f"From {st['peer']} ({where})" if st["peer"]
+                else f"Waiting for a sender on {st['address']}" if st["listen"] else f"Waiting for {st['address']}")
         if st["measured"]:
             text += f", arriving at {rate_text(st['measured'])}"
             if st["mismatch"]:

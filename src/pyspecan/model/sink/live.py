@@ -268,6 +268,8 @@ class SinkLive(Sink):
             try:
                 x, meta = self.dev.read(n, timeout=timeout, meta=True, latest=not recording)
             except _err.Lost as e: # unplugged, failing, or its server is gone
+                if recording and e.samples is not None and len(e.samples): # what came before the end is recorded too
+                    self._record(e.samples.conj() if self.inverted else e.samples, e.meta)
                 raise ConnectionError(f"the radio is gone: {e} (use reconnect)") from None
             except _err.Timeout:
                 self.stalls += 1

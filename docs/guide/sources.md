@@ -18,6 +18,12 @@ How many samples a tick reads is set by `-st` / `--sweep_time` (ms of samples), 
 realtime frames and `--block_max` samples; `-n` is the FFT size and `--show` the ms between frames. See
 [`pyspecan.model`](../api/model.md).
 
+The command line logs what happens to stderr: where the web view serves and every browser that connects (with its
+address), commands and settings, files opened, a TCP IQ stream's address and its senders. `--log_level` sets how much
+(`trace`, `debug`, `info`, `warning`, `error`; `info` by default, `warning` with the console view, `debug` adds the web
+server's requests), and `--log_file <path>` also writes everything to a file. From Python, the loggers are under
+`pyspecan` like any library's.
+
 ## Files
 
 `-f` names the file and `-F` the sample format, by pysdrlib's names (`cf32`: two float32, a GNU Radio `.cfile`;
@@ -56,6 +62,7 @@ Live uses [pysdrlib](https://github.com/anonoei/pysdrlib) for hardware SDR abstr
 TCPIQ takes `--tcp_host`, `--tcp_port`, `--tcp_listen`, `--tcp_timeout`, and `--tcp_fmt`: what the sender sends
 (`cf32` by default, two float32 as GNU Radio sends; `ci16` two int16; `cu8` two uint8, an RTL-SDR's layout...).
 
-The views show who sends and the rate samples arrive at, flagged when it is more than 10% off `-fs`. The stream says
+The views show where the stream comes from (the address listened on, or the server), who sends and the rate samples
+arrive at, flagged when it is more than 10% off `-fs`; the log says when a sender connects, drops or takes over. The stream says
 nothing about its rate, so `-fs` stays what it is: "Use measured rate" (console: `fs measured`) takes the measured
 one, right only for a sender paced in real time (one replaying a file arrives at network speed).

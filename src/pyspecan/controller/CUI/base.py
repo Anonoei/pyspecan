@@ -155,7 +155,8 @@ class Controller(_Controller):
                 print(f"    {radio['record_error']}")
         stream = st.get("stream")
         if stream:
-            line = f"  stream from {stream['peer'] or '(waiting for a sender)'}"
+            where = f"listening on {stream['address']}" if stream["listen"] else f"server {stream['address']}"
+            line = f"  stream from {stream['peer'] or '(waiting for a sender)'} ({where})"
             if stream["measured"]:
                 line += f", arriving at {fmt_hz(stream['measured']).replace('Hz', 'S/s')}" + (" (not the declared rate: `fs measured` uses it)" if stream["mismatch"] else "")
             print(line)

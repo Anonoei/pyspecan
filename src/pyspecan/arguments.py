@@ -10,6 +10,7 @@ those back: the model (and its sink) never sees a view's options, nor a view the
 import argparse
 
 from .config import Sink, View
+from .logger import LEVELS
 from .utils import args
 
 LAYERS = ("model", "ui", "plots")
@@ -23,6 +24,10 @@ def define_args(view: View = View.tkGUI) -> argparse.ArgumentParser:
     parser.add_argument("-s", "--sink", type=Sink.normalize, default=None, choices=Sink.choices(),
                         help=f"sample source (default: {Sink.FILE.value}, {Sink.LIVE.value} with --list)")
     parser.add_argument("--list", action="store_true", help="list the radios that can be used and exit: those attached here, and with -d radiohost (or --servers) those of pysdrlib servers")
+    log = args.get_group(parser, "logging")
+    log.add_argument("--log_level", default=None, choices=LEVELS,
+                     help="what to log to stderr (default: info, warning with the cui view)")
+    log.add_argument("--log_file", default=None, help="also log everything (from trace on) to this file")
     mon = args.get_group(parser, "developer toggles")
     mon.add_argument("--mon_mem", action="store_true")
     mon.add_argument("--profile", action="store_true")

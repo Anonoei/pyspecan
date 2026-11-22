@@ -42,7 +42,7 @@ class Controller:
     FEATURES: set[str] = {LINE, SCATTER, IMAGE}
 
     def __init__(self, model: Model, view, **kwargs):
-        self.log = logger.new(type(self).__module__.rsplit(".", 1)[-1])
+        self.log = logger.new(type(self).__module__.removeprefix("pyspecan.").removesuffix(".base")) # controller.WEB
         self.model = model
         self.view = view
         self.source = Source(model)
@@ -273,8 +273,9 @@ class Controller:
             return state
 
     # --- commands --- #
+    QUIET_COMMANDS = ("next", "prev") # stepping block by block: logged at debug
     def command(self, cmd: str):
-        self.log.trace("command(%s)", cmd)
+        (self.log.debug if cmd in self.QUIET_COMMANDS else self.log.info)("command %s", cmd)
         if cmd == "stop":
             # not under the lock: the playback thread holds it for a whole block (a persistence plot takes long),
             # and waiting for it here freezes a view that calls this from its event loop. The flag is all it needs,
@@ -322,7 +323,7 @@ class Controller:
                 raise ValueError(f"unknown command {cmd!r}")
 
     def setting(self, key: str, value):
-        self.log.trace("setting(%s, %s)", key, value)
+        self.log.info("set %s = %s", key, value)
         with self.lock:
             if key == "fs" and str(value).strip().lower() == "measured": # a network stream's arrival rate, when asked
                 value = self.measured_fs()
@@ -411,6 +412,7 @@ class Controller:
             written = self.sink.start_record(path)
             self.playing = True
             self.message = f"recording to {written}"
+        self.log.info("recording to %s", written)
         self.state_changed()
         return written
 
@@ -420,6 +422,7 @@ class Controller:
             rec = self.sink.recording()
             self.sink.stop_record()
             self.message = f"recorded {rec['seconds']:g} s to {rec['path']}" if rec else ""
+        self.log.info("%s", self.message or "recording stopped")
         self.state_changed()
 
     def _need_file(self):
@@ -436,6 +439,7 @@ class Controller:
         self.sink.set_path(path)
         self.reset_plots()
         self.message = self.sink.note # what was assumed about it (its format), else nothing
+        self.log.info("opened %s", path)
 
     # --- playback --- #
     def step(self, forward=True) -> bool:
@@ -465,6 +469,7 @@ class Controller:
                 valid = self.step()
                 if not valid:
                     self.message = "END"
+                    self.log.info("playback stopped: %s", "end of the file" if self.sink.SEEKABLE else "no samples")
                 elif self.message == "END":
                     self.message = ""
             except Exception as e: # keep playback alive

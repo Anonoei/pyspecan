@@ -344,7 +344,8 @@ const fmtRate = (r) => r >= 1e6 ? `${(r / 1e6).toFixed(3)} MS/s` : r >= 1e3 ? `$
 function applyStream(st) {
     document.querySelectorAll(".stream-only").forEach((el) => (el.hidden = !st));
     if (!st) return;
-    const parts = [st.peer ? `From ${st.peer}` : "Waiting for a sender"];
+    const where = st.listen ? `listening on ${st.address}` : `server ${st.address}`;
+    const parts = [st.peer ? `From ${st.peer} (${where})` : st.listen ? `Waiting for a sender on ${st.address}` : `Waiting for ${st.address}`];
     if (st.measured) parts.push(`arriving at ${fmtRate(st.measured)}` + (st.mismatch ? `, not the ${fmtRate(st.declared)} declared` : ""));
     $("lbl-stream").textContent = parts.join(", ");
     $("lbl-stream").classList.toggle("danger", !!st.mismatch);

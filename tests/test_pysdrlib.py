@@ -156,6 +156,19 @@ def test_recording_keeps_every_sample_and_the_tuning(radio, tmp_path):
     f = pysdrlib.File(path)
     assert f.rate == 1e6 and f.freq == 100e6 and f.max_samp == written
 
+def test_a_recording_keeps_what_came_before_the_radio_went(radio, tmp_path):
+    sink = radio.sink
+    sink.start_record(str(tmp_path / "last.cf32"))
+    def read(count, **kw):
+        e = pysdrlib.err.Lost("unplugged")
+        e.samples = np.ones(300, np.complex64)
+        e.meta = RxMeta(index=0, count=300, freq=100e6, rate=1e6)
+        raise e
+    sink.dev.read = read
+    with pytest.raises(ConnectionError, match="gone"):
+        sink.next(1000)
+    assert sink.recorder.count == 300 # the partial read, written before saying the radio is gone
+
 def test_a_path_with_a_format_records_that_format(radio, tmp_path):
     sink = radio.sink
     path = sink.start_record(tmp_path / "x.cs16")
@@ -323,3 +336,33 @@ def test_a_sweep_is_not_offered_for_a_file_and_says_why_without_control(tmp_path
     c.step()
     assert "recording" in dict(c.latest[pid].readout)["Sweep"]
     tone_radio.sink.stop_record()
+
+def test_tcpiq_logs_where_it_listens_and_who_sends(caplog):
+    import socket
+    m = GetModel(Sink.TCPIQ)(tcp_listen=True, tcp_host="127.0.0.1", tcp_port=0, Fs="1M", nfft=256)
+    try:
+        st = m.sink.stream_status()
+        port = int(st["address"].rsplit(":", 1)[1])
+        assert st["listen"] and port > 0 and st["address"] == f"127.0.0.1:{port}"
+        with caplog.at_level("INFO", logger="pyspecan"):
+            with socket.create_connection(("127.0.0.1", port)) as conn:
+                conn.sendall(np.zeros(4096, np.complex64).tobytes())
+                end = time.monotonic() + 5
+                while time.monotonic() < end and "connected" not in caplog.text:
+                    time.sleep(0.05)
+                me = f"{conn.getsockname()[0]}:{conn.getsockname()[1]}"
+            end = time.monotonic() + 5
+            while time.monotonic() < end and "dropped" not in caplog.text:
+                time.sleep(0.05)
+        assert f"sender {me} connected" in caplog.text and f"sender {me} dropped" in caplog.text
+    finally:
+        m.sink.close()
+
+def test_tcpiq_says_where_in_its_log_line(caplog):
+    with caplog.at_level("INFO", logger="pyspecan"):
+        m = GetModel(Sink.TCPIQ)(tcp_listen=True, tcp_port=0, Fs="1M", nfft=256)
+    try:
+        assert f"listening on {m.sink.address} (every interface)" in caplog.text
+        assert m.sink.address.startswith("0.0.0.0:") and not m.sink.address.endswith(":0")
+    finally:
+        m.sink.close()

@@ -171,3 +171,20 @@ def test_state_leaves_out_what_never_changes_after_the_first():
     lean = decode(Fake().state_message(full=False))["data"]
     assert full == Fake().get_state()
     assert lean == {"playing": True, "plots": {"p1": {"name": "PSD", "settings": {"vbw": 3}}}}
+
+def test_a_client_is_logged_with_its_address(caplog):
+    import asyncio
+    class Parent:
+        log = logging.getLogger("test.ws")
+    class Addr:
+        host, port = "10.1.2.3", 5555
+    c = Client()
+    c.client = Addr()
+    ws = WebSocketManager(Parent())
+    async def run():
+        with caplog.at_level("INFO", logger="test.ws"):
+            cid = await ws.connect(c)
+            ws.disconnect(cid)
+    asyncio.run(run())
+    assert "client 0 connected from 10.1.2.3:5555 (1 connected)" in caplog.text
+    assert "client 0 (10.1.2.3:5555) disconnected after 0 s (0 connected)" in caplog.text
