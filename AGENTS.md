@@ -14,11 +14,11 @@ every view draws the same frames.
 python tools/builder.py -s            # pip install -e ".[dev]"
 python -m pytest -q                   # the suite; Linux without a display: xvfb-run -a python -m pytest -q
 PYSPECAN_NO_RPPS=1 python -m pytest -q  # without the DSP plots (rpps is optional)
-ruff check src tests dev tools examples
+ruff check src tests tools examples
 python tools/builder.py -d            # docs: API pages + llms files (tools/gen_docs.py), then zensical build --strict
 python -m pyspecan -v web|tk|cui -s file|live|tcpiq -h   # the options of a view and sink
-python dev/benchmark.py [--plots a,b] # each plot's cost in PSDs
-python dev/screenshots.py             # media/*.png (playwright chromium, a display, pillow)
+python tools/benchmark.py [--plots a,b] # each plot's cost in PSDs
+python tools/screenshots.py           # media/*.png (playwright chromium, a display, pillow)
 ```
 
 The browser tests (`tests/test_web_*.py`) skip without playwright and a chromium (`python -m playwright install
@@ -63,7 +63,7 @@ Full picture: the `pyspecan` and `pyspecan.plots` docstrings.
 | `examples/` | self-checking scripts; the guides embed them; `tests/test_examples.py` runs them |
 | `docs/` | the site: guides (`docs/guide/`), gallery, examples index, contributing; `docs/api/` and `docs/llms*.txt` are generated |
 | `tests/` | the suite, flat; `conftest.py` puts `src/` on the path |
-| `dev/`, `tools/` | benchmark, screenshots, launchers; builder and docs generator |
+| `tools/` | builder, docs generator, benchmark, screenshots (and `demo.py`, their synthetic capture) |
 
 Imports run down the data path: `measure` knows nothing of plots; plots and the model import no view, controller or
 GUI library; only `plots/dsp/` imports rpps, inside the calls (`plots.settings.HAVE_RPPS` finds it without importing).
@@ -87,7 +87,7 @@ GUI library; only `plots/dsp/` imports rpps, inside the calls (`plots.settings.H
 - **Each layer gets only its own options** (`pyspecan.arguments`).
 - **rpps is optional:** run the suite with and without `PYSPECAN_NO_RPPS=1` when touching plots.
 - **I/O through pysdrlib:** formats, radios, servers, TCP IQ. A bug there is fixed in pysdrlib.
-- **A new plot's `ABOUT.cost`** comes from `dev/benchmark.py`; the benchmark flags a cost more than twice off.
+- **A new plot's `ABOUT.cost`** comes from `tools/benchmark.py`; the benchmark flags a cost more than twice off.
 - **No aliases:** a rename or move drops the old name and fixes the callers.
 - **Failures are never silent:** report them to the view's status and stderr (`Controller.report_error`).
 - **Docs live with what they describe:** concepts in the package / module docstring, usage in a guide that embeds an

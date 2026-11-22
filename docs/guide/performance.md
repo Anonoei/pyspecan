@@ -1,16 +1,16 @@
 # Performance
 
-`python dev/benchmark.py` times every plot alone on a synthetic capture and gives its cost in PSDs (a PSD on the same
+`python tools/benchmark.py` times every plot alone on a synthetic capture and gives its cost in PSDs (a PSD on the same
 blocks is 1.0), its median / p90 / first block in ms, and its share of real time (over 100% it can not keep up with
 live samples at that rate on its own).
 
 ```
-python dev/benchmark.py                            # every plot, the analyzer's defaults (1 MS/s, 1024 FFT, 50 ms blocks)
-python dev/benchmark.py --nfft 4096 --sweep 20     # other FFT size / block length
-python dev/benchmark.py --plots psd,scope,scalogram
-python dev/benchmark.py --markers                  # also what each marker kind adds to a PSD
-python dev/benchmark.py --set "Scope trig_mode=roll" --set "PSD points=0"
-python dev/benchmark.py --json benchmark.json      # the numbers, to compare runs
+python tools/benchmark.py                            # every plot, the analyzer's defaults (1 MS/s, 1024 FFT, 50 ms blocks)
+python tools/benchmark.py --nfft 4096 --sweep 20     # other FFT size / block length
+python tools/benchmark.py --plots psd,scope,scalogram
+python tools/benchmark.py --markers                  # also what each marker kind adds to a PSD
+python tools/benchmark.py --set "Scope trig_mode=roll" --set "PSD points=0"
+python tools/benchmark.py --json benchmark.json      # the numbers, to compare runs
 ```
 
 The cost is what pickers show in a plot's tooltip (light under 2 PSDs, heavy from 10). The benchmark marks a plot

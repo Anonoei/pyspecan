@@ -26,7 +26,7 @@ runs without it. Then:
 
 - `tests/test_plots.py` for what it computes; `tests/test_web_all.py` draws every registered plot and marker kind in a
   real browser.
-- Its `ABOUT.cost` from `python dev/benchmark.py --plots <name>` (the benchmark flags a cost more than twice off).
+- Its `ABOUT.cost` from `python tools/benchmark.py --plots <name>` (the benchmark flags a cost more than twice off).
 
 ## From another package
 

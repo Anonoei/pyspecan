@@ -11,7 +11,7 @@ plots work is [`pyspecan.plots`](api/plots.md). Read them before adding a plot.
 | How to use pyspecan for a task | a guide in `docs/guide/`, embedding a script from `examples/` with `--8<-- "examples/<name>.py"` |
 | A runnable, self-checking demonstration | `examples/<name>.py`, run by `tests/test_examples.py` |
 | What agents need first | `AGENTS.md`; `llms.txt` / `llms-full.txt` are generated from it and the docstrings |
-| Screenshots | `media/`, made by `python dev/screenshots.py`, shown in README.md and the [gallery](gallery.md) |
+| Screenshots | `media/`, made by `python tools/screenshots.py`, shown in README.md and the [gallery](gallery.md) |
 
 Python blocks in README.md and `docs/` run in `tests/test_docs.py` unless they hold `# docs: skip`. `python
 tools/builder.py -d` builds the site with `--strict`, so a broken snippet path or docstring cross-reference fails the
@@ -46,15 +46,14 @@ Branch from `dev`, merge back into it; `main` is released.
 | `src/build.spec` | the pyinstaller spec of the standalone executable |
 | `examples/` | one self-checking script per recommended usage; the guides embed them |
 | `tests/` | the suite: `test_plots.py`, `test_measure.py`, `test_dsp.py`, `test_layout.py`, the views (`test_tk.py`, `test_web_*.py`, `test_controller.py`), `test_examples.py`, `test_docs.py` |
-| `dev/` | `benchmark.py` (cost of each plot), `screenshots.py` (`media/`), `demo.py` (their synthetic capture), launchers |
-| `tools/` | `builder.py` (setup, tests, docs, release), `gen_docs.py` (API pages, llms files) |
+| `tools/` | `builder.py` (setup, tests, docs, release), `gen_docs.py` (API pages, llms files), `benchmark.py` (cost of each plot), `screenshots.py` (`media/`), `demo.py` (their synthetic capture) |
 | `docs/` | the site: guides, gallery, examples index, this page; `docs/api/` and `docs/llms*.txt` are generated |
 | `media/` | screenshots |
 
 ## Adding things
 
 - **A plot**: a `Plot` subclass with `@plot("Name")` in `src/pyspecan/plots/`, imported in `plots/__init__.py`;
-  `ABOUT` with its cost from `python dev/benchmark.py --plots <name>`. See [Extending](guide/extending.md).
+  `ABOUT` with its cost from `python tools/benchmark.py --plots <name>`. See [Extending](guide/extending.md).
 - **A marker kind**: a `MarkerKind` subclass with `@marker_kind("name")` in `plots/markers.py`.
 - **A DSP plot**: in `plots/dsp/`, on `common.DSPPlot` and the shared `Analyzer`; rpps imported inside the call.
 - **Measurement math**: `pyspecan.measure`, numpy only, tested in `tests/test_measure.py`.
@@ -69,7 +68,7 @@ Branch from `dev`, merge back into it; `main` is released.
 python -m pytest -q                       # everything; the browser tests need playwright's chromium
 xvfb-run -a python -m pytest -q           # Linux without a display: test_tk needs one
 PYSPECAN_NO_RPPS=1 python -m pytest -q    # without the DSP plots: everything else must work the same
-ruff check src tests dev tools examples   # the rules are in pyproject.toml
+ruff check src tests tools examples       # the rules are in pyproject.toml
 ```
 
 Run the suite both ways when touching plots. Without playwright and a chromium the browser tests skip, so check they

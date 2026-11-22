@@ -1,11 +1,11 @@
 """Benchmark the plots: how long each takes to render a block, measured in PSDs (a PSD on the same blocks is 1.0)
 
-    python dev/benchmark.py                            # every plot, the analyzer's defaults (1 MS/s, 1024 FFT, 50 ms blocks)
-    python dev/benchmark.py --nfft 4096 --sweep 20     # other FFT size / block length
-    python dev/benchmark.py --plots psd,scope,scalogram
-    python dev/benchmark.py --markers                  # also what each marker kind adds to a PSD
-    python dev/benchmark.py --set "Scope trig_mode=roll" --set "PSD points=0"
-    python dev/benchmark.py --json benchmark.json        # the numbers, to compare runs
+    python tools/benchmark.py                            # every plot, the analyzer's defaults (1 MS/s, 1024 FFT, 50 ms blocks)
+    python tools/benchmark.py --nfft 4096 --sweep 20     # other FFT size / block length
+    python tools/benchmark.py --plots psd,scope,scalogram
+    python tools/benchmark.py --markers                  # also what each marker kind adds to a PSD
+    python tools/benchmark.py --set "Scope trig_mode=roll" --set "PSD points=0"
+    python tools/benchmark.py --json benchmark.json        # the numbers, to compare runs
 
 Each plot runs alone on its own source, so it pays for everything it needs (in a layout, plots share the source's
 FFT frames and the DSP plots one signal search and lock). The first blocks are a warm-up (caches, the DSP plots' full
@@ -13,7 +13,7 @@ search), timed but left out of the median; "first" shows the first one. "realtim
 own duration: over 100% the plot can not keep up with live samples at this rate on its own. "declared" is the cost
 the plot's About says (its picker tooltip), marked "!" when the measured one is more than twice off it: update it.
 
-The blocks come from dev/demo.py's synthetic capture (QPSK, FM, tones, a burst, a chirp), the DSP plots analyse the
+The blocks come from tools/demo.py's synthetic capture (QPSK, FM, tones, a burst, a chirp), the DSP plots analyse the
 QPSK at 150 kHz.
 """
 import argparse

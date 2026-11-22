@@ -62,7 +62,7 @@ class Decode(Plot):
               'failed messages each block gave; the decoder state (measuring, searching, locked, lost) and its load',
         use=('Read ADS-B, BLE advertising, AX.25, DVB-S/S2 or CCSDS frames off the air or a capture',
              'Check an LTE or NR cell to its MIB and SIB1', 'See whether a link decodes, and how often a check fails'),
-        # decoding ax25/afsk1200 (dev/benchmark.py's choice); other profiles cost what their decoding does, which the
+        # decoding ax25/afsk1200 (tools/benchmark.py's choice); other profiles cost what their decoding does, which the
         # "Load" readout says (LTE / NR to SIB1 near real time on their own). No profile costs nothing
         cost=7, # (its work comes in bursts: the median runs 5-10)
     )

@@ -13,6 +13,6 @@ runs them, and the guides show them in full.
 | extension.py | A plot and a marker kind of your own, rendered on a block held in memory | [Extending](guide/extending.md#a-plot-and-a-marker-kind) |
 | dsp.py | The `signals` marker finding two signals, the Constellation locking to the QPSK one | [DSP plots](guide/dsp.md#from-python) |
 
-The developer tools in [dev/](https://github.com/Anonoei/pyspecan/tree/main/dev) are worth reading too:
+The developer tools in [tools/](https://github.com/Anonoei/pyspecan/tree/main/tools) are worth reading too:
 `benchmark.py` ([Performance](guide/performance.md)) and `screenshots.py` ([Gallery](gallery.md)) build layouts and
 drive every view.

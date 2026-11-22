@@ -1,9 +1,9 @@
 """Screenshots for the README: the views (web, tkGUI, console), their plots and features, on a synthetic capture
 
-    python dev/screenshots.py                  # every scene into media/
-    python dev/screenshots.py --only web       # one view (web, tk, cui)
-    python dev/screenshots.py --scene dsp      # scenes whose name holds "dsp"
-    python dev/screenshots.py --list           # what it would take
+    python tools/screenshots.py                  # every scene into media/
+    python tools/screenshots.py --only web       # one view (web, tk, cui)
+    python tools/screenshots.py --scene dsp      # scenes whose name holds "dsp"
+    python tools/screenshots.py --list           # what it would take
 
 The capture is made here (numpy only), so the pictures are the same every time: a QPSK signal, an FM broadcast-like
 carrier, a clean carrier with phase noise, two tones with their third order products, a bursty signal, a slow chirp,

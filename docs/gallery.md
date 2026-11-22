@@ -1,6 +1,6 @@
 # Gallery
 
-Taken by `python dev/screenshots.py` on a synthetic capture (QPSK with an echo, an FM carrier, a carrier with phase
+Taken by `python tools/screenshots.py` on a synthetic capture (QPSK with an echo, an FM carrier, a carrier with phase
 noise, two tones and their IM3 products, a bursty signal, a chirp); run it again to refresh them (they are in
 [media/](https://github.com/Anonoei/pyspecan/tree/main/media)).
 

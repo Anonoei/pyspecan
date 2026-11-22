@@ -67,7 +67,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install ruff
-      - run: ruff check src tests dev tools examples # the rules are in pyproject.toml
+      - run: ruff check src tests tools examples # the rules are in pyproject.toml
 
   without-rpps:
     # rpps is optional: everything but the DSP plots must work without it (they skip, the rest runs)
