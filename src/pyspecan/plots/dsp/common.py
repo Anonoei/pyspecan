@@ -32,10 +32,8 @@ class DSPPlot(Plot):
             return None, None, "no signal found"
         try:
             lk = an.lock(sel, self.dsp_mod, self.dsp_baud) # type: ignore
-        except NoLock as e:
+        except NoLock as e: # nothing that looks like symbols, with why
             return sel, None, str(e)
-        except (ValueError, IndexError, FloatingPointError) as e: # nothing that looks like symbols
-            return sel, None, f"no lock ({e})"
         if lk is None:
             return sel, None, "too few samples"
         key = (sel.key, lk.mod, round(lk.baud), lk.Fs)

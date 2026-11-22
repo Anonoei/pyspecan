@@ -228,7 +228,7 @@ class CyclicSpectrum(DSPPlot):
         marks = []
         try:
             feat = features(x, Fs)
-        except (ValueError, IndexError, FloatingPointError) as e:
+        except ValueError as e: # samples that are not all finite (a file holding NaN or inf)
             feat = None
             readout.append(("Features", str(e)))
         if feat is not None:
