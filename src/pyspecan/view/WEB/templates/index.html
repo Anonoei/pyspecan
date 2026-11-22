@@ -50,6 +50,10 @@
             <div class="path muted file-only" id="lbl-path"></div>
             <div class="control-group file-only"><label for="sel-fmt">Format</label><select id="sel-fmt" data-set="fmt"></select></div>
             <div class="control-group"><label for="in-fs">Sample rate</label><input id="in-fs" data-set="fs"></div>
+            <div class="stream-only" hidden>
+                <div class="path muted" id="lbl-stream"></div>
+                <div class="control-group"><button id="btn-measured" title="set the sample rate to the rate samples arrive at: only right for a sender paced in real time">Use measured rate</button></div>
+            </div>
             <div class="control-group"><label for="in-cf">Center freq</label><input id="in-cf" data-set="cf"></div>
             <div class="control-group"><label for="in-nfft">FFT size (2^n)</label><input id="in-nfft" type="number" min="2" max="20" step="1" data-set="nfft_exp"></div>
             <div class="control-group"><span class="muted">Block size (samples)</span><span id="lbl-block"></span></div>

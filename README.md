@@ -58,6 +58,9 @@ Console: PSD and spectrogram drawn as text
       gqrx's `ci32t` is `ci16`
   - TCPIQ takes `--tcp_host`, `--tcp_port`, `--tcp_listen`, `--tcp_timeout`, and `--tcp_fmt`: what the sender sends
     (`cf32` by default, two float32 as GNU Radio sends; `ci16` two int16; `cu8` two uint8, an RTL-SDR's layout...)
+    - The views show who sends and the rate samples arrive at, flagged when it is more than 10% off `-fs`. The stream
+      says nothing about its rate, so `-fs` stays what it is: "Use measured rate" (console: `fs measured`) takes the
+      measured one, right only for a sender paced in real time (one replaying a file arrives at network speed)
 
 ## Module
 - `python3 -m pyspecan --help`

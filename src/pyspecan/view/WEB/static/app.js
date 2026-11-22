@@ -192,6 +192,7 @@ function applyStatus(s) {
     $("btn-start").disabled = s.playing;
     $("btn-stop").disabled = !s.playing;
     if (s.radio_live) applyRadioLive(s.radio_live);
+    applyStream(s.stream);
     if (s.cur_samp !== undefined) {
         $("lbl-time").textContent = `${s.time_cur} / ${state ? state.time_tot : ""}`;
         if (!seeking) $("sld-samp").value = s.cur_samp;
@@ -338,6 +339,18 @@ function applyRadio(r) {
     const sel = $("sel-radio");
     if (!radioList.length) sel.replaceChildren(new Option(r.device, ""));
 }
+// a network stream (TCP IQ): who sends, and the rate samples arrive at against the one declared
+const fmtRate = (r) => r >= 1e6 ? `${(r / 1e6).toFixed(3)} MS/s` : r >= 1e3 ? `${(r / 1e3).toFixed(3)} kS/s` : `${r.toFixed(1)} S/s`;
+function applyStream(st) {
+    document.querySelectorAll(".stream-only").forEach((el) => (el.hidden = !st));
+    if (!st) return;
+    const parts = [st.peer ? `From ${st.peer}` : "Waiting for a sender"];
+    if (st.measured) parts.push(`arriving at ${fmtRate(st.measured)}` + (st.mismatch ? `, not the ${fmtRate(st.declared)} declared` : ""));
+    $("lbl-stream").textContent = parts.join(", ");
+    $("lbl-stream").classList.toggle("danger", !!st.mismatch);
+    $("btn-measured").disabled = !st.measured;
+}
+
 // what changes block to block: samples lost, the recording
 function applyRadioLive(r) {
     const parts = [];
@@ -1283,6 +1296,7 @@ function bindInputs() {
     sld.addEventListener("change", () => { seeking = false; set("samp", sld.value); });
     $("btn-claim").onclick = () => cmd(state.radio.control === "controlling" ? "release" : "claim");
     $("btn-reconnect").onclick = () => cmd("reconnect");
+    $("btn-measured").onclick = () => set("fs", "measured");
     $("btn-record").onclick = () => cmd($("btn-record").classList.contains("recording") ? "record_stop" : "record");
     $("sel-antenna").addEventListener("change", (e) => set("antenna", e.target.value));
     $("sel-radio").addEventListener("focus", loadRadios); // fresh when it is about to be used

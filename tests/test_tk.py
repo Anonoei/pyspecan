@@ -350,3 +350,47 @@ def test_export_writes_files(app, tmp_path):
     assert (tmp_path / "psd.png").read_bytes()[:4] == b"\x89PNG"
     pane.export("table", str(tmp_path / "t.csv")) # no markers: says so, writes nothing
     assert not (tmp_path / "t.csv").exists()
+
+def test_a_tcp_iq_stream_shows_its_sender_and_the_rate_it_arrives_at():
+    import socket
+    import threading
+    srv = socket.create_server(("127.0.0.1", 0))
+    stop = threading.Event()
+    def send(): # paced at 200 kS/s, declared as 1 MS/s
+        conn, _ = srv.accept()
+        with conn:
+            chunk, t0 = (0.5 * np.ones(2000)).astype(np.complex64).tobytes(), time.monotonic()
+            for k in range(10**6):
+                if stop.is_set():
+                    break
+                time.sleep(max(0.0, t0 + k * 0.01 - time.monotonic()))
+                conn.sendall(chunk)
+    threading.Thread(target=send, daemon=True).start()
+    kw = dict(tcp_host="127.0.0.1", tcp_port=srv.getsockname()[1], Fs="1M", nfft=256)
+    model = GetModel(Sink.TCPIQ)(**kw)
+    try:
+        view = GetView(View.tkGUI, Sink.TCPIQ)(**kw)
+    except tk.TclError:
+        stop.set()
+        model.sink.close()
+        pytest.skip("no display")
+    ctrl = GetController(View.tkGUI, Sink.TCPIQ)(model, view, **kw)
+    try:
+        v = view.sink
+        settle(ctrl)
+        assert str(v.cl_btn_measured.cget("state")) == "disabled" # nothing measured yet
+        end = time.monotonic() + 6
+        while time.monotonic() < end and not model.sink.measured_rate():
+            model.sink.next(1000)
+            ctrl.view.root.update()
+        for _ in range(20): # a few more windows, then the panel follows the status
+            model.sink.next(1000)
+        ctrl.draw_tb()
+        assert "arriving at 19" in v.cl_lbl_stream.cget("text") or "arriving at 20" in v.cl_lbl_stream.cget("text")
+        assert "not the 1.000 MS/s declared" in v.cl_lbl_stream.cget("text")
+        v.cl_btn_measured.invoke()
+        assert model.get_fs().raw == pytest.approx(200e3, rel=0.05)
+    finally:
+        stop.set()
+        ctrl.quit()
+        srv.close()

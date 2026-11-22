@@ -45,6 +45,18 @@ class SinkTcpIq(Sink):
     def name(self):
         return "tcpiq"
 
+    MISMATCH = 0.1 # measured this far off the declared rate (as pysdrlib warns): say so
+
+    def measured_rate(self) -> float | None:
+        """Samples per second arriving over the last second or so (pysdrlib), None until known. Only a sender paced in
+        real time arrives at its sample rate (nc replaying a file arrives at network speed): it is shown, never applied"""
+        return self.dev.measured_rate
+
+    def stream_status(self) -> dict:
+        rate, fs = self.measured_rate(), float(self._Fs.raw)
+        return {"peer": self.dev.peer, "measured": rate, "declared": fs,
+                "mismatch": rate is not None and abs(rate / fs - 1) > self.MISMATCH}
+
     def _set_fs(self, fs):
         return self.dev.set_rx_sample_rate(fs)
     def _set_cf(self, cf):

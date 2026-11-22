@@ -219,6 +219,9 @@ class Controller:
         radio = self.sink.live_status()
         if radio is not None: # what changes block to block, the rest of the radio is in the state
             status["radio_live"] = radio
+        stream = self.sink.stream_status()
+        if stream is not None:
+            status["stream"] = stream
         if self.sink.SEEKABLE:
             status.update({
                 "cur_samp": self.sink.cur_samp,
@@ -321,6 +324,8 @@ class Controller:
     def setting(self, key: str, value):
         self.log.trace("setting(%s, %s)", key, value)
         with self.lock:
+            if key == "fs" and str(value).strip().lower() == "measured": # a network stream's arrival rate, when asked
+                value = self.measured_fs()
             if key in ("fs", "cf"):
                 asked = Frequency.get(value)
                 (self.model.set_fs if key == "fs" else self.model.set_cf)(value)
@@ -375,6 +380,13 @@ class Controller:
                 self.reset_plots()
             else:
                 raise ValueError(f"unknown setting {key!r}")
+
+    def measured_fs(self) -> float:
+        """The rate samples arrive at (a network stream), to 4 significant digits: a second's measurement jitters"""
+        rate = self.sink.measured_rate()
+        if not rate:
+            raise ValueError("no measured rate: nothing has arrived yet, or this source does not measure one")
+        return float(round(rate, 3 - int(math.floor(math.log10(rate)))))
 
     def _need_radio(self):
         if self.sink.status() is None:

@@ -3,9 +3,9 @@ from ..config import Sink
 from ..utils.registry import Registry
 from .base import args_controller
 from .tkGUI.base import Controller, args_ctrl
-from .tkGUI.sink import Sink as SinkTcpIq
 from .tkGUI.sink_file import SinkFile
 from .tkGUI.sink_live import SinkLive
+from .tkGUI.sink_tcpiq import SinkTcpIq
 
 SINKS: Registry = Registry("tkGUI sink controller")
 SINKS.register(Sink.FILE.name)(SinkFile)

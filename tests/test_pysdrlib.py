@@ -219,6 +219,45 @@ def test_tcpiq_reads_the_format_the_sender_sends(fmt, dtype, scale):
         m.sink.close()
         srv.close()
 
+def test_tcpiq_shows_the_rate_samples_arrive_at_and_uses_it_when_asked():
+    import socket
+    import threading
+    rate, block = 200e3, 2000 # paced at 200 kS/s, declared as 1 MS/s
+    srv = socket.create_server(("127.0.0.1", 0))
+    stop = threading.Event()
+    def send():
+        conn, _ = srv.accept()
+        with conn:
+            chunk = (0.5 * tones(block)).tobytes()
+            t0 = time.monotonic()
+            for k in range(10**6):
+                if stop.is_set():
+                    break
+                wait = t0 + k * block / rate - time.monotonic()
+                if wait > 0:
+                    time.sleep(wait)
+                conn.sendall(chunk)
+    threading.Thread(target=send, daemon=True).start()
+    m = GetModel(Sink.TCPIQ)(tcp_host="127.0.0.1", tcp_port=srv.getsockname()[1], Fs="1M", nfft=256)
+    c = Recorder(m, nfft=256)
+    try:
+        with pytest.raises(ValueError, match="no measured rate"):
+            c.setting("fs", "measured") # nothing measured yet
+        end = time.monotonic() + 6
+        while time.monotonic() < end and not (m.sink.stream_status()["measured"] and time.monotonic() > end - 3):
+            m.sink.next(1000)
+        st = c.get_status()["stream"]
+        assert st["peer"] and st["declared"] == 1e6 and st["mismatch"]
+        assert st["measured"] == pytest.approx(rate, rel=0.05)
+        assert m.get_fs().raw == 1e6 # shown, not applied
+        c.setting("fs", "measured")
+        assert m.get_fs().raw == pytest.approx(rate, rel=0.05) and m.get_fs().raw == float(f"{m.get_fs().raw:.4g}")
+        assert not c.get_status()["stream"]["mismatch"]
+    finally:
+        stop.set()
+        m.sink.close()
+        srv.close()
+
 def test_the_file_format_option_points_tcpiq_to_its_own():
     from pyspecan.arguments import hint
     from pyspecan.config import View

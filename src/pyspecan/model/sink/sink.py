@@ -48,6 +48,14 @@ class Sink:
         """What the views show about the source of live samples (None: a file)"""
         return None
 
+    def stream_status(self) -> dict | None:
+        """A network stream's state, every frame (None: not a stream): who sends, the rate samples arrive at"""
+        return None
+
+    def measured_rate(self) -> float | None:
+        """The rate samples arrive at, when the source measures it (a network stream), None otherwise or not yet"""
+        return None
+
     def live_status(self) -> dict | None:
         """The part of status() that changes block to block, cheap enough for every frame (None: a file)"""
         return None
