@@ -103,8 +103,8 @@ the console draws all but 3D.
 - Time domain: IQ, IQ 3D, PMF, Phasor, IQ Density, Scope (triggered / roll)
 - Measurements: CCDF, Power vs Time, Occupancy, Phase Noise (L(f) on a log offset axis, integrated phase noise and
   jitter)
-- Analog demodulation: Analog Demod (`mode` AM / FM / PM against time and its spectrum, depth / deviation, modulating
-  frequency, SINAD), Frequency vs Time
+- Analog demodulation: Frequency vs Time; with RPPS, Analog Demod (`mode` AM / FM / PM / USB / LSB against time and its
+  spectrum, depth / deviation, the carrier offset, and the modulating tone and SINAD when one tone carries it)
 - Digital demodulation, Modulation quality, Channel and signal analysis: with RPPS, see DSP plots below
 - Markers on any spectrum (`+ Marker`, or `marker=<kind>` in a layout): point, peak (lands on the highest peak and
   stays there; its ▲ prev / ▼ next buttons step up / down the peaks by level, ◀ left / ▶ right to the nearest peak in

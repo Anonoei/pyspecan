@@ -7,6 +7,7 @@ from pyspecan.obj import Frequency
 from pyspecan.plots import PLOTS, PlotSet, Scroller, Source, available
 from pyspecan.plots.frame import Image
 from pyspecan.plots.freq import to_psd
+from pyspecan.plots.settings import HAVE_RPPS
 from pyspecan.plots.source import Stream
 from pyspecan.utils.vbw import vbw, vbw_rows
 
@@ -1168,10 +1169,12 @@ def test_phase_noise_follows_a_random_walk_phase():
     r = dict(f.readout)
     assert abs(float(r["Carrier"].split()[0]) - 100) < 0.1 and "° rms" in r["Integrated"]
 
+@pytest.mark.skipif(not HAVE_RPPS, reason="Analog Demod is on rpps (pyspecan[dsp])")
 @pytest.mark.parametrize("demod, check", [
-    ("FM", lambda r: r["Deviation"].startswith("5") and r["Mod freq"] == "1 kHz"),
+    ("FM", lambda r: r["Deviation"].startswith("5") and r["Mod freq"] == "1 kHz" and float(r["SINAD"].split()[0]) > 30),
     ("PM", lambda r: abs(float(r["Deviation"].split()[0]) - 2.0) < 0.1 and r["Mod freq"] == "1 kHz"),
-    ("AM", lambda r: r["Mod freq"] == "1 kHz" and r["Depth"].startswith("+50")),
+    ("AM", lambda r: r["Mod freq"] == "1 kHz" and r["Depth"] == "50.0%"),
+    ("USB", lambda r: abs(float(r["Mod freq"].split()[0]) * {"Hz": 1, "kHz": 1e3}[r["Mod freq"].split()[1]] - 1e3) < 5 and "Power" in r), # coarse: 7.5 kHz audio
 ])
 def test_analog_demod(demod, check):
     fs, n = 1e6, 50000
@@ -1181,11 +1184,14 @@ def test_analog_demod(demod, check):
         x = np.exp(1j * (2*np.pi*100e3*t + 5e3 / 1e3 * (1 - np.cos(2*np.pi*1e3*t)))) # 5 kHz deviation
     elif demod == "PM":
         x = np.exp(1j * (2*np.pi*100e3*t + 2.0 * m)) # 2 rad
+    elif demod == "USB":
+        x = np.exp(2j*np.pi*101e3*t) + 1e-6 * np.exp(2j*np.pi*100e3*t) # a 1 kHz tone above a (suppressed) carrier
     else:
         x = (1 + 0.5 * m) * np.exp(2j*np.pi*100e3*t) # 50 %
     model = FakeModel(fs=fs, nfft=4096)
     src = Source(model)
-    p = PLOTS.get("Analog Demod")(src, mode=demod, demod_bw="50k")
+    kw = {"carrier": "100k", "demod_bw": "3k"} if demod == "USB" else {"demod_bw": "50k"}
+    p = PLOTS.get("Analog Demod")(src, mode=demod, **kw)
     feed(src, model, x.astype(np.complex64))
     f = p.update()
     r = dict(f.readout)

@@ -93,9 +93,9 @@ def _clear(page):
 def test_every_plot_type_draws(page):
     from pyspecan.plots.settings import HAVE_RPPS
     types = page.evaluate("state.plot_types")
-    assert {"3D Spectrogram", "IQ 3D", "Phase Noise", "Analog Demod"} <= set(types) # the web view draws 3d now
+    assert {"3D Spectrogram", "IQ 3D", "Phase Noise"} <= set(types) # the web view draws 3d now
     if HAVE_RPPS:
-        assert {"3D Constellation", "Constellation", "Eye Diagram", "Network Analyzer", "Impulse Response", "Cyclic Spectrum",
+        assert {"Analog Demod", "3D Constellation", "Constellation", "Eye Diagram", "Network Analyzer", "Impulse Response", "Cyclic Spectrum",
                 "Symbol Table", "Error Vector", "Error Vector Spectrum"} <= set(types)
     problems = []
     for name in types:

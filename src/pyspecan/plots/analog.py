@@ -1,12 +1,11 @@
-"""Analog measurements: phase noise of a carrier, and AM / FM / PM demodulation"""
+"""Analog measurements: phase noise of a carrier (AM / FM / PM / SSB demodulation is in plots.dsp.analog, on rpps)"""
 import numpy as np
 
 from ..measure import units
 from ..measure.windows import WindowLUT
 from .base import About, Plot, plot
-from .frame import BLUE, GREEN, YELLOW, Axis, Frame, Trace
+from .frame import YELLOW, Axis, Frame, Trace
 from .freq import fmt_hz, freq_text, hz, to_psd
-from .reduce import envelope
 from .settings import Setting
 
 
@@ -114,92 +113,3 @@ class PhaseNoise(Plot):
             xmin=float(off[0]), xmax=float(off[-1]), xlog=True, xfmt="freq", ymin=btm, ymax=top,
             xlabel="Offset", ylabel="dBc/Hz", traces=[Trace(ydb, x, color=YELLOW, name="pn")],
         )], title=title, readout=readout)
-
-MODES = ("AM", "FM", "PM")
-
-@plot("Analog Demod")
-class AnalogDemod(Plot):
-    """AM, FM or PM demodulation of a carrier: the modulation against time and its spectrum, with the depth or
-    deviation, the modulating frequency and the SINAD"""
-    TITLE = "Analog Demod"
-    CATEGORY = "Analog demodulation"
-    ABOUT = About(
-        data='The block shifted to the carrier, filtered to the demod bandwidth, then its envelope (AM), '
-             'phase step (FM) or unwrapped phase (PM)',
-        shows='The demodulated signal against time and its spectrum; depth or deviation, the modulating '
-              'frequency, SINAD',
-        use=('Measure FM deviation or AM depth', "Check a modulating tone's frequency and distortion (SINAD)"),
-        cost=5.7,
-    )
-    SETTINGS = (
-        Setting("mode", "Mode", "select", default="FM", options=MODES, reset=True, group="Demod", help="what is demodulated"),
-        Setting("carrier", "Carrier", "text", default="", coerce=freq_text, hint="strongest", group="Demod",
-                help="the carrier, blank for the strongest"),
-        Setting("demod_bw", "Bandwidth", "text", default="", coerce=freq_text, hint="sample rate", group="Demod",
-                help="filter around the carrier before demodulating"),
-        Setting("count", "Samples", "int", default=4096, min=16, step=256, group="Timebase", help="samples drawn"),
-    )
-
-    def render(self):
-        x = np.asarray(self.source.samples, dtype=np.complex128)
-        if len(x) < 64:
-            return None
-        fs = self.source.fs or 1.0
-        n = len(x)
-        X = np.fft.fft(x * np.hanning(n))
-        f = np.fft.fftfreq(n, 1 / fs)
-        if self.carrier:
-            off = hz(self.carrier, 0) - self.source.cf
-        else: # the strongest peak, refined to the power centroid around it (the strongest bin of FM is a sideband)
-            P = np.abs(X)**2
-            k = int(np.argmax(P))
-            near = np.abs(f - f[k]) <= (hz(self.demod_bw, 0) / 2 if self.demod_bw else fs / 2)
-            off = float(np.sum(f[near] * P[near]) / np.sum(P[near]))
-        y = x * np.exp(-2j * np.pi * off * np.arange(n) / fs)
-        bw = hz(self.demod_bw, 0) if self.demod_bw else 0.0
-        if 0 < bw < fs:
-            Y = np.fft.fft(y)
-            Y[np.abs(f) > bw / 2] = 0
-            y = np.fft.ifft(Y)
-        mode = self.mode
-        readout = [("Carrier", fmt_hz(self.source.cf + off))]
-        if mode == "AM":
-            env = np.abs(y)
-            mean = float(env.mean()) or 1.0
-            d = (env / mean - 1) * 100
-            yfmt, unit, color = "num", "%", YELLOW
-            readout += [("Depth", f"+{d.max():.1f}% / {d.min():.1f}%"), ("RMS", f"{d.std():.2f}%")]
-        elif mode == "FM":
-            d = np.angle(y[1:] * np.conj(y[:-1])) * fs / (2 * np.pi)
-            readout.append(("Offset", fmt_hz(float(d.mean()))))
-            d = d - d.mean()
-            yfmt, unit, color = "freq", "Hz", GREEN
-            readout += [("Deviation", f"{fmt_hz(float(np.max(np.abs(d))))} pk"), ("RMS", fmt_hz(float(d.std())))]
-        else:
-            ph = np.unwrap(np.angle(y))
-            t = np.arange(len(ph))
-            d = ph - np.polyval(np.polyfit(t, ph, 1), t) # a carrier offset is a phase ramp
-            yfmt, unit, color = "num", "rad", BLUE
-            readout += [("Deviation", f"{np.max(np.abs(d)):.3g} rad pk"), ("RMS", f"{d.std():.3g} rad")]
-        # the modulation's spectrum: its strongest tone is the modulating frequency
-        S = np.abs(np.fft.rfft(d * np.hanning(len(d))))**2
-        sf = np.fft.rfftfreq(len(d), 1 / fs)
-        S[:3] = 0 # what is left of DC
-        top = int(np.argmax(S))
-        if S[top] > 0 and float(np.std(d)) > 1e-6 * (100 if mode == "AM" else 1): # there is modulation
-            tone = float(np.sum(S[max(0, top - 3):top + 4]))
-            rest = float(np.sum(S)) - tone
-            readout += [("Mod freq", fmt_hz(float(sf[top]))), ("SINAD", f"{_db(float(np.sum(S)) / max(rest, 1e-30)):.1f} dB")]
-        sdb = 10 * np.log10(np.maximum(S / max(float(S.max()), 1e-30), 1e-12))
-        fmax = min(fs / 2, bw / 2) if bw else fs / 2
-        keep = sf <= fmax
-        shown = d[-self.count:]
-        tt = np.arange(len(shown)) / fs
-        tx, ty = envelope(tt, shown)
-        lim = float(np.max(np.abs(shown))) * 1.2 or 1.0
-        return Frame([
-            Axis(xmin=0.0, xmax=len(shown) / fs, xfmt="time", ymin=-lim, ymax=lim, yfmt=yfmt, xlabel="Time",
-                 ylabel=f"{mode} ({unit})", traces=[Trace(ty, tx, color=color, name="demod")]),
-            Axis(xmin=0.0, xmax=float(fmax), xfmt="freq", ymin=-100.0, ymax=5.0, ylabel="dB",
-                 traces=[Trace(sdb[keep], sf[keep], color=color, name="spectrum")]),
-        ], title=self.TITLE, readout=readout)
