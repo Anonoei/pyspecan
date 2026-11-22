@@ -94,7 +94,9 @@ Benchmark). The web view and tkGUI draw them all, 3D included (drag a 3D plot to
 the console draws all but 3D.
 - Spectrum: PSD (four analyzer traces, each clear/write, average, max hold, min hold, view or blank, a marker trace,
   detector, a stored reference trace and trace math: "store ref" and the `math` setting, live - ref on its own axis),
-  Persistence, FFT
+  Persistence, FFT; with a live radio, Sweep (a span wider than the sample rate: the radio is stepped across `start` to
+  `stop`, the middle 80% of each step kept and joined into one trace with the PSD's traces and markers, then tuned
+  back. Heavy: raise its "Update every" to keep the rest of a layout live)
 - Time-frequency: Spectrogram, RT Spectrogram, 3D Spectrogram (a waterfall of lines), Surface Spectrogram (a 3D
   surface spectrogram: the spectrogram as a solid surface colored by level), Scalogram (a wavelet transform: frequency
   on a log axis against time, sharp in time at high frequencies, in frequency at low ones)

@@ -64,7 +64,7 @@ class Controller:
     @property
     def plot_types(self) -> list[str]:
         """Plots this view can draw"""
-        return available(self.FEATURES)
+        return available(self.FEATURES, radio=hasattr(self.sink, "sweep"))
 
     def _check_type(self, name):
         if name not in self.plot_types:

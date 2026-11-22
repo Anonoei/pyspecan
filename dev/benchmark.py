@@ -101,7 +101,9 @@ def main():
     a.block = int(round(a.fs * a.sweep / 1000))
     data = capture((a.warmup + a.blocks) * a.block + 1)
     sets = parse_sets(a.set)
-    names = [layout.resolve_type(n) for n in a.plots.split(",") if n.strip()] if a.plots else list(PLOTS.names())
+    # plots that tune a radio themselves (Sweep) have nothing to time on a capture
+    names = [layout.resolve_type(n) for n in a.plots.split(",") if n.strip()] if a.plots else \
+        [n for n in PLOTS.names() if not PLOTS.get(n).NEEDS_RADIO]
     if REFERENCE not in names:
         names.insert(0, REFERENCE)
     block_s = a.block / a.fs

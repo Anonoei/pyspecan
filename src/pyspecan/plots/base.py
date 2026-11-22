@@ -69,15 +69,17 @@ def plot(name: str):
         return PLOTS.register(name)(cls)
     return deco
 
-def available(features) -> list[str]:
-    """Names of the plots a view that can draw `features` is able to show"""
-    return [name for name, cls in PLOTS.items() if cls.FEATURES <= set(features)]
+def available(features, radio: bool = True) -> list[str]:
+    """Names of the plots a view that can draw `features` is able to show; `radio`: the source is a radio this program
+    can tune (plots that retune it, NEEDS_RADIO, are left out otherwise)"""
+    return [name for name, cls in PLOTS.items() if cls.FEATURES <= set(features) and (radio or not cls.NEEDS_RADIO)]
 
 class Plot:
     """Settings resolve through a hierarchy: global (`globals`, shared by every plot) -> link group
     (`link.values`, for "link" scope settings while the plot is linked) -> the plot's own values"""
     NAME = ""
     TITLE = ""
+    NEEDS_RADIO = False # it tunes a live radio itself (a sweep): not offered for files
     SETTINGS: tuple[Setting, ...] = ()
     FEATURES: frozenset = frozenset({LINE}) # drawing features the frames need, see plots.frame
     MARKERS = False                         # carries a `markers` set the user can add markers and measurements to

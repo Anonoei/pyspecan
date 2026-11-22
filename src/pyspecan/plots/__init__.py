@@ -40,7 +40,7 @@ from importlib import metadata
 
 # isort: off
 # registration order is the order views list them in (sorting would also let analog's import of scope go first)
-from . import psd, spg, pst, fft, iq, scope, measure, analog, timefreq, markers
+from . import psd, spg, pst, fft, iq, scope, measure, analog, timefreq, sweep, markers
 # isort: on
 from . import layout
 from .base import CATEGORIES, PLOTS, About, Plot, available, plot

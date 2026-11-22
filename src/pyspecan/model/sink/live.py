@@ -350,6 +350,28 @@ class SinkLive(Sink):
             return None
         return {"path": str(rec.path), "seconds": round(rec.count / float(self._Fs.raw), 3)}
 
+    # --- sweeping --- #
+    def sweep(self, freqs, count: int):
+        """Tune to each of `freqs` in turn and take `count` samples there, each received after the retune settled:
+        [(frequency, samples)], mirrored and DC offset corrected as blocks are. The radio is tuned back after"""
+        self._need_control()
+        if self.recorder is not None:
+            raise ValueError("not while recording: a sweep retunes the radio")
+        out = []
+        timeout = max(2.0, 4*count/float(self._Fs.raw))
+        try:
+            for freq, x, meta in self.dev.sweep(list(freqs), count=int(count), timeout=timeout, meta=True, on_drop="retry"):
+                if self.dev.get_rx_inverted(): # the chain in use can depend on where it is tuned
+                    x = x.conj()
+                if self.dc_block:
+                    x = x - x.mean()
+                self.dropped += meta.dropped
+                out.append((float(freq), x))
+        finally:
+            self.dev.set_rx_freq(self._cf.raw, flush=True)
+            self._next_index = None # the blocks after it are not those before
+        return out
+
     def _follow(self, freq, rate):
         """A radio controlled elsewhere changed: show what it is now"""
         self._cf, self._Fs = Frequency.get(freq), Frequency.get(rate)

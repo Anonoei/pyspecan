@@ -1,5 +1,5 @@
 """What pyspecan takes from pysdrlib 0.5: file formats and SigMF, a live radio's RxMeta (lost and skipped samples),
-recording, and TCP IQ formats. Live parts run against pysdrlib's simulated radio"""
+recording, and sweeping. Live parts run against pysdrlib's simulated radio"""
 import time
 
 import numpy as np
@@ -10,6 +10,8 @@ from pysdrlib import FileSink, RxMeta
 from pyspecan.config import Sink
 from pyspecan.controller.base import Controller
 from pyspecan.model.model import GetModel
+from pyspecan.model.sink import live as live_mod
+from pyspecan.plots.sweep import plan
 
 
 class Recorder(Controller):
@@ -211,3 +213,54 @@ def test_the_file_format_option_points_tcpiq_to_its_own():
     from pyspecan.arguments import hint
     from pyspecan.config import View
     assert "--tcp_fmt" in hint("F", View.WEB, Sink.TCPIQ)
+
+# --- sweeping --- #
+def test_the_sweep_plan_tiles_the_span_on_one_grid():
+    centers, keep = plan(88e6, 108e6, 1e6, 1024)
+    df = 1e6 / 1024
+    assert keep % 2 == 0 and keep <= 0.8 * 1024
+    assert np.allclose(np.diff(centers), keep * df) # each step starts where the last one's kept bins end
+    assert centers[0] - keep * df / 2 == 88e6 and centers[-1] + keep * df / 2 >= 108e6
+    with pytest.raises(ValueError):
+        plan(108e6, 88e6, 1e6, 1024)
+
+@pytest.fixture
+def tone_radio(monkeypatch):
+    """The sim radio hearing one carrier at 101.2 MHz, wherever it is tuned"""
+    real = pysdrlib.open
+    monkeypatch.setattr(live_mod.pysdrlib, "open", lambda name, **kw: real(
+        name, tones=[{"freq": 101.2e6, "level": -10}], noise=-70, seed=1, **kw))
+    m = GetModel(Sink.LIVE)(device="sim", Fs="1M", cf="100M", nfft=1024)
+    yield m
+    m.sink.close()
+
+def test_the_sweep_finds_a_carrier_outside_the_tuned_span_and_tunes_back(tone_radio):
+    c = Recorder(tone_radio, nfft=1024)
+    assert "Sweep" in c.plot_types
+    pid = c.add_plot("Sweep")
+    c.set_plot(pid, "start", "98M")
+    c.set_plot(pid, "stop", "104M")
+    c.step()
+    frame = c.latest[pid]
+    plot = c.plots.get(pid)
+    assert frame.axes[0].xmin == 98e6 and frame.axes[0].xmax == 104e6 and dict(frame.readout)["Steps"] == "8"
+    freqs = plot.bin_freqs(len(plot.last))
+    assert freqs[0] >= 98e6 and freqs[-1] <= 104e6 and np.allclose(np.diff(freqs), 1e6 / 1024)
+    peak = freqs[np.argmax(plot.last)]
+    assert abs(peak - 101.2e6) < 3e3 # outside 99.5-100.5 MHz, where the radio is tuned
+    far = np.abs(freqs - 101.2e6) > 50e3
+    assert plot.last[far].max() < plot.last.max() - 40 # and nowhere else: each step hears only what it covers
+    assert tone_radio.sink.dev.get_rx_freq() == 100e6 and tone_radio.sink._next_index is None # tuned back, a break
+    c.step() # and the next block is back at the center frequency
+    assert c.sink.get_cf().raw == 100e6
+
+def test_a_sweep_is_not_offered_for_a_file_and_says_why_without_control(tmp_path, tone_radio):
+    tones().tofile(tmp_path / "c.cfile")
+    kw = dict(path=str(tmp_path / "c.cfile"), Fs="1M", nfft=256)
+    assert "Sweep" not in Recorder(GetModel(Sink.FILE)(**kw), **kw).plot_types
+    c = Recorder(tone_radio, nfft=1024)
+    pid = c.add_plot("Sweep")
+    tone_radio.sink.start_record(tmp_path / "r.sigmf") # a sweep would retune the radio under the recording
+    c.step()
+    assert "recording" in dict(c.latest[pid].readout)["Sweep"]
+    tone_radio.sink.stop_record()

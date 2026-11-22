@@ -121,7 +121,7 @@ def test_plot_types_follow_the_views_features(capture):
     from pyspecan.plots.settings import HAVE_RPPS
     dsp = ["Error Vector", "Error Vector Spectrum", "Network Analyzer", "Impulse Response"] if HAVE_RPPS else [] # the optional DSP plots
     assert c.plot_types == ["PSD", "FFT", "IQ", "PMF", "Scope", "Frequency vs Time", "CCDF", "Power vs Time", "Occupancy",
-                            "Phase Noise", "Analog Demod", *dsp]
+                            "Phase Noise", "Analog Demod", *dsp] # no Sweep: a file is no radio
     with pytest.raises(ValueError):
         c.add_plot("Spectrogram")
 
