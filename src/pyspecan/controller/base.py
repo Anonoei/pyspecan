@@ -388,7 +388,7 @@ class Controller:
         self.playing = False
         self.sink.set_path(path)
         self.reset_plots()
-        self.message = ""
+        self.message = self.sink.note # what was assumed about it (its format), else nothing
 
     # --- playback --- #
     def step(self, forward=True) -> bool:

@@ -16,10 +16,10 @@ from pyspecan.view.view import GetView
 
 @pytest.fixture
 def app(tmp_path):
-    path = tmp_path / "capture.cf64"
+    path = tmp_path / "capture.cf32"
     t = np.arange(20000) / 10000
     np.exp(2j*np.pi*1000*t).astype(np.complex64).tofile(path)
-    kw = dict(path=str(path), fmt="cf64", Fs="10k", nfft=256)
+    kw = dict(path=str(path), fmt="cf32", Fs="10k", nfft=256)
     model = GetModel(Sink.FILE)(**kw)
     try:
         view = GetView(View.tkGUI, Sink.FILE)(**kw)

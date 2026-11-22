@@ -14,10 +14,10 @@ FS = 10_000
 
 @pytest.fixture
 def capture(tmp_path):
-    """A cf64 capture of two tones, 1 second"""
+    """A cf32 capture of two tones, 1 second"""
     t = np.arange(FS) / FS
-    sig = (np.exp(2j*np.pi*1000*t) + 0.5*np.exp(-2j*np.pi*2500*t)).astype(np.complex64) # what pysdrlib calls cf64
-    path = tmp_path / "capture.cf64"
+    sig = (np.exp(2j*np.pi*1000*t) + 0.5*np.exp(-2j*np.pi*2500*t)).astype(np.complex64) # what pysdrlib calls cf32
+    path = tmp_path / "capture.cf32"
     sig.tofile(path)
     return path
 
@@ -30,7 +30,7 @@ class Recorder(Controller):
         self.ticks.append((frames, status))
 
 def make(capture, **kwargs):
-    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256, **kwargs)
+    kw = dict(path=str(capture), fmt="cf32", Fs=str(FS), nfft=256, **kwargs)
     return Recorder(GetModel(Sink.FILE)(**kw), **kw)
 
 # --- model --- #
@@ -156,7 +156,7 @@ def test_draw_frame_fits_its_box(color, size):
 
 # --- opening files after launch (the browser / file dialog flow) ---
 def test_file_chosen_after_launch_plays(capture, tmp_path):
-    kw = dict(fmt="cf64", Fs=str(FS), nfft=256)
+    kw = dict(fmt="cf32", Fs=str(FS), nfft=256)
     c = Recorder(GetModel(Sink.FILE)(**kw), **kw)       # started without -f
     with pytest.raises(ValueError):
         c.command("start")                               # nothing to play yet
@@ -165,7 +165,7 @@ def test_file_chosen_after_launch_plays(capture, tmp_path):
     c.command("next")
     assert c.ticks and c.sink.cur_samp == c.model.get_block_size()
 
-    other = tmp_path / "other.cf64"                      # switching files reopens
+    other = tmp_path / "other.cf32"                      # switching files reopens
     np.zeros(2000, np.complex64).tofile(other)
     c.setting("path", str(other))
     assert c.sink.cur_samp == 0 and c.sink.max_samp == 2000
@@ -298,7 +298,7 @@ def test_sample_rate_must_be_positive(capture):
     c.setting("fs", "20k")
     assert c.sink.get_fs().raw == 20_000
     with pytest.raises(ValueError):
-        GetModel(Sink.FILE)(path=str(capture), fmt="cf64", Fs="0") # and a bad launch value fails up front instead of at the first client
+        GetModel(Sink.FILE)(path=str(capture), fmt="cf32", Fs="0") # and a bad launch value fails up front instead of at the first client
 
 def test_plot_settings_redraw_the_current_block_while_stopped(capture):
     c = make(capture)
@@ -342,7 +342,7 @@ def test_marker_actions_through_the_controller_and_console(capture):
     class Both(Recorder): # the console's marker command on a recording controller
         cmd_marker = Console.cmd_marker
         _need = Console._need
-    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256)
+    kw = dict(path=str(capture), fmt="cf32", Fs=str(FS), nfft=256)
     c = Both(GetModel(Sink.FILE)(**kw), **kw)
     pid = c.plots.layout[0][0]
     mid = c.add_marker(pid, "peak")
@@ -360,7 +360,7 @@ def test_plot_actions_through_the_controller_and_console(capture):
     class Both(Recorder):
         cmd_act = Console.cmd_act
         _need = Console._need
-    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256)
+    kw = dict(path=str(capture), fmt="cf32", Fs=str(FS), nfft=256)
     c = Both(GetModel(Sink.FILE)(**kw), **kw)
     pid = c.plots.layout[0][0]
     assert c.get_state()["plots"][pid]["actions"] == ["store ref", "clear ref"]
@@ -385,7 +385,7 @@ def test_export_through_the_controller_and_console(capture, tmp_path):
     class Both(Recorder):
         cmd_export = Console.cmd_export
         _need = Console._need
-    kw = dict(path=str(capture), fmt="cf64", Fs=str(FS), nfft=256)
+    kw = dict(path=str(capture), fmt="cf32", Fs=str(FS), nfft=256)
     c = Both(GetModel(Sink.FILE)(**kw), **kw)
     pid = c.plots.layout[0][0]
     with pytest.raises(ValueError, match="drawn nothing yet"):

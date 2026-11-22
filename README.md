@@ -38,21 +38,27 @@ Console: PSD and spectrogram drawn as text
     - `-d` picks the radio: a driver (`uhd`), or a radio on a pysdrlib server (`tcp://host:5555/hackrf-0`). With no `-d` it uses the first radio attached to this machine
     - `--servers tcp://a:5555,tcp://b:5555` (or the `PYSPECAN_SERVERS` environment variable) names known servers. With no `-d` and no radio attached here, it uses the first server that has one. `--list` and the radio picker show their radios too
     - `--list` prints every radio it can use, with the options that pick each one
+  - File: `-F` names the sample format, by pysdrlib's names (`cf32`: two float32, a GNU Radio `.cfile`; `ci16`: two
+    int16, a gqrx `.cs16`; `cui8`: an RTL-SDR `.cu8`...). Without it a SigMF recording (`x.sigmf-meta`) brings its own
+    format, sample rate and center frequency, and other files the format their extension names; a name that says
+    nothing is read as `cf32`, and pyspecan says so. `-fs` / `-cf` given win over a recording's
+    - pysdrlib 0.5 renamed the formats: the number is now the bits of one I or Q value. What was `cf64` is `cf32`, and
+      gqrx's `ci32t` is `ci16`
   - TCPIQ takes `--tcp_host`, `--tcp_port`, `--tcp_listen`, `--tcp_timeout`
 
 ## Module
 - `python3 -m pyspecan --help`
 - tkGUI, file: `python3 -m pyspecan`
 - tkGUI, live (hackrf): `python3 -m pyspecan -s live -d hackrf`
-- web, file: `python3 -m pyspecan -v web -f <file> -F cf64 -fs 250k`, then open http://127.0.0.1:8000
-- console, file: `python3 -m pyspecan -v cui -f <file> -F cf64 -fs 250k`, type `help` (draws plots as text, needs no plotting library)
+- web, file: `python3 -m pyspecan -v web -f <file> -F cf32 -fs 250k`, then open http://127.0.0.1:8000
+- console, file: `python3 -m pyspecan -v cui -f <file> -F cf32 -fs 250k`, type `help` (draws plots as text, needs no plotting library)
 
 ## Layouts
 Start with specific plots, in rows, with their settings, links and markers. `--plot` adds a plot to the
 current row, `--row` starts a new one. A plot is its name (case and spaces don't matter) then `key=value`
 settings; `link=<name>` links plots that share a name, `marker=<kind>[:key=value,...]` adds a marker.
 ```
-python3 -m pyspecan -v web -f <file> -F cf64 -fs 250k --cal_db -10 \
+python3 -m pyspecan -v web -f <file> -F cf32 -fs 250k --cal_db -10 \
     --plot "PSD vbw=5 unit=dBm link=a marker=peak" --plot "spectrogram link=a" \
     --row --plot "persistence show_max=on" --plot "scope trig_mode=roll time_div=10u"
 ```
@@ -128,7 +134,7 @@ Without it everything else works the same, and these plots are not listed.
 - The "Analysis" globals (`--dsp_freq`, `--dsp_bw`, `--dsp_mod`, `--dsp_baud`) pick the signal and, when known, its
   modulation and symbol rate. Blank picks the strongest signal and finds the rest
 ```
-python3 -m pyspecan -v web -f <file> -F cf64 -fs 1M \
+python3 -m pyspecan -v web -f <file> -F cf32 -fs 1M \
     --plot "PSD marker=signals" --plot constellation --row --plot "eye diagram" --plot "network analyzer"
 ```
 

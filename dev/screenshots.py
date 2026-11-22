@@ -86,7 +86,7 @@ def shoot_web(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=str(ROOT / "src"))
-    cmd = [sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(cap), "-F", "cf64", "-fs", "1M", "-n", "1024",
+    cmd = [sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(cap), "-F", "cf32", "-fs", "1M", "-n", "1024",
            *plot_args(scene.plots), *scene.args]
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     try:
@@ -147,7 +147,7 @@ def shoot_tk(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
     from pyspecan.controller.controller import GetController
     from pyspecan.model.model import GetModel
     from pyspecan.view.view import GetView
-    kw = dict(path=str(cap), fmt="cf64", Fs="1M", nfft=1024, layout_items=list(scene.plots), **_globals(scene.args))
+    kw = dict(path=str(cap), fmt="cf32", Fs="1M", nfft=1024, layout_items=list(scene.plots), **_globals(scene.args))
     ctrl = GetController(View.tkGUI, Sink.FILE)(GetModel(Sink.FILE)(**kw), GetView(View.tkGUI, Sink.FILE)(**kw), **kw)
     root = ctrl.view.root
     errors = []
@@ -242,7 +242,7 @@ def shoot_cui(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
     from pyspecan.controller.controller import GetController
     from pyspecan.model.model import GetModel
     from pyspecan.view.view import GetView
-    kw = dict(path=str(cap), fmt="cf64", Fs="1M", nfft=1024, layout_items=list(scene.plots), **_globals(scene.args))
+    kw = dict(path=str(cap), fmt="cf32", Fs="1M", nfft=1024, layout_items=list(scene.plots), **_globals(scene.args))
     view = GetView(View.CUI, Sink.FILE)(**kw)
     ctrl = GetController(View.CUI, Sink.FILE)(GetModel(Sink.FILE)(**kw), view, **kw)
     view.size = lambda: scene.size # a terminal this big
@@ -280,7 +280,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     dsp = have_rpps()
     with tempfile.TemporaryDirectory() as tmp:
-        cap = pathlib.Path(tmp) / "demo.cf64"
+        cap = pathlib.Path(tmp) / "demo.cf32"
         capture().tofile(cap)
         failed = []
         for s in scenes:

@@ -35,13 +35,13 @@ def qpsk_capture(n=1_000_000, baud=50e3, f0=150e3, beta=0.35, seed=0) -> np.ndar
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    capture = tmp_path_factory.mktemp("data") / "qpsk.cf64"
+    capture = tmp_path_factory.mktemp("data") / "qpsk.cf32"
     qpsk_capture().tofile(capture)
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
-    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64",
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf32",
                              "-fs", "1M", "-n", "1024"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     log: list[str] = []
     reader = threading.Thread(target=lambda: log.extend(proc.stdout), daemon=True) # type: ignore[arg-type]

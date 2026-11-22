@@ -25,14 +25,14 @@ def _browser(p):
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    capture = tmp_path_factory.mktemp("data") / "capture.cf64"
+    capture = tmp_path_factory.mktemp("data") / "capture.cf32"
     t = np.arange(250_000) / 250_000
     (np.exp(2j*np.pi*20_000*t) + 0.1*np.random.default_rng(0).standard_normal(t.size)).astype(np.complex64).tofile(capture)
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
-    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64", "-fs", "250k", "-n", "512"],
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf32", "-fs", "250k", "-n", "512"],
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         for _ in range(100):
@@ -394,13 +394,13 @@ def test_save_and_load_layout(page, tmp_path):
 def test_closing_pages_mid_stream_logs_no_errors(page, tmp_path):
     """Pages, and a whole browser context, going away while frames stream: the server drops them quietly.
     Uses the module's browser, playwright's sync API runs once per thread"""
-    capture = tmp_path / "capture.cf64"
+    capture = tmp_path / "capture.cf32"
     (np.exp(2j*np.pi*0.1*np.arange(2_000_000))).astype(np.complex64).tofile(capture)
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
-    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64", "-fs", "1M"],
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf32", "-fs", "1M"],
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         for _ in range(100):
