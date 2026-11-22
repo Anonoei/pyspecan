@@ -35,7 +35,7 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
-      # Extras (tk, web, dsp, test) come from pyproject.toml. dsp needs rpps >= 0.5.0 from PyPI
+      # Extras (tk, web, dsp, test) come from pyproject.toml. dsp needs rpps >= 0.6.0 from PyPI
       - name: Install package
         run: |
           python -m pip install --upgrade pip
