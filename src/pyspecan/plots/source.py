@@ -55,9 +55,11 @@ class Source:
         self._streams: dict[tuple, Stream] = {}
 
     # --- per tick --- #
-    def tick(self):
-        """A new block is in the model"""
-        self.seq += 1
+    def tick(self, contiguous: bool = True):
+        """A new block is in the model. `contiguous`: it follows the last one with no samples missing in between or in
+        it, else the sequence skips a number, which everything stitching blocks together (streams, the scope, the
+        DSP baseband) takes as a missed block"""
+        self.seq += 1 if contiguous else 2
         self._streams = {k: s for k, s in self._streams.items() if s.seen >= self.seq - 2}
 
     def reset(self):

@@ -47,6 +47,8 @@ class Controller(_Controller):
             (("claim",), "claim", "take control of a hosted radio that is free", lambda a: self._radio_cmd("claim")),
             (("release",), "release", "give up control of a hosted radio, and keep watching", lambda a: self._radio_cmd("release")),
             (("reconnect",), "reconnect", "connect to the radio again", lambda a: self._radio_cmd("reconnect")),
+            (("record", "rec"), "record [path|stop]", "record what the radio delivers while playing (default: SigMF in --record_dir)",
+             self.cmd_record),
             (("fs",), "fs <rate>", "sample rate, e.g. 250k", self.cmd_fs),
             (("cf",), "cf <freq>", "center frequency", self.cmd_cf),
             (("nfft",), "nfft <n>", "FFT size, a power of two (or its exponent)", self.cmd_nfft),
@@ -144,6 +146,12 @@ class Controller(_Controller):
             print(f"  radio {radio['device']} ({radio['control']}{', ' + str(radio['lag']) + ' s behind' if radio['lag'] else ''}{', spectrum mirrored, corrected' if radio.get('inverted') else ''})")
             for a in radio.get("antennas", []):
                 print(f"    antenna {'*' if a['selected'] else ' '} {a['label']}")
+            if radio["dropped"]:
+                print(f"    {radio['dropped']:,} samples lost by the radio")
+            if radio["recording"]:
+                print(f"    recording {radio['recording']['seconds']:g} s to {radio['recording']['path']}")
+            elif radio["record_error"]:
+                print(f"    {radio['record_error']}")
         if "path" in st:
             print(f"  file {st['path'] or '-'}  format {st['fmt']}  at {st['cur_samp']}/{st['max_samp']}  {st['time_cur']} / {st['time_tot']}")
         if self.message:
@@ -171,6 +179,16 @@ class Controller(_Controller):
             raise ValueError("the sink is a file, there is no radio")
         if not self.sink.antennas():
             raise ValueError("this radio has no selectable antennas")
+
+    def cmd_record(self, args):
+        """record [path|stop]: record the radio's samples while playing, or stop recording"""
+        if args and args[0] == "stop":
+            self.stop_record()
+            print(f"  {self.message}")
+            return
+        path = self.start_record(" ".join(args) or None)
+        self.playing = False # here playing is the `start` loop, which is what reads (and so records)
+        print(f"  recording to {path}: `start` plays and records, `record stop` ends it")
 
     def _radio_cmd(self, cmd):
         self.command(cmd)

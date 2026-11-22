@@ -1,6 +1,11 @@
-"""What pyspecan takes from pysdrlib 0.5: file formats and SigMF recordings"""
+"""What pyspecan takes from pysdrlib 0.5: file formats and SigMF, a live radio's RxMeta (lost and skipped samples),
+recording, and TCP IQ formats. Live parts run against pysdrlib's simulated radio"""
+import time
+
 import numpy as np
-from pysdrlib import FileSink
+import pysdrlib
+import pytest
+from pysdrlib import FileSink, RxMeta
 
 from pyspecan.config import Sink
 from pyspecan.controller.base import Controller
@@ -70,3 +75,139 @@ def test_seeking_clamps_to_the_file(tmp_path):
     assert sink.cur_samp == 4096 and not sink.next(1)
     sink.seek(-5)
     assert sink.cur_samp == 0 and sink.next(16)
+
+# --- a live radio: what pysdrlib says about each block --- #
+@pytest.fixture
+def radio():
+    m = GetModel(Sink.LIVE)(device="sim", Fs="1M", cf="100M", nfft=256)
+    yield m
+    m.sink.close()
+
+def scripted(sink, metas):
+    """Make the radio's reads return blocks with these RxMeta, in turn"""
+    it = iter(metas)
+    def read(count, timeout=None, meta=False, latest=False, **kw):
+        m = next(it)
+        return np.ones(m.count, np.complex64), m
+    sink.dev.read = read
+
+def test_blocks_follow_each_other_unless_samples_were_lost_or_skipped(radio):
+    sink = radio.sink
+    m = lambda index, gaps=(), discarded=0: RxMeta(index=index, count=1000, freq=100e6, rate=1e6, gaps=gaps, discarded=discarded)
+    scripted(sink, [m(0), m(1000), m(2000, gaps=((400, 50),)), m(3050), m(4057, gaps=((0, 7),)), m(5057),
+                    m(9000, discarded=2943)])
+    seen = []
+    for _ in range(7):
+        assert sink.next(1000)
+        seen.append(sink.contiguous)
+    # the first has nothing before it; a gap inside a block breaks it, the next follows it (the gap was inside it);
+    # a gap at its start (already counted in its index) breaks a block, the next follows; samples skipped to show the newest break it too
+    assert seen == [False, True, False, True, False, True, False]
+    assert sink.dropped == 57 and sink.skipped == 2943
+    live = sink.live_status()
+    assert live["dropped"] == 57 and live["skipped"] == 2943 and live["recording"] is None
+
+def test_a_break_skips_a_sequence_number_so_streams_start_over(radio):
+    c = Recorder(radio, nfft=256)
+    c.add_plot("PSD")
+    m = lambda index: RxMeta(index=index, count=radio.get_block_size(), freq=100e6, rate=1e6)
+    n = radio.get_block_size()
+    scripted(radio.sink, [m(0), m(n), m(5 * n)])
+    c.command("next"); c.command("next")
+    seq = c.source.seq
+    c.command("next") # 3n samples were lost
+    assert c.source.seq == seq + 2
+    assert all(not s.carry.size or s.seen == c.source.seq for s in c.source._streams.values())
+
+def test_a_radio_that_is_gone_says_so(radio):
+    def read(*a, **kw):
+        raise pysdrlib.err.Lost("unplugged")
+    radio.sink.dev.read = read
+    with pytest.raises(ConnectionError, match="gone"):
+        radio.sink.next(256)
+
+def test_a_spectrum_mirrored_by_the_chain_is_turned_back(radio):
+    sink = radio.sink
+    x = np.exp(2j*np.pi*0.1*np.arange(1000)).astype(np.complex64)
+    sink.dev.read = lambda count, **kw: (x[:count].copy(), RxMeta(index=0, count=count, freq=100e6, rate=1e6))
+    sink.inverted, sink.dc_block = True, False
+    assert sink.next(1000) and np.allclose(sink.samples, x.conj())
+
+# --- recording --- #
+def test_recording_keeps_every_sample_and_the_tuning(radio, tmp_path):
+    c = Recorder(radio, nfft=256, record_dir=str(tmp_path))
+    c.add_plot("PSD")
+    path = c.start_record()
+    assert c.playing and path.endswith(".sigmf-data") and str(tmp_path) in path and "100000000Hz" in path
+    shown = 0
+    for _ in range(20):
+        c.step()
+        shown += len(c.sink.samples)
+        assert len(c.sink.samples) == radio.get_block_size()
+    rec, written = c.sink.recording(), c.sink.recorder.count
+    assert written >= shown and rec["seconds"] == round(written / 1e6, 3) # everything read, not just what was shown
+    assert c.get_status()["radio_live"]["recording"]["path"] == path
+    c.stop_record()
+    assert "recorded" in c.message and c.sink.recording() is None
+    f = pysdrlib.File(path)
+    assert f.rate == 1e6 and f.freq == 100e6 and f.max_samp == written
+
+def test_a_path_with_a_format_records_that_format(radio, tmp_path):
+    sink = radio.sink
+    path = sink.start_record(tmp_path / "x.cs16")
+    for _ in range(3):
+        sink.next(256)
+    n = sink.recorder.count
+    sink.stop_record()
+    assert path.endswith("x.cs16") and pysdrlib.File(path).max_samp == n and pysdrlib.File(path).fmt.name == "ci16t"
+
+def test_a_failing_recording_stops_and_says_why_without_stopping_the_display(radio, tmp_path):
+    sink = radio.sink
+    sink.start_record(tmp_path / "r.sigmf")
+    def full(*a, **kw):
+        raise OSError("No space left on device")
+    sink.recorder.write = full
+    assert sink.next(256) and len(sink.samples) == 256
+    assert sink.recorder is None and "No space left" in sink.live_status()["record_error"]
+
+def test_recording_needs_a_radio(tmp_path):
+    tones().tofile(tmp_path / "c.cfile")
+    kw = dict(path=str(tmp_path / "c.cfile"), Fs="1M", nfft=256)
+    c = Recorder(GetModel(Sink.FILE)(**kw), **kw)
+    with pytest.raises(ValueError, match="no radio"):
+        c.command("record")
+
+# --- a TCP IQ stream, in the sender's format --- #
+@pytest.mark.parametrize("fmt, dtype, scale", [("ci16", np.int16, 32767), ("cu8", np.uint8, None), ("cf32", np.float32, 1)])
+def test_tcpiq_reads_the_format_the_sender_sends(fmt, dtype, scale):
+    import socket
+    import threading
+    x = (0.5 * tones(8192)).astype(np.complex64)
+    iq = np.empty(2 * len(x), np.float64)
+    iq[0::2], iq[1::2] = x.real, x.imag
+    raw = (np.round(iq * 127.5 + 127.5) if scale is None else np.round(iq * scale) if dtype != np.float32 else iq).astype(dtype)
+    srv = socket.create_server(("127.0.0.1", 0))
+    port = srv.getsockname()[1]
+    def send():
+        conn, _ = srv.accept()
+        with conn:
+            conn.sendall(raw.tobytes())
+            time.sleep(1.0)
+    threading.Thread(target=send, daemon=True).start()
+    m = GetModel(Sink.TCPIQ)(tcp_host="127.0.0.1", tcp_port=port, tcp_fmt=fmt, Fs="1M", nfft=256)
+    try:
+        got = []
+        while sum(map(len, got)) < 4096:
+            assert m.sink.next(1024)
+            got.append(m.sink.samples)
+        y = np.concatenate(got)[:4096]
+        y = y / np.abs(y).max() * np.abs(x[:4096]).max() # whatever full scale each format reads at
+        assert np.allclose(y, x[:4096], atol=0.02), fmt
+    finally:
+        m.sink.close()
+        srv.close()
+
+def test_the_file_format_option_points_tcpiq_to_its_own():
+    from pyspecan.arguments import hint
+    from pyspecan.config import View
+    assert "--tcp_fmt" in hint("F", View.WEB, Sink.TCPIQ)

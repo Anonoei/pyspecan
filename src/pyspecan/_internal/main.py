@@ -9,8 +9,9 @@ from ..specan import SpecAn
 
 
 def _list_radios(device, servers=None):
-    from ..model.sink.live import list_devices, parse_servers
-    address = [device] if device and "://" in device else []
+    from ..model.sink.live import list_devices, parse_servers, remote_target
+    target = remote_target(device)
+    address = [target.server] if target is not None else []
     print("\n".join(list_devices(address + parse_servers(servers))))
 
 def _main(ns: argparse.Namespace):

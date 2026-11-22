@@ -34,6 +34,7 @@ def args_controller(parser):
     """Options every view's controller takes"""
     ctrl = args.get_group(parser, "Playback")
     ctrl.add_argument("--show", default=ControllerConfig.show, type=float, help="[ms] time between frames")
+    ctrl.add_argument("--record_dir", default=None, help="where a live radio's recordings go when no path is given (default: here)")
     return ctrl
 
 class Controller:
@@ -56,6 +57,7 @@ class Controller:
         self.running = True
         self.message = ""
         self.time_show = float(kwargs.get("show", ControllerConfig.show))
+        self.record_dir = pathlib.Path(kwargs.get("record_dir") or ".").expanduser()
         self.thread: threading.Thread | None = None
 
     # --- plots --- #
@@ -214,6 +216,9 @@ class Controller:
     def get_status(self) -> dict:
         """The parts of the state that change while streaming"""
         status = {"playing": self.playing, "message": self.message}
+        radio = self.sink.live_status()
+        if radio is not None: # what changes block to block, the rest of the radio is in the state
+            status["radio_live"] = radio
         if self.sink.SEEKABLE:
             status.update({
                 "cur_samp": self.sink.cur_samp,
@@ -286,6 +291,10 @@ class Controller:
                 self.model.reset()
                 self.reset_plots()
                 self.message = ""
+            elif cmd == "record":
+                self.start_record()
+            elif cmd == "record_stop":
+                self.stop_record()
             elif cmd in ("claim", "release", "reconnect"):
                 self._need_radio()
                 self.playing = False
@@ -375,6 +384,32 @@ class Controller:
         """Radios that can be picked, a server that is down does not get in the way"""
         return self.sink.radios() if self.sink.status() is not None else []
 
+    # --- recording a live radio --- #
+    def record_path(self) -> pathlib.Path:
+        """A new recording's path when none is given: pyspecan-<UTC time>-<center frequency>.sigmf in record_dir"""
+        stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        return self.record_dir / f"pyspecan-{stamp}-{int(self.sink.get_cf().raw)}Hz.sigmf"
+
+    def start_record(self, path=None) -> str:
+        """Record every sample the radio delivers to `path` (default: record_path()), and play if stopped: reading is what
+        records. A path whose extension names no format (.cfile, .cs16, .cu8...) is a SigMF recording"""
+        with self.lock:
+            self._need_radio()
+            path = pathlib.Path(path).expanduser() if path else self.record_path()
+            written = self.sink.start_record(path)
+            self.playing = True
+            self.message = f"recording to {written}"
+        self.state_changed()
+        return written
+
+    def stop_record(self):
+        with self.lock:
+            self._need_radio()
+            rec = self.sink.recording()
+            self.sink.stop_record()
+            self.message = f"recorded {rec['seconds']:g} s to {rec['path']}" if rec else ""
+        self.state_changed()
+
     def _need_file(self):
         if not self.sink.SEEKABLE:
             raise ValueError("sink does not support seeking")
@@ -404,7 +439,7 @@ class Controller:
             self.source.reset()
             self.plots.reset()
             self.state_changed()
-        self.source.tick()
+        self.source.tick(sink.contiguous)
         self.deliver(self.render(), self.get_status())
         return True
 

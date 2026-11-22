@@ -35,16 +35,29 @@ Console: PSD and spectrogram drawn as text
 - View (-v|--view): specifies which frontend to use (tk, web, cui; any case)
 - Sink (-s|--sink): specifies which interface to use (file, live, tcpiq)
   - Live uses [pysdrlib](https://github.com/anonoei/pysdrlib) for hardware SDR abstractions
-    - `-d` picks the radio: a driver (`uhd`), or a radio on a pysdrlib server (`tcp://host:5555/hackrf-0`). With no `-d` it uses the first radio attached to this machine
-    - `--servers tcp://a:5555,tcp://b:5555` (or the `PYSPECAN_SERVERS` environment variable) names known servers. With no `-d` and no radio attached here, it uses the first server that has one. `--list` and the radio picker show their radios too
+    - `-d` picks the radio by pysdrlib's target: a driver (`uhd`, `hackrf@<serial>`), or on a pysdrlib server
+      `radiohost` (it picks), `radiohost/hackrf-0` (one it hosts), `radiohost/hackrf` (open a new one) or
+      `radiohost:5556/hackrf@<serial>` (one attached to it); `tcp://host:port/...` works too. With no `-d` it uses the
+      first radio attached to this machine
+    - `--servers radiohost,other:5556` (or the `PYSPECAN_SERVERS` / pysdrlib's `PYSDRLIB_SERVERS` environment variable)
+      names known servers. With no `-d` and no radio attached here, it uses the first server that has one. `--list` and
+      the radio picker show their radios too
     - `--list` prints every radio it can use, with the options that pick each one
+    - Record: every sample the radio delivers goes to a SigMF recording (cf32, with its rate, frequency, the radio, and
+      where samples were lost) while it plays, even when the display skips blocks to keep up. Web and tkGUI: "Record";
+      console: `record [path|stop]` (a path ending in a format's extension, `.cs16`, `.cu8`..., records that format
+      instead). Recordings without a path go to `--record_dir` (default: here; the web view's `--root` when given),
+      named `pyspecan-<UTC time>-<center>Hz.sigmf`. The web view never takes a path from the browser
+    - The status line counts samples the radio lost (overflows). A block with samples lost in or before it starts the
+      plots' frame streams over, instead of joining samples that do not follow each other
   - File: `-F` names the sample format, by pysdrlib's names (`cf32`: two float32, a GNU Radio `.cfile`; `ci16`: two
     int16, a gqrx `.cs16`; `cui8`: an RTL-SDR `.cu8`...). Without it a SigMF recording (`x.sigmf-meta`) brings its own
     format, sample rate and center frequency, and other files the format their extension names; a name that says
     nothing is read as `cf32`, and pyspecan says so. `-fs` / `-cf` given win over a recording's
     - pysdrlib 0.5 renamed the formats: the number is now the bits of one I or Q value. What was `cf64` is `cf32`, and
       gqrx's `ci32t` is `ci16`
-  - TCPIQ takes `--tcp_host`, `--tcp_port`, `--tcp_listen`, `--tcp_timeout`
+  - TCPIQ takes `--tcp_host`, `--tcp_port`, `--tcp_listen`, `--tcp_timeout`, and `--tcp_fmt`: what the sender sends
+    (`cf32` by default, two float32 as GNU Radio sends; `ci16` two int16; `cu8` two uint8, an RTL-SDR's layout...)
 
 ## Module
 - `python3 -m pyspecan --help`

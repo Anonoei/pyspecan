@@ -51,6 +51,10 @@ def hosted(address):
     with remote.Client(address, 2.0) as c:
         return {d["id"]: d for d in c.list()}
 
+def short(address):
+    """How pysdrlib writes a server in a target: tcp://127.0.0.1:5556 -> 127.0.0.1:5556"""
+    return pysdrlib.targets.short(address)
+
 def make(address, ident="sim-0", **kw):
     return GetModel(Sink.LIVE)(device=f"{address}/{ident}", nfft=256, **kw)
 
@@ -99,16 +103,26 @@ def test_plots_run_on_a_remote_radio(server):
         c.quit() # detaches
     assert not hosted(server)["sim-0"]["controlled"] and not hosted(server)["sim-0"]["state"]["rx"]
 
-def test_bad_remote_names_fail_clearly(server):
-    from pyspecan.model.sink.live import SinkLive
-    for bad in ("tcp:/hackrf", "://host:5555", "tcp://", "tcp://host:5555/a/b"):
-        with pytest.raises(ValueError):
-            SinkLive.split_address(bad)
-    assert SinkLive.split_address("tcp://10.0.10.35:5555/hackrf-6") == ("tcp://10.0.10.35:5555", "hackrf-6")
-    assert SinkLive.split_address("tcp://10.0.10.35:5555") == ("tcp://10.0.10.35:5555", None)
-    assert SinkLive.split_address("tcp://10.0.10.35:5555/") == ("tcp://10.0.10.35:5555", None)
+def test_targets_name_a_radio_on_a_server_however_it_is_written(server):
+    from pyspecan.model.sink.live import remote_target
+    t = remote_target("10.0.10.35/hackrf-6")
+    assert t.server == "tcp://10.0.10.35:5555" and t.device == "hackrf-6"
+    assert remote_target("tcp://10.0.10.35:5556").device is None # the server picks
+    assert remote_target("hackrf@a06") is None and remote_target("auto") is None and remote_target(None) is None
+    for name in (f"{server}/sim-0", f"{short(server)}/sim-0"): # with or without the scheme
+        sink = GetModel(Sink.LIVE)(device=name, nfft=256).sink
+        try:
+            assert sink.remote and sink.hosted and sink.server == server and sink.dev.id == "sim-0"
+        finally:
+            sink.close()
     with pytest.raises(pysdrlib.err.NoDevice):
         make(server, ident="sim-99")
+
+@pytest.mark.parametrize("bad", ["tcp:/hackrf", "://host:5555", "tcp://", "tcp://host:5555/a/b"])
+def test_malformed_targets_fail_clearly(bad):
+    from pyspecan.model.sink.live import remote_target
+    with pytest.raises(ValueError):
+        remote_target(bad)
 
 def test_watching_an_idle_radio_says_how_to_start_it(server):
     sink = make(server).sink
@@ -147,8 +161,8 @@ def empty_server():
 def test_list_shows_hosted_radios_with_the_option_that_picks_each(server):
     from pyspecan.model.sink.live import list_devices
     text = "\n".join(list_devices(server))
-    assert f"-s live -d {server}/sim-0" in text and "--claim" in text and "free" in text and "idle" in text
-    assert f"-d {server}/sim  " in text or f"-d {server}/sim" in text # the type it can open
+    assert f"-s live -d {short(server)}/sim-0" in text and "--claim" in text and "free" in text and "idle" in text
+    assert f"-d {short(server)}/sim\n" in text + "\n" # the type it can open
     assert "attached to this machine" in text
     with pytest.raises(ValueError):
         list_devices("tcp:/bad")
@@ -156,7 +170,9 @@ def test_list_shows_hosted_radios_with_the_option_that_picks_each(server):
 def test_list_cli_flag_prints_and_exits(server, capsys, monkeypatch):
     from pyspecan._internal import main as m
     m._main(m.parse_args(["--list", "-d", server]))
-    assert f"{server}/sim-0" in capsys.readouterr().out
+    assert f"{short(server)}/sim-0" in capsys.readouterr().out
+    m._main(m.parse_args(["--list", "-d", f"{short(server)}/sim-0"])) # a radio on it: that server's
+    assert f"on the server {short(server)}:" in capsys.readouterr().out
 
 def test_a_server_address_alone_picks_a_radio(server, empty_server):
     from pyspecan.model.sink.live import pick_remote
@@ -219,7 +235,7 @@ def test_known_servers_are_used_when_nothing_is_attached(server, monkeypatch, ca
         assert sink.remote and sink.server == server and sink.next(2048) # the dead one was skipped
         assert "using sim-0" in capsys.readouterr().out or sink.dev.id == "sim-0"
         targets = [c["target"] for c in sink.radios()]
-        assert f"{server}/sim-0" in targets and None in targets # the dead server is listed as not answering
+        assert f"{short(server)}/sim-0" in targets and None in targets # the dead server is listed as not answering
     finally:
         sink.close()
     monkeypatch.setenv("PYSPECAN_SERVERS", server)
@@ -243,8 +259,9 @@ def test_a_local_radio_comes_before_the_known_servers(server, monkeypatch):
 def test_known_servers_must_be_addresses():
     from pyspecan.model.sink.live import parse_servers
     assert parse_servers(" tcp://a:1 ,tcp://b:2/, tcp://a:1") == ["tcp://a:1", "tcp://b:2"]
+    assert parse_servers("radiohost a:1") == ["tcp://radiohost:5555", "tcp://a:1"] # as pysdrlib writes them: host[:port]
     assert parse_servers("") == []
-    for bad in ("a:1", "tcp://a:1/sim-0"):
+    for bad in ("tcp://a:1/sim-0", "radiohost/sim-0", "hackrf@a06"):
         with pytest.raises(ValueError):
             parse_servers(bad)
 
@@ -255,7 +272,7 @@ def test_list_shows_every_known_server(server, empty_server, monkeypatch, capsys
     dead = _dead_address()
     m._main(m.parse_args(["--list", "--servers", f"{server},{dead}", "-d", empty_server]))
     out = capsys.readouterr().out
-    assert f"{server}/sim-0" in out and f"on the server {empty_server}" in out and f"{dead}: not answering" in out
+    assert f"{short(server)}/sim-0" in out and f"on the server {short(empty_server)}" in out and f"{short(dead)}: not answering" in out
 
 def test_a_driver_name_and_serial_still_pick_the_radio(monkeypatch):
     seen = []

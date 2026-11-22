@@ -154,6 +154,7 @@ body, html {
 .pyspecan canvas { position: absolute; top: 0; left: 0; }
 .pyspecan .path { font-size: 0.8rem; word-break: break-all; margin-bottom: 6px; }
 .pyspecan .danger, .danger { color: var(--danger); }
+#btn-record.recording { color: var(--danger); border-color: var(--danger); }
 
 dialog {
     background: hsl(0 0% 9%);

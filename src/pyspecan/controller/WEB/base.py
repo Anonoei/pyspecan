@@ -35,6 +35,8 @@ class Controller(_Controller):
         super().__init__(model, view, **kwargs)
         self.view: GUI = self.view # type hints
         self.root = pathlib.Path(kwargs["root"]).resolve() if kwargs.get("root") else None
+        if self.root is not None and not kwargs.get("record_dir"):
+            self.record_dir = self.root # recordings land where the browser can open them
 
         self.ws = WebSocketManager(self)
         self.encoder = Encoder()

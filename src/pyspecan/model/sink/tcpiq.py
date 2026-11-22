@@ -1,6 +1,8 @@
 """TCP IQ stream, as a client of a sample server or a server that a sender connects to (pysdrlib's tcpiq)"""
 import numpy as np
 import pysdrlib
+import pysdrlib.tcpiq
+from pysdrlib import err as _err
 
 from ...obj import Frequency
 from .sink import Sink, SinkConfig
@@ -11,6 +13,8 @@ def args_tcpiq(sink):
     sink.add_argument("--tcp_port", default=1234, type=int, help="TCP port")
     sink.add_argument("--tcp_listen", action="store_true", help="be the server and wait for a sender to connect")
     sink.add_argument("--tcp_timeout", default=1.0, type=float, help="seconds to wait for a block of samples")
+    sink.add_argument("--tcp_fmt", default="cf32", choices=pysdrlib.tcpiq.FORMATS,
+                      help="what the sender sends: cf32 (two float32, GNU Radio), ci16 (two int16), cu8 (RTL-SDR)... (default: cf32)")
 
 class SinkTcpIq(Sink):
     __slots__ = ("dev", "timeout")
@@ -20,8 +24,9 @@ class SinkTcpIq(Sink):
         host = kwargs.get("tcp_host", None)
         port = int(kwargs.get("tcp_port", 1234))
         listen = bool(kwargs.get("tcp_listen", False))
+        fmt = kwargs.get("tcp_fmt") or "cf32"
 
-        self.dev: pysdrlib.Device = pysdrlib.open("tcpiq", host=host, port=port, listen=listen)
+        self.dev: pysdrlib.Device = pysdrlib.open("tcpiq", host=host, port=port, listen=listen, sample_format=fmt)
         # the stream's rate and frequency can't be set from here, they're what we say it is
         cf = None if int(self._cf.raw) == int(SinkConfig.cf) else self._cf.raw
         Fs = None if int(self._Fs.raw) == int(SinkConfig.Fs) else self._Fs.raw
@@ -31,7 +36,7 @@ class SinkTcpIq(Sink):
         self.dev.start_rx()
 
     def show(self, ind=2):
-        print(" "*ind + f"TCP IQ {self.dev.peer or 'waiting for peer'}")
+        print(" "*ind + f"TCP IQ {self.dev.peer or 'waiting for peer'} [{self.dev.SAMPLE_FORMAT}]")
 
     def ready(self):
         return self.dev is not None
@@ -48,7 +53,7 @@ class SinkTcpIq(Sink):
     def next(self, count: int):
         try:
             self._samples = np.asarray(self.dev.read(count, timeout=self.timeout))
-        except TimeoutError:
+        except _err.Timeout:
             return False
         return True
 

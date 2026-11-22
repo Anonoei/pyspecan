@@ -1,58 +1,67 @@
 import atexit
-import inspect
 import os
+import re
 import time
 
 import pysdrlib
 from pysdrlib import err as _err
+from pysdrlib import targets as _targets
 
 from ...obj import Frequency
 from .sink import Sink, SinkConfig
 
 PROGRAM = "pyspecan" # what a pysdrlib server shows next to a radio this program holds
-SERVERS_ENV = "PYSPECAN_SERVERS" # known pysdrlib servers, when --servers is not given
+SERVERS_ENV = "PYSPECAN_SERVERS" # known pysdrlib servers when --servers is not given (else pysdrlib's PYSDRLIB_SERVERS)
 PROBE_TIMEOUT = 2.0 # [s] a known server has to answer in when looking for a radio, else it is skipped
 
 def parse_servers(value=None) -> list[str]:
-    """Known pysdrlib servers: a comma separated 'tcp://host:5555, tcp://other:5555' (or a list),
-    None: the PYSPECAN_SERVERS environment variable. Each is checked to be an address, duplicates dropped"""
+    """Known pysdrlib servers as endpoints: 'radiohost, tcp://other:5556' (commas or whitespace, or a list); None:
+    $PYSPECAN_SERVERS, else $PYSDRLIB_SERVERS. An entry naming a radio is refused, duplicates are dropped"""
     if value is None:
-        value = os.environ.get(SERVERS_ENV, "")
-    parts = value if isinstance(value, (list, tuple)) else str(value).split(",")
+        value = os.environ.get(SERVERS_ENV) or os.environ.get(_targets.SERVERS_ENV, "")
+    parts = value if isinstance(value, (list, tuple)) else re.split(r"[,\s]+", str(value))
     out = []
-    for p in (str(p).strip() for p in parts):
-        if not p:
+    for part in (str(x).strip().rstrip("/") for x in parts):
+        if not part:
             continue
-        base, ident = SinkLive.split_address(p)
-        if ident is not None:
-            raise ValueError(f"a known server is an address without a radio, tcp://host:port, got {p!r}")
-        if base not in out:
-            out.append(base)
+        rest = part.split("://", 1)[1] if "://" in part else part
+        if "@" in rest or ("/" in rest and not part.startswith("ipc://")):
+            raise ValueError(f"a known server is an address without a radio (radiohost, host:port, tcp://host:port), got {part!r}")
+        server = _targets.endpoint(part)
+        if server not in out:
+            out.append(server)
     return out
 
+def remote_target(name):
+    """The pysdrlib Target of `name` when it names a server ([server/]device, see pysdrlib.targets), else None"""
+    if not name or name == "auto":
+        return None
+    t = _targets.parse_target(name)
+    return t if t.server is not None else None
+
 def _addresses(*groups) -> list[str]:
-    """Server addresses (None, one, or lists of them), each once, in order"""
+    """Server endpoints (None, one, or lists of them), each once, in order"""
     out = []
     for g in groups:
         for a in ([g] if isinstance(g, str) else g or []):
-            if a and a not in out:
-                out.append(a)
+            if a and _targets.endpoint(a) not in out:
+                out.append(_targets.endpoint(a))
     return out
 
 def args_live(sink):
-    sink.add_argument("-d", "--device", default=None, help="radio to use: a driver name (uhd), 'auto' or nothing for the first one found (see --list), or one on a pysdrlib server: tcp://host:5555 (the first it hosts), tcp://host:5555/<id> (hackrf-0), tcp://host:5555/<driver> (open a new one)")
+    sink.add_argument("-d", "--device", default=None, help="radio to use, as --list shows: a driver (uhd, hackrf@<serial>), 'auto' or nothing for the first one found, or one on a pysdrlib server: radiohost (it picks), radiohost/hackrf-0 (one it hosts), radiohost/hackrf (open a new one), radiohost:5556/hackrf@<serial> (one attached to it); tcp://host:port works too")
     sink.add_argument("--serial", default=None, help="which unit of the driver, as --list shows")
     sink.add_argument("--no-dc-block", action="store_true", help="keep the DC spike at the center (radios with a direct-conversion receiver, like the HackRF, have one): by default the average of each block is removed")
     sink.add_argument("--claim", action="store_true", help="take control of a hosted remote radio that is free (tune it, start it), without it you only watch")
-    sink.add_argument("--servers", default=None, help=f"known pysdrlib servers, comma separated tcp://host:5555: with no -d and no radio attached here the first usable one is picked, --list and the radio picker show theirs (default: ${SERVERS_ENV})")
+    sink.add_argument("--servers", default=None, help=f"known pysdrlib servers, comma separated (radiohost, host:5556, tcp://host:port): with no -d and no radio attached here the first usable one is picked, --list and the radio picker show theirs (default: ${SERVERS_ENV}, else $PYSDRLIB_SERVERS)")
 
 class SinkLive(Sink):
     __slots__ = (
         "dev", "gain_frac", "claim", "remote", "hosted", "serial", "target", "server", "stalls", "lag", "skipped", "retuned",
-        "inverted", "granted", "dc_block", "servers"
+        "inverted", "granted", "dc_block", "servers", "dropped", "hw_time", "recorder", "record_error", "_next_index"
     )
-    LAG_MIN = 0.1     # [s] of backlog that is dropped to catch up with the radio (or 3 blocks, if longer)
     STALLS = 3        # reads without samples in a row before the radio is called lost
+    RECORD_READ_S = 1.0 # [s] most samples read at once while recording (what is queued beyond waits for the next read)
     def __init__(self, model, **kwargs):
         self.dev: pysdrlib.Device = None # type: ignore
         device = kwargs.get("device", None)
@@ -68,10 +77,15 @@ class SinkLive(Sink):
         self.server = None    # address of the pysdrlib server in use, to list its radios
         self.stalls = 0       # reads in a row that got no samples
         self.lag = 0.0        # [s] how far behind the radio the last block was
-        self.skipped = 0      # blocks dropped to catch up, or because they came from before a retune
+        self.skipped = 0      # samples skipped to show the newest (queued while busy, or from before a retune)
         self.retuned = False  # the radio was tuned elsewhere and this sink followed
         self.inverted = False # the radio's spectrum comes mirrored (a converter with its LO above the signal): undone in next()
         self.granted = None   # what a server that chose the radio says it can do nearest to what was asked
+        self.dropped = 0      # samples the radio lost (overflows), as pysdrlib reports them
+        self.hw_time = None   # the radio's own clock at the last block's first sample, for radios that keep one
+        self.recorder = None  # pysdrlib FileSink while recording
+        self.record_error = "" # why the last recording stopped by itself
+        self._next_index = None # stream index after the last block shown, to tell whether the next one follows it
         self.set_device(device) # type: ignore
 
     def show(self, ind=2):
@@ -94,6 +108,7 @@ class SinkLive(Sink):
 
     def close(self):
         """Let go of the device. A radio a server already hosted is detached from, so it stays open there for others"""
+        self.stop_record()
         dev, self.dev = self.dev, None # type: ignore
         if dev is None:
             return
@@ -109,44 +124,32 @@ class SinkLive(Sink):
         except Exception as e: # the server may be gone, there is nothing left to release
             self.log.warning("closing the device: %s", e)
 
-    @staticmethod
-    def split_address(name: str) -> tuple[str, str | None]:
-        """'tcp://host:5555/hackrf-0' -> ('tcp://host:5555', 'hackrf-0'), 'tcp://host:5555' -> ('tcp://host:5555', None)"""
-        scheme, sep, rest = name.partition("://")
-        host, _, ident = rest.partition("/")
-        if not sep or not scheme or not host or "/" in ident:
-            raise ValueError(f"expected tcp://host:port[/<device id or driver>], got {name!r}")
-        return f"{scheme}://{host}", (ident or None)
-
-    def _connect_remote(self, name: str):
-        address, ident = self.split_address(name)
+    def _connect_remote(self, target):
+        """A radio on a pysdrlib server, from its pysdrlib Target"""
+        address, device, serial = target.server, target.device, target.serial
+        where = _targets.short(address)
         self.granted = None
-        if ident is None:
-            ident = pick_remote(address, self.claim)
-            if ident is not None:
-                print(f"using {ident} on {address}", flush=True)
-        chooses, names = _connect_features()
-        who = {"program": PROGRAM} if names else {} # an older pysdrlib does not take who we are
-        if ident is None: # nothing hosted to use: the server chooses the radio to open, for what was asked
+        if device is None:
+            device = pick_remote(address, self.claim)
+            if device is not None:
+                print(f"using {device} on {where}", flush=True)
+        who = {"program": PROGRAM}
+        if device is None: # nothing hosted to use: the server chooses the radio to open, for what was asked
             try:
-                if not chooses: # an older pysdrlib cannot choose: open the first type the server has
-                    raise _err.NoDevice("attached: none")
                 dev = pysdrlib.connect(address, **who, **self._wanted())
             except _err.NoDevice as e: # it chooses among the radios attached to it: with none attached, open the first type it has
-                types = _server_radios(address)[1]
+                types = [r.driver for r in _discover([address], local=False, raise_errors=True) if r.state == "openable"]
                 if not types or "attached: none" not in str(e): # attached radios that do not fit are an answer
                     raise
                 dev = pysdrlib.connect(address, types[0], **who)
             self.granted = getattr(dev, "granted", None)
-            print(f"using {dev.id} on {address}" + self._granted_note(), flush=True)
-        elif "@" in ident: # an attached radio the server has not opened yet: driver@serial
-            driver, serial = ident.split("@", 1)
-            dev = pysdrlib.connect(address, driver, serial=serial, **who)
-        else:
-            dev = pysdrlib.connect(address, ident, claim=self.claim, **who)
+            print(f"using {dev.id} on {where}" + self._granted_note(), flush=True)
+        else: # hosted (attach), a driver (open a new one), or driver@serial (one attached to it)
+            dev = pysdrlib.open(_targets.format_target(address, device, serial), program=PROGRAM,
+                                **({} if serial else {"claim": self.claim}))
         self.remote = True
         # attaching to a hosted id gives the device with that id, naming a driver opens a new one (hackrf-N) that is ours to close
-        self.hosted = getattr(dev, "id", None) == ident
+        self.hosted = getattr(dev, "id", None) == device and not serial
         atexit.register(self.close)
         return dev
 
@@ -171,17 +174,21 @@ class SinkLive(Sink):
     def _pick_server(self) -> str:
         """No radio attached here: the first known server with one to use, as a -d target. Servers that do not
         answer, or have nothing usable (every radio controlled, with --claim), are skipped"""
+        errors = []
+        found = _discover(self.servers, local=False, timeout=PROBE_TIMEOUT, errors=errors)
+        down = dict(errors)
         tried = []
         for address in self.servers:
-            try:
-                ident = pick_remote(address, self.claim, PROBE_TIMEOUT)
-            except ImportError:
-                raise
-            except Exception as e: # down, busy, or hosting nothing it can open
-                self.log.warning("skipping %s: %s", address, e)
-                tried.append(f"{address} ({e})")
+            if address in down:
+                tried.append(f"{_targets.short(address)} ({down[address]})")
                 continue
-            return address if ident is None else f"{address}/{ident}"
+            try:
+                device = _choose([r for r in found if r.server == address], address, self.claim)
+            except Exception as e: # busy, or hosting nothing it can open
+                self.log.warning("skipping %s: %s", address, e)
+                tried.append(f"{_targets.short(address)} ({e})")
+                continue
+            return _targets.format_target(address, device)
         raise _err.NoDevice("no radios found on this machine, and none to use on the known servers: " + "; ".join(tried)
                             + " (--list shows what there is)")
 
@@ -190,7 +197,7 @@ class SinkLive(Sink):
         if name in (None, "", "auto"):
             found = pysdrlib.find()
             if not found:
-                raise _err.NoDevice("no radios found on this machine, name a driver with -d, or a server with -d tcp://host:5555 (--list shows what there is)")
+                raise _err.NoDevice("no radios found on this machine, name a driver with -d, or a server with -d radiohost (--list shows what there is)")
             info = found[0]
             print(f"using {info.label}" + (f" ({len(found) - 1} more, see --list)" if len(found) > 1 else ""), flush=True)
             return info.open()
@@ -201,15 +208,15 @@ class SinkLive(Sink):
         self.close()
         self.remote = self.hosted = False
         self.target = name
-        self.stalls = self.skipped = 0
+        self.stalls = self.skipped = self.dropped = 0
         self.lag = 0.0
-        if name and "://" not in name and "@" in name: # driver@serial, as the radio list gives them
-            name, self.serial = name.split("@", 1)
+        self._next_index = self.hw_time = None
         if name in (None, "", "auto") and self.servers and not pysdrlib.find():
             name = self._pick_server()
-        if name and "://" in name:
-            self.server = self.split_address(name)[0]
-            self.dev = self._connect_remote(name)
+        target = remote_target(name)
+        if target is not None:
+            self.server = target.server
+            self.dev = self._connect_remote(target)
             if self.controlling:
                 if int(self._cf.raw) != int(SinkConfig.cf): # only what was asked for, a hosted radio keeps its gain
                     self.dev.set_rx_freq(self._cf.raw)
@@ -249,13 +256,18 @@ class SinkLive(Sink):
         return got
 
     def next(self, count: int):
-        """Read one block. The radio's own report (pysdrlib's RxMeta) decides what is shown: a block from before a
-        retune, or one that sat in the queue while this program was busy, is dropped so the display tracks the radio"""
+        """Read one block: the newest `count` samples at the radio's current settings (pysdrlib's read(latest=True)
+        skips what queued up while this program was busy, and what came before a retune). While recording, everything
+        queued is read (and written) instead, and the display shows the newest `count` of it"""
         fs = float(self._Fs.raw)
         timeout = max(2.0, 4*count/fs)
         for attempt in range(4):
+            recording = self.recorder is not None
+            n = max(count, min(self.dev.wait_available(0), int(self.RECORD_READ_S * fs))) if recording else count
             try:
-                x, meta = self.dev.read(count, timeout=timeout, meta=True)
+                x, meta = self.dev.read(n, timeout=timeout, meta=True, latest=not recording)
+            except _err.Lost as e: # unplugged, failing, or its server is gone
+                raise ConnectionError(f"the radio is gone: {e} (use reconnect)") from None
             except _err.Timeout:
                 self.stalls += 1
                 self.log.warning("no samples from the device")
@@ -271,24 +283,72 @@ class SinkLive(Sink):
                         continue
                 raise RuntimeError("this radio is not receiving and you are only watching it, claim it to start it (--claim, or the Claim control)") from None
             self.stalls = 0
-            last = attempt == 3
+            self.dropped += meta.dropped
+            self.skipped += meta.discarded
+            if self.inverted:
+                x = x.conj() # conjugating the IQ mirrors the spectrum back (a recording is stored the right way round)
+            if recording:
+                self._record(x, meta)
             if meta.freq != self._cf.raw or meta.rate != self._Fs.raw:
                 if not self.controlling: # somebody else tuned it: follow
                     self._follow(meta.freq, meta.rate)
                     fs = float(self._Fs.raw)
-                elif not last:           # stale, from before our own retune
-                    self.skipped += 1
+                elif recording and attempt < 3: # read whole, so from before our own retune: recorded, not shown
                     continue
-            self.lag = max(0.0, time.monotonic() - meta.time - count/fs) if meta.time else 0.0
-            if self.lag > max(self.LAG_MIN, 3*count/fs) and not last:
-                self.skipped += 1
-                self.dev.flush() # pysdrlib: drop the queue and read what is current
-                continue
+            self.lag = max(0.0, time.monotonic() - meta.time - n/fs) if meta.time else 0.0
+            shown = n - count # the newest `count` are shown
+            x = x[shown:]
+            # the stream index counts lost samples too (a gap at offset 0 is already behind meta.index): a block follows the
+            # last one shown when it starts where that ended, with nothing lost inside it
+            start = meta.index + shown + sum(k for at, k in meta.gaps if 0 < at <= shown)
+            self.contiguous = start == self._next_index and not any(at > shown for at, _ in meta.gaps)
+            self._next_index = meta.index + meta.count + sum(k for at, k in meta.gaps if at > 0)
+            self.hw_time = meta.hw_time
             if self.dc_block:
                 x = x - x.mean() # the receiver's own DC offset is the spike at the center, a signal there is only its average
-            self._samples = x.conj() if self.inverted else x # conjugating the IQ mirrors the spectrum back
+            self._samples = x
             return True
         return True
+
+    # --- recording --- #
+    def start_record(self, path) -> str:
+        """Write every sample received from now on to `path`: a SigMF recording (format cf32) unless its extension names
+        a format (.cfile, .cs16, .cu8...). Returns the path of the samples"""
+        from pysdrlib import FileSink, Formats
+        if self.recorder is not None:
+            raise ValueError(f"already recording to {self.recorder.path}")
+        path = str(path)
+        sigmf = Formats.from_extension(path) is None # no format in its name: SigMF says what it is
+        sink = FileSink(path, sigmf=sigmf, scale=True, clip=True, rate=self._Fs.raw, freq=self._cf.raw,
+                        hw=getattr(self.dev, "id", None) or self.name)
+        sink.open()
+        self.recorder, self.record_error = sink, ""
+        self._next_index = None # what was queued is read whole: the display starts over
+        return str(sink.path)
+
+    def stop_record(self):
+        """Close the recording (its SigMF metadata is written)"""
+        rec, self.recorder = self.recorder, None
+        if rec is not None:
+            rec.close()
+
+    def _record(self, x, meta):
+        try:
+            self.recorder.write(x, meta=meta)
+        except Exception as e: # a full disk must not stop the display: the recording ends, and says why
+            self.record_error = f"recording stopped: {type(e).__name__}: {e}"
+            self.log.error(self.record_error)
+            try:
+                self.stop_record()
+            except Exception:
+                self.recorder = None
+
+    def recording(self) -> dict | None:
+        """{path, seconds} of the recording in progress, None when not recording"""
+        rec = self.recorder
+        if rec is None:
+            return None
+        return {"path": str(rec.path), "seconds": round(rec.count / float(self._Fs.raw), 3)}
 
     def _follow(self, freq, rate):
         """A radio controlled elsewhere changed: show what it is now"""
@@ -303,10 +363,7 @@ class SinkLive(Sink):
 
     def _read_inverted(self):
         """Does the radio's spectrum come mirrored (an LNB or converter with its LO above the signal, see pysdrlib's `Chain`)"""
-        try:
-            self.inverted = bool(self.dev.get_rx_inverted())
-        except Exception: # a pysdrlib or server that predates chains: nothing is mirrored
-            self.inverted = False
+        self.inverted = bool(self.dev.get_rx_inverted())
 
     # --- antennas --- #
     def antennas(self) -> list[dict]:
@@ -363,10 +420,16 @@ class SinkLive(Sink):
         control = "local" if not self.remote else ("controlling" if self.controlling else "watching")
         return {
             "control": control, "device": self.name, "server": self.server, "id": getattr(self.dev, "id", None),
-            "lag": round(self.lag, 3), "skipped": self.skipped,
+            **self.live_status(),
             "can_claim": self.remote and not self.controlling, "inverted": self.inverted,
             "antennas": self.antennas(), "antenna": self.get_antenna(),
         }
+
+    def live_status(self) -> dict:
+        """What changes block to block: how far behind, samples lost (by the radio) and skipped (to show the newest), the radio's
+        clock at the last block (radios that keep one), the recording"""
+        return {"lag": round(self.lag, 3), "skipped": self.skipped, "dropped": self.dropped, "hw_time": self.hw_time,
+                "recording": self.recording(), "record_error": self.record_error}
 
     def radios(self) -> list[dict]:
         """Radios that can be chosen: [{label, target}], those attached here and the server's"""
@@ -399,26 +462,20 @@ class SinkLive(Sink):
         self.dev.stop_rx()
 
 
-def _connect_features() -> tuple[bool, bool]:
-    """(pysdrlib.connect can pick the radio itself when given none, it takes `program`): older releases do neither"""
-    try:
-        chooses = inspect.signature(pysdrlib.connect).parameters["device"].default is not inspect.Parameter.empty
-        from pysdrlib.remote.client import RemoteDevice
-        return chooses, "program" in inspect.signature(RemoteDevice.__init__).parameters
-    except Exception:
-        return False, False
-
 # --- antennas --- #
 def describe_antenna(chain) -> str:
     """What is fitted on a chain as text: `ANT500 (Whip / monopole, length 20-88 cm, 50 ohm)`, '' when it names none"""
     if chain is None or not getattr(chain, "antenna", None):
         return ""
-    info = chain.describe() or {"name": chain.antenna}
+    return format_antenna_info(chain.describe() or {"name": chain.antenna})
+
+def format_antenna_info(info: dict) -> str:
+    """An antenna's description (pysdrlib's, a dict) as text"""
     try:
         from pysdrlib.remote.cli import format_antenna
         return format_antenna(info)
     except Exception: # the remote extra is not installed
-        return str(info.get("name", chain.antenna))
+        return str(info.get("name", ""))
 
 def radio_antennas(dev, selected=None) -> list[dict]:
     """The receive antenna ports of a `pysdrlib.Device` (opened or not), with what is fitted on each: [{port, antenna, label,
@@ -446,122 +503,101 @@ def radio_antennas(dev, selected=None) -> list[dict]:
     return out
 
 # --- what radios there are --- #
-def _server_radios(address: str, timeout: float = 5.0) -> tuple[list[dict], list[str]]:
-    """(hosted radios, device types it can open) of a pysdrlib server"""
+def _discover(servers, local=True, timeout=5.0, errors=None, raise_errors=False) -> list:
+    """pysdrlib.discover over these servers (endpoints). errors: a list that gets (server, exception) for each that did
+    not answer; raise_errors: raise the first instead"""
+    errs = [] if errors is None else errors
     try:
-        from pysdrlib.remote import Client
+        found = pysdrlib.discover(servers=list(servers), local=local, timeout=timeout, errors=errs)
     except ImportError as exc:
         raise ImportError("using a pysdrlib server needs pyzmq: pip install pysdrlib[remote]") from exc
-    with Client(address, timeout) as client:
-        return client.list(), client.types()
+    if raise_errors and errs:
+        raise errs[0][1]
+    return found
 
-def _server_attached(address: str, timeout: float = 5.0) -> list[dict]:
-    """The radios attached to a server's machine that it has not opened (older servers do not say: none)"""
-    from pysdrlib.remote import Client
-    with Client(address, timeout) as client:
-        try:
-            return [a for a in client.available() if not a.get("hosted")]
-        except Exception:
-            return []
-
-def _attached_target(base: str, a: dict) -> str:
-    return f"{base}/{a['driver']}" + (f"@{a['serial']}" if a.get("serial") else "")
+def _choose(radios, address: str, claim: bool) -> str | None:
+    """The device to use among what a server has (Radios): with `claim` a hosted one nobody controls, to watch one that
+    is receiving (else any hosted one); None when it hosts nothing: the server picks a new radio (ours) to open"""
+    hosted = [r for r in radios if r.state == "hosted"]
+    if claim:
+        free = [r for r in hosted if not r.controlled]
+        if free:
+            return free[0].id
+        if hosted:
+            raise _err.Busy(f"every radio on {_targets.short(address)} has a controller: {', '.join(r.id for r in hosted)}")
+    elif hosted:
+        return next((r for r in hosted if (r.extra.get("state") or {}).get("rx")), hosted[0]).id
+    if radios:
+        return None # a new radio opened for us, chosen by the server
+    raise _err.NoDevice(f"{_targets.short(address)} hosts no radios and can open none")
 
 def pick_remote(address: str, claim: bool = False, timeout: float = 5.0) -> str | None:
-    """The radio to use on a server when none was named: with `claim` a hosted one nobody controls, to watch one that is
-    already receiving (else any hosted one), and when it hosts nothing None: the server picks a new radio (ours) to open"""
-    hosted, types = _server_radios(address, timeout)
-    if claim:
-        free = [d for d in hosted if not d["controlled"]]
-        if free:
-            return free[0]["id"]
-        if hosted:
-            raise _err.Busy(f"every radio on {address} has a controller: {', '.join(d['id'] for d in hosted)}")
-    elif hosted:
-        return next((d for d in hosted if d["state"]["rx"]), hosted[0])["id"]
-    if types:
-        return None # a new radio opened for us, chosen by the server
-    raise _err.NoDevice(f"{address} hosts no radios and can open none")
+    """The radio to use on a server when none was named (see _choose)"""
+    address = _targets.endpoint(address)
+    return _choose(_discover([address], local=False, timeout=timeout, raise_errors=True), address, claim)
 
-def _local_ports(info) -> list[str]:
-    """The receive antenna ports of an attached radio, from its driver's declared capabilities (it is not opened)"""
-    try:
-        return [a["label"] for a in radio_antennas(pysdrlib.device(info.driver), selected="")]
-    except Exception:
-        return []
+def _antenna_text(a: dict) -> str:
+    """One of a Radio's antennas ({port, name, antenna}) as text: `RX2: ANT500 (Whip / monopole, ...)`"""
+    info = a.get("antenna")
+    text = format_antenna_info(info) if info else (a.get("name") or "")
+    return " ".join(x for x in (f"{a['port']}:" if a.get("port") else "", text) if x)
 
-def _hosted_chains(d: dict) -> list[str]:
-    """What the server says sits between a hosted radio and the air: `rx RX2: ANT500 (...), LO 9750 MHz (inverted)`"""
-    out = []
-    for c in d.get("chains") or []:
-        if c.get("direction") != "rx":
-            continue
-        text = ""
-        if c.get("antenna"):
-            try:
-                from pysdrlib.remote.cli import format_antenna
-                text = format_antenna(c["antenna"])
-            except Exception:
-                text = str(c["antenna"].get("name", ""))
-        lo = f"LO {c['lo'] / 1e6:g} MHz{' (inverted)' if c.get('invert') else ''}" if c.get("lo") else ""
-        out.append(" ".join(x for x in (f"{c['port']}:" if c.get("port") else "", text, lo) if x))
-    return out
+def _state_text(r) -> str:
+    rx = (r.extra.get("state") or {}).get("rx")
+    return ("receiving" if rx else "idle") + (", controlled" if r.controlled else ", free")
 
 def list_devices(address: str | list[str] | None = None) -> list[str]:
     """Lines describing the radios pyspecan can use, with the -d that picks each: those attached here, and those of
     pysdrlib servers (`address`: one, or a list). A server that does not answer is listed as such"""
-    lines = []
-    found = pysdrlib.find()
-    lines.append("attached to this machine:" if found else "attached to this machine: none")
-    for info in found:
-        pick = f"-s live -d {info.driver}" + (f" --serial {info.serial}" if info.serial else "")
-        lines.append(f"  {info.label:<36} {pick}")
-        for port in _local_ports(info):
-            lines.append(f"      antenna {port}")
     addresses = _addresses(address)
+    errors = []
+    found = _discover(addresses, local=True, timeout=PROBE_TIMEOUT if len(addresses) > 1 else 5.0, errors=errors)
+    if len(addresses) == 1 and errors: # the one server asked about: say why
+        raise errors[0][1]
+    down = dict(errors)
+    here = [r for r in found if r.server is None]
+    lines = ["attached to this machine:" if here else "attached to this machine: none"]
+    for r in here:
+        lines.append(f"  {r.label:<36} -s live -d {r.target}")
+        lines += [f"      antenna {_antenna_text(a)}" for a in r.antennas]
     for addr in addresses:
-        base, _ = SinkLive.split_address(addr)
-        try:
-            hosted, types = _server_radios(base, PROBE_TIMEOUT if len(addresses) > 1 else 5.0)
-        except ImportError:
-            raise
-        except Exception as e:
-            if len(addresses) == 1: # the one server asked about: say why
-                raise
-            lines.append(f"on the server {base}: not answering ({e})")
+        where = _targets.short(addr)
+        if addr in down:
+            lines.append(f"on the server {where}: not answering ({down[addr]})")
             continue
-        lines.append(f"on the server {base}:" if hosted or types else f"on the server {base}: nothing")
-        for d in hosted:
-            state = ("receiving" if d["state"]["rx"] else "idle") + (", controlled" if d["controlled"] else ", free")
-            lines.append(f"  {d['id']:<12} {d['name']:<14} {Frequency.get(d['cf'])} / {Frequency.get(d['Fs'])} {state:<22} -s live -d {base}/{d['id']}" + ("" if d["controlled"] else "  [--claim to control]"))
-            for chain in _hosted_chains(d):
-                lines.append(f"      antenna {chain}")
-        attached = _server_attached(base)
-        for a in attached:
-            lines.append(f"  {a['driver']:<12} {a['label']:<28} attached, not open  -s live -d {_attached_target(base, a)}")
-        if not attached: # a server that does not say what is attached: the types it can open
-            for t in types:
-                lines.append(f"  {t:<12} (opens a new one)  -s live -d {base}/{t}")
+        radios = [r for r in found if r.server == addr]
+        lines.append(f"on the server {where}:" if radios else f"on the server {where}: nothing")
+        for r in radios:
+            if r.state == "hosted":
+                tuned = f"{Frequency.get(r.extra.get('cf', 0))} / {Frequency.get(r.extra.get('Fs', 0))}"
+                lines.append(f"  {r.id:<12} {r.driver:<14} {tuned} {_state_text(r):<22} -s live -d {r.target}"
+                             + ("" if r.controlled else "  [--claim to control]"))
+                lines += [f"      antenna {_antenna_text(a)}" for a in r.antennas]
+            elif r.state == "attached":
+                lines.append(f"  {r.driver:<12} {r.label:<28} attached, not open  -s live -d {r.target}")
+            else:
+                lines.append(f"  {r.driver:<12} (opens a new one)  -s live -d {r.target}")
     if not addresses:
-        lines.append(f"a pysdrlib server's radios: --list -d tcp://host:5555, or name servers with --servers / ${SERVERS_ENV}")
+        lines.append(f"a pysdrlib server's radios: --list -d radiohost, or name servers with --servers / ${SERVERS_ENV} / ${_targets.SERVERS_ENV}")
     return lines
 
 def radio_choices(address: str | list[str] | None = None) -> list[dict]:
-    """[{label, target}] for a device picker, `target` is what set_device takes. `address`: a server, or a list"""
+    """[{label, target}] for a device picker, `target` is what set_device takes. `address`: a server, or a list. A server
+    that is down is listed with why, and no target"""
+    addresses = _addresses(address)
+    errors = []
+    found = _discover(addresses, local=True, timeout=PROBE_TIMEOUT, errors=errors)
     out = []
-    for info in pysdrlib.find():
-        out.append({"label": f"{info.label} (this machine)", "target": info.driver + (f"@{info.serial}" if info.serial else "")})
-    for address in _addresses(address):
-        try:
-            hosted, types = _server_radios(address, PROBE_TIMEOUT)
-        except Exception as e: # the picker must still work when a server is down
-            out.append({"label": f"{address}: {e}", "target": None})
-            continue
-        for d in hosted:
-            who = "receiving" if d["state"]["rx"] else "idle"
-            out.append({"label": f"{d['id']} {d['name']} ({who}, {'controlled' if d['controlled'] else 'free'}) on {address}", "target": f"{address}/{d['id']}"})
-        attached = _server_attached(address)
-        out += [{"label": f"{a['label']} (attached, not open) on {address}", "target": _attached_target(address, a)} for a in attached]
-        if not attached: # a server that does not say what is attached: the types it can open
-            out += [{"label": f"open a new {t} on {address}", "target": f"{address}/{t}"} for t in types]
+    for r in found:
+        where = "this machine" if r.server is None else _targets.short(r.server)
+        if r.server is None:
+            label = f"{r.label} (this machine)"
+        elif r.state == "hosted":
+            label = f"{r.id} {r.driver} ({_state_text(r)}) on {where}"
+        elif r.state == "attached":
+            label = f"{r.label} (attached, not open)"
+        else:
+            label = f"open a new {r.driver} on {where}"
+        out.append({"label": label, "target": r.target})
+    out += [{"label": f"{_targets.short(s)}: {e}", "target": None} for s, e in errors]
     return out

@@ -191,6 +191,7 @@ function applyStatus(s) {
     showMessage(s.message);
     $("btn-start").disabled = s.playing;
     $("btn-stop").disabled = !s.playing;
+    if (s.radio_live) applyRadioLive(s.radio_live);
     if (s.cur_samp !== undefined) {
         $("lbl-time").textContent = `${s.time_cur} / ${state ? state.time_tot : ""}`;
         if (!seeking) $("sld-samp").value = s.cur_samp;
@@ -320,6 +321,7 @@ let radioList = [];
 function applyRadio(r) {
     document.querySelectorAll(".radio-only").forEach((el) => (el.hidden = !r));
     if (!r) return;
+    applyRadioLive(r);
     const what = {local: "Radio on this machine", controlling: "Controlling", watching: "Watching, it is controlled elsewhere"}[r.control];
     $("lbl-radio").textContent = `${what}: ${r.device}` + (r.lag > 0.1 ? ` (${Math.round(r.lag * 1000)} ms behind)` : "");
     $("btn-claim").textContent = r.control === "controlling" ? "Release" : "Claim";
@@ -335,6 +337,16 @@ function applyRadio(r) {
     asel.disabled = r.control === "watching";
     const sel = $("sel-radio");
     if (!radioList.length) sel.replaceChildren(new Option(r.device, ""));
+}
+// what changes block to block: samples lost, the recording
+function applyRadioLive(r) {
+    const parts = [];
+    if (r.dropped) parts.push(`${r.dropped.toLocaleString()} samples lost by the radio`);
+    if (r.recording) parts.push(`Recording ${r.recording.seconds.toFixed(1)} s to ${r.recording.path}`);
+    else if (r.record_error) parts.push(r.record_error);
+    $("lbl-radio-live").textContent = parts.join(" · ");
+    $("btn-record").textContent = r.recording ? "Stop recording" : "Record";
+    $("btn-record").classList.toggle("recording", !!r.recording);
 }
 async function loadRadios() {
     try {
@@ -1271,6 +1283,7 @@ function bindInputs() {
     sld.addEventListener("change", () => { seeking = false; set("samp", sld.value); });
     $("btn-claim").onclick = () => cmd(state.radio.control === "controlling" ? "release" : "claim");
     $("btn-reconnect").onclick = () => cmd("reconnect");
+    $("btn-record").onclick = () => cmd($("btn-record").classList.contains("recording") ? "record_stop" : "record");
     $("sel-antenna").addEventListener("change", (e) => set("antenna", e.target.value));
     $("sel-radio").addEventListener("focus", loadRadios); // fresh when it is about to be used
     $("sel-radio").addEventListener("change", (e) => { if (e.target.value) set("device", e.target.value); });

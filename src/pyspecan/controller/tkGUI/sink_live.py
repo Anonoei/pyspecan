@@ -16,6 +16,7 @@ class SinkLive(Sink):
         v.cl_cb_ant.bind("<<ComboboxSelected>>", self.handle_event)
         v.cl_btn_claim.config(command=self.toggle_control)
         v.cl_btn_reconnect.config(command=lambda: self.ctrl.run_command("reconnect"))
+        v.cl_btn_record.config(command=self.toggle_record)
 
         self.ctrl.view.sink.cl_ent_rx.bind("<Return>", self.handle_event)
         self.ctrl.view.sink.cl_ent_rx.bind("<FocusOut>", self.handle_event)
@@ -50,6 +51,27 @@ class SinkLive(Sink):
         for w in (v.cl_ent_fs, v.cl_ent_cf, v.sink.cl_ent_rx, *v.sink.cl_stage_ents.values()):
             w.config(state=tunable)
         self.draw_gains()
+
+    def draw_tb(self, status):
+        """Samples lost and the recording, every block"""
+        live = status.get("radio_live")
+        if live is None:
+            return
+        parts = []
+        if live["dropped"]:
+            parts.append(f"{live['dropped']:,} samples lost by the radio")
+        rec = live["recording"]
+        if rec:
+            parts.append(f"Recording {rec['seconds']:.1f} s to {rec['path']}")
+        elif live["record_error"]:
+            parts.append(live["record_error"])
+        v = self.ctrl.view.sink
+        v.cl_lbl_live.config(text="\n".join(parts))
+        v.cl_btn_record.config(text="Stop recording" if rec else "Record")
+
+    def toggle_record(self):
+        live = self.ctrl.sink.live_status() or {}
+        self.ctrl.run_command("record_stop" if live.get("recording") else "record")
 
     def toggle_control(self):
         control = (self.ctrl.sink.status() or {}).get("control")
