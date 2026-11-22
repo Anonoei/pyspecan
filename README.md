@@ -58,3 +58,11 @@ print(frames["p1"].table.rows[0].cells)         # ['M1', 'peak', '125 kHz', '-32
 | [Examples](https://anonoei.github.io/pyspecan/examples/) | runnable, self-checking scripts ([examples/](https://github.com/Anonoei/pyspecan/tree/main/examples)) |
 | [API](https://anonoei.github.io/pyspecan/api/) | every package; the data path is `pyspecan`, how plots work `pyspecan.plots` |
 | [Contributing](https://anonoei.github.io/pyspecan/contributing/) | setup, tests, CI, conventions, releases |
+
+## License
+Copyright (C) 2025-2026 Anonoei
+
+pyspecan is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See [LICENSE](LICENSE) for the full text.
