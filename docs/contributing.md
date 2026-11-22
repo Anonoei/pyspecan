@@ -79,13 +79,13 @@ ran.
 
 | Workflow | When | Does |
 |---|---|---|
-| `tests.yml` | push to `main` / `dev`, pull requests | the suite on Python 3.12 and 3.13, Ubuntu and Windows; without rpps; ruff; sdist → wheel in a clean venv (with the web assets); the docs build |
+| `tests.yml` | push to `main` / `dev`, pull requests | the suite on Python 3.12-3.14, Ubuntu and Windows; without rpps; ruff; sdist → wheel in a clean venv (with the web assets); the docs build |
 | `deploy-docs.yml` | push to `main` | `python tools/builder.py -d` (Zensical) to GitHub Pages |
 | `python-publish.yml` | a GitHub release | builds, checks the tag against the version, publishes to PyPI |
 | `deploy-executable.yml` | a GitHub release | the pyinstaller executable for Linux and Windows, attached to the release |
 
 To release: `python tools/builder.py -v p` (or `m`, `M`) previews the bump, `-r` makes it (edits `pyproject.toml` and
-`src/pyspecan/__init__.py`, commits and tags); merge to `main`; publish a GitHub release tagged exactly `v<version>`.
+`src/pyspecan/__init__.py`, commits, does not tag); merge to `main`; publish a GitHub release tagged exactly `v<version>`.
 
 The standalone executable builds locally with `pip install ".[tk]" pyinstaller`, then
 `pyinstaller --distpath dist --workpath build src/build.spec` and `./dist/pyspecan`.

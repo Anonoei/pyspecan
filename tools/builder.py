@@ -49,7 +49,7 @@ def cmd_test(args) -> None:
 
 
 def cmd_docs(args) -> None:
-    run(sys.executable, "tools/gen_docs.py")      # docs/api/*.md, docs/llms.txt, docs/llms-full.txt
+    run(sys.executable, str(ROOT / "tools" / "gen_docs.py"))      # docs/api/*.md, docs/llms.txt, docs/llms-full.txt
     py("zensical", "build", "--strict")
 
 
