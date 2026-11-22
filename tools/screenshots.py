@@ -161,6 +161,16 @@ def shoot_tk(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
             time.sleep(0.01)
     try:
         pump(1.0)
+        for pid, pane in ctrl.panels.panes.items(): # the plots, not their settings columns
+            if pane.pane.fr_sets.winfo_manager():
+                ctrl.panels.toggle_settings(pid)
+        pump(0.3)
+        rows = ctrl.panels.panel.main # rows of even height, columns of even width
+        for k in range(len(rows.panes()) - 1):
+            rows.sashpos(k, rows.winfo_height() * (k + 1) // len(rows.panes()))
+        for row in ctrl.panels.rows:
+            for k in range(len(row.main.panes()) - 1):
+                row.main.sashpos(k, row.main.winfo_width() * (k + 1) // len(row.main.panes()))
         for k in range(scene.steps):
             if k == scene.store_ref:
                 for pid, plot in list(ctrl.plots.plots.items()):

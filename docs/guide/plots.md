@@ -6,6 +6,20 @@ uses and what it does to it, what it shows, what to use it for, and roughly what
 [Performance](performance.md)). The web view and tkGUI draw them all, 3D included (drag a 3D plot to turn it, double
 click to reset it); the console draws all but 3D.
 
+Every plot, by the category pickers list it under (*italic*: with RPPS, see [DSP plots](dsp.md)):
+
+| Category | Plots |
+|---|---|
+| Spectrum | PSD, Persistence, FFT, Sweep |
+| Time-frequency | Spectrogram, RT Spectrogram, 3D Spectrogram, Surface Spectrogram, Scalogram |
+| Time domain | IQ, IQ 3D, PMF, Phasor, IQ Density, Scope, Autocorrelation |
+| Measurements | CCDF, Power vs Time, Occupancy, Marker Trend, Phase Noise |
+| Analog demodulation | Frequency vs Time, *Analog Demod* |
+| Digital demodulation | *Constellation*, *Vector Diagram*, *Constellation Density*, *3D Constellation*, *Eye Diagram*, *Symbol Table* |
+| Modulation quality | *Error Vector*, *Error Vector Spectrum* |
+| Channel and signal analysis | *Network Analyzer*, *Impulse Response*, *Cyclic Spectrum*, *Waveform ID*, *Hopping*, *Bursts* |
+| Decoding | *Signal Profile*, *Frame Raster*, *Decode* |
+
 ## Spectrum
 
 - PSD: four analyzer traces, each clear/write, average, max hold, min hold, view or blank, a marker trace, detector, a

@@ -75,3 +75,18 @@ def test_gen_docs(tmp_path):
     assert "## pyspecan.plots" in full and "## pyspecan.controller.WEB.wire" in full
     assert '[plot "PSD"]' in full
     assert len(full) < 240_000, f"llms-full.txt is {len(full)} bytes: about {len(full)//4} tokens"
+
+
+def test_every_plot_is_listed():
+    """The plots guide's table lists every built in plot under its category, the DSP ones in italics"""
+    from pyspecan.plots import PLOTS
+    rows = re.findall(r"^\| ([^|]+?) \| ([^|]+?) \|$", (DOCS / "guide" / "plots.md").read_text(encoding="utf-8"), re.M)
+    listed = {name.strip(): (cat, name.strip().startswith("*")) for cat, names in rows for name in names.split(",")}
+    listed = {name.strip("*"): v for name, v in listed.items()}
+    for name, cls in PLOTS.items():
+        if not cls.__module__.startswith("pyspecan.plots."):
+            continue # an extension's
+        assert name in listed, f"{name} is not in docs/guide/plots.md's table of plots"
+        cat, italic = listed[name]
+        assert cat == cls.about()["category"], f"{name} is listed under {cat}, its category is {cls.about()['category']}"
+        assert italic == cls.__module__.startswith("pyspecan.plots.dsp."), f"{name}: italic in the table iff it needs RPPS"
