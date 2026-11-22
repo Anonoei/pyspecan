@@ -87,6 +87,9 @@ ran.
 To release: `python tools/builder.py -v p` (or `m`, `M`) previews the bump, `-r` makes it (edits `pyproject.toml` and
 `src/pyspecan/__init__.py`, commits, does not tag); merge to `main`; publish a GitHub release tagged exactly `v<version>`.
 
+pysdrlib and rpps release first: CI and `pip install pyspecan[dsp]` take them from PyPI, so the lower bounds in
+`pyproject.toml` (`pysdrlib>=`, `rpps>=`) must name released versions that have everything pyspecan calls.
+
 The standalone executable builds locally with `pip install ".[tk]" pyinstaller`, then
 `pyinstaller --distpath dist --workpath build src/build.spec` and `./dist/pyspecan`.
 

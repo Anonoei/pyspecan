@@ -63,6 +63,12 @@ def test_file_format_is_capital_f_and_d_is_the_radio():
     with pytest.raises(SystemExit):
         m.parse_args(["-d", "cf64"]) # file sink: no -d any more
 
+def test_file_format_takes_pysdrlibs_other_spellings(capsys):
+    assert m.parse_args(["-F", "ci16"]).fmt == "ci16t" # pysdrlib's alias, named as -h lists it
+    with pytest.raises(SystemExit):
+        m.parse_args(["-F", "cs16"])
+    assert "one of ci4t" in capsys.readouterr().err
+
 def test_each_layer_gets_only_its_options():
     from pyspecan.arguments import split
     _importable(View.WEB)

@@ -17,7 +17,6 @@ dist/
 *.egg-info/
 
 # Misc
-logs/
 .python-version
 .pytest_cache/
 

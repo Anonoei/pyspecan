@@ -27,10 +27,9 @@ class SinkLive(Sink):
 
     def draw_cl(self, parent, row=0):
         parent.columnconfigure(1, weight=1)
-        self.cl_var_dev = tk.StringVar(parent) # TODO: switch from ent to combo
+        self.cl_var_dev = tk.StringVar(parent)
         ttk.Label(parent, text="Device:").grid(row=row,column=0, sticky=tk.W)
         self.cl_cb_dev = ttk.Combobox(parent, textvariable=self.cl_var_dev, width=20)
-        # self.ent_dev = ttk.Entry(root, textvariable=self.var_dev, state=tk.DISABLED, width=10)
         self.cl_cb_dev.grid(row=row,column=1, sticky=tk.NSEW)
         row += 1
         self.cl_lbl_status = ttk.Label(parent, text="", wraplength=220, justify=tk.LEFT)

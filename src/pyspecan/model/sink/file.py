@@ -1,4 +1,5 @@
 """File reader"""
+import argparse
 import pathlib
 
 from pysdrlib import File as _File
@@ -12,9 +13,25 @@ from .sink import Sink, SinkConfig
 FORMATS = [f.name for f in _Formats if f.is_complex]
 DEFAULT_FORMAT = "cf32" # two float32 a sample (a GNU Radio .cfile): what a file whose name says nothing is taken to be
 
+def format_name(fmt: str) -> str:
+    """A format's name in `FORMATS`, from it or one of pysdrlib's other spellings ("ci16" for "ci16t")"""
+    try:
+        name = _Formats[fmt].name
+    except KeyError:
+        name = None
+    if name not in FORMATS:
+        raise ValueError(f"unknown format {fmt!r}: one of {', '.join(FORMATS)}")
+    return name
+
+def _format_arg(fmt: str) -> str:
+    try:
+        return format_name(fmt)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
+
 def args_file(sink):
     sink.add_argument("-f", "--path", default=None, help="file path")
-    sink.add_argument("-F", "--fmt", choices=FORMATS, default=None,
+    sink.add_argument("-F", "--fmt", type=_format_arg, metavar="{" + ",".join(FORMATS) + "}", default=None,
                       help=f"data format (default: a SigMF recording's, else the one the extension names, .cfile .cs16 .cu8..., else {DEFAULT_FORMAT})")
 
 class SinkFile(Sink):
@@ -24,9 +41,8 @@ class SinkFile(Sink):
     )
     def __init__(self, model, **kwargs):
         super().__init__(model, **kwargs)
-        self.fmt = kwargs.get("fmt", None) # the format asked for, None: each file's own (SigMF, extension)
-        if self.fmt is not None and self.fmt not in FORMATS:
-            raise ValueError(f"unknown format {self.fmt!r}")
+        fmt = kwargs.get("fmt", None)
+        self.fmt = None if fmt is None else format_name(fmt) # the format asked for, None: each file's own (SigMF, extension)
         # rate and frequency given at launch hold for the file given with them, over what its SigMF metadata says
         self.given = {"Fs": int(self._Fs.raw) != int(SinkConfig.Fs), "cf": int(self._cf.raw) != int(SinkConfig.cf)}
         self.note = "" # what was assumed about the file, for the views to say
@@ -70,8 +86,7 @@ class SinkFile(Sink):
     def get_fmt(self):
         return self.dev.get_fmt()
     def set_fmt(self, fmt):
-        if fmt not in FORMATS:
-            raise ValueError(f"unknown format {fmt!r}")
+        fmt = format_name(fmt)
         self.fmt = fmt # chosen: it holds for files opened later too
         self.dev.set_fmt(fmt)
         self.note = ""

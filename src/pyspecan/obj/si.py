@@ -125,11 +125,3 @@ class Frequency(SI):
         6: ("MHz","M"),
         9: ("GHz","G")
     }
-
-if __name__ == "__main__":
-    unit = Frequency(1_000_000)
-    print(f"original: {unit}")
-    freq_str = str(unit)
-    new_unit = Frequency.fm_str(freq_str)
-    print(f"from_str: {new_unit}")
-    print(f"from freq: {Frequency.get(unit)}")
