@@ -1,0 +1,99 @@
+# Documentation site: guides in docs/, API reference from the package docstrings (mkdocstrings).
+# `python tools/builder.py -d` writes docs/api/ and the llms files (tools/gen_docs.py), then builds into site/.
+[project]
+site_name = "pyspecan"
+site_description = "A spectrum analyzer library: web, tk and console views over files, radios and TCP IQ streams"
+site_url = "https://anonoei.github.io/pyspecan/"
+repo_url = "https://github.com/Anonoei/pyspecan"
+repo_name = "Anonoei/pyspecan"
+docs_dir = "docs"
+site_dir = "site"
+nav = [
+  { "Home" = "index.md" },
+  { "Guides" = [
+    "guide/sources.md",
+    "guide/layouts.md",
+    "guide/plots.md",
+    "guide/dsp.md",
+    "guide/library.md",
+    "guide/extending.md",
+    "guide/performance.md",
+  ] },
+  { "Gallery" = "gallery.md" },
+  { "Examples" = "examples.md" },
+  { "API" = [
+    "api/index.md",
+    "api/pyspecan.md",
+    "api/model.md",
+    "api/plots.md",
+    "api/measure.md",
+    "api/controller.md",
+    "api/view.md",
+    "api/backend.md",
+    "api/obj.md",
+    "api/utils.md",
+  ] },
+  { "Contributing" = "contributing.md" },
+]
+
+[project.theme]
+language = "en"
+features = [
+  "content.code.copy",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+pymdownx.details = {}
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.superfences = {}
+# Guides embed the tested example scripts (--8<-- "examples/x.py"); a missing file fails the build
+pymdownx.snippets.base_path = ["."]
+pymdownx.snippets.check_paths = true
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["src"]
+inventories = ["https://docs.python.org/3/objects.inv", "https://numpy.org/doc/stable/objects.inv"]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "google"
+members_order = "source"
+filters = ["!^_"]
+show_submodules = false
+show_root_heading = true
+show_root_full_path = true
+show_signature_annotations = true
+separate_signature = true
+merge_init_into_class = true
+summary = true
