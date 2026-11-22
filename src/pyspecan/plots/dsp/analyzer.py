@@ -180,7 +180,7 @@ class Analyzer:
         self._bb_stream = out.stream
         x = np.asarray(out.data, dtype=np.complex64)
         if not go_on:
-            x = x[min(len(x)//8, 256):] # the filters starting up
+            x = x[ch.settle:] # the filters starting up
         self._bb = np.concatenate((self._bb, x))[-HISTORY:]
         self._bb_key, self._bb_seq = key, src.seq
         return self._bb, self._bb_Fs
