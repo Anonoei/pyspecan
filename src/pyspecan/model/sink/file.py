@@ -85,10 +85,12 @@ class SinkFile(Sink):
         self.dev.reset()
 
     def next(self, count: int):
+        at = self.dev.cur_samp
         try:
             self._samples = self.dev.next(count) # opens the file on the first read
         except _err.Overflow: # the end
             return False
+        self._placed(at)
         return True
 
     def prev(self, count: int):
@@ -96,7 +98,14 @@ class SinkFile(Sink):
             self._samples = self.dev.prev(count)
         except _err.Overflow: # the start
             return False
+        self._placed(self.dev.cur_samp)
         return True
+
+    def _placed(self, at: int):
+        """The block starts at sample `at`: its time is a SigMF recording's start plus that, else seconds into the file"""
+        self.block_index = at
+        start = self.dev.meta.start_time if self.dev.meta is not None else None
+        self.block_time = (start or 0.0) + at / self.get_fs().raw
 
     def seek(self, samp: int):
         """Jump to sample `samp`"""

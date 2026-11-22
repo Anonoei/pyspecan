@@ -113,7 +113,8 @@ def test_every_plot_type_draws(page):
             continue
         frame = page.evaluate("(id) => runtime[id].frame", pid)
         drawn = _drawn(page, pid)
-        has_data = any(a["traces"] or a.get("image") or a.get("surface") for a in frame["axes"])
+        has_data = any(a["traces"] or a.get("image") or a.get("surface") for a in frame["axes"]) \
+            or bool((frame.get("table") or {}).get("rows")) # a table's rows (Decode's catalogue) are its data
         readout = dict(frame.get("readout") or [])
         if drawn < 500:
             problems.append(f"{name}: drew {drawn} pixels")

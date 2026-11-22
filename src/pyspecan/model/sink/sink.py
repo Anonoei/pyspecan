@@ -19,12 +19,14 @@ class Sink:
     SEEKABLE = False # can jump around in the stream (files)
     __slots__ = (
         "log", "model",
-        "_samples", "_cf", "_Fs", "contiguous"
+        "_samples", "_cf", "_Fs", "contiguous", "block_index", "block_time"
     )
     def __init__(self, model, **kwargs):
         self.log = logger.new(f"model.{type(self).__name__}")
         self.model = model
         self.contiguous = True # the last block read follows the one before it, nothing lost or skipped in between
+        self.block_index = None # the stream index of the last block's first sample (None: not known)
+        self.block_time = None  # its time [s, wall clock or a file's own], None when not known
         self._cf: Frequency = Frequency.get(kwargs.get("cf", SinkConfig.cf))
         self._Fs: Frequency = self._valid_fs(Frequency.get(kwargs.get("Fs", SinkConfig.Fs)))
         self._samples = np.empty((), dtype=np.complex64)

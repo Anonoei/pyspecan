@@ -73,6 +73,18 @@ class Source:
         return self.model.samples
 
     @property
+    def index(self) -> int | None:
+        """The stream index of the block's first sample (None: the source does not say)"""
+        sink = getattr(self.model, "sink", None)
+        return getattr(sink, "block_index", None)
+
+    @property
+    def time(self) -> float | None:
+        """The block's first sample's time [s: wall clock, or into a file], None when not known"""
+        sink = getattr(self.model, "sink", None)
+        return getattr(sink, "block_time", None)
+
+    @property
     def fs(self) -> float:
         return self.model.get_fs().raw
 

@@ -320,3 +320,82 @@ def test_vector_diagram_and_constellation_density():
     q = img.shape[0] // 2
     assert all(part.max() > 200 for part in (img[:q, :q], img[:q, q:], img[q:, :q], img[q:, q:])) # a cluster per quadrant
     assert img[q - 10:q + 10, q - 10:q + 10].max() == 0 # nothing at the origin
+
+# --- decoding: rpps' profiles through rp.profile.Decoder --- #
+def adsb_recording(path, frames=4, seed=1):
+    """A SigMF recording of ADS-B squitters at 2 MS/s, 1090 MHz: (its meta path, the payloads)"""
+    import rpps as rp
+    from pysdrlib import FileSink
+    rng = np.random.default_rng(seed)
+    tx, s, waves, payloads = rp.profile.load("adsb/mode_s").tx(), None, [], []
+    for i in range(frames):
+        bits = rng.integers(0, 2, 83).astype(bool)
+        payloads.append(np.packbits(bits).tobytes().hex())
+        d = rp.Data(bits, Fs=2e6, sps=1, stream=s, flush=i == frames - 1)
+        s = d.stream
+        waves += [tx(d, fields={"df": 17}).data * 0.5, np.zeros(30000, np.complex64)]
+    x = np.concatenate([np.zeros(20000, np.complex64)] + waves + [np.zeros(120000, np.complex64)]) # (blocks of 100k: none cut)
+    x = (x + 0.01 * (rng.standard_normal(len(x)) + 1j * rng.standard_normal(len(x)))).astype(np.complex64)
+    with FileSink(path / "adsb.sigmf", rate=2e6, freq=1090e6) as out:
+        out.write(x)
+    return path / "adsb.sigmf-meta", payloads
+
+def decoding(meta, **settings):
+    from pyspecan.config import Sink
+    from pyspecan.controller.base import Controller
+    from pyspecan.model.model import GetModel
+    class Quiet(Controller):
+        def __init__(self, model, **kw):
+            super().__init__(model, None, **kw)
+        def deliver(self, frames, status):
+            pass
+    kw = dict(path=str(meta), nfft=1024)
+    c = Quiet(GetModel(Sink.FILE)(**kw), **kw)
+    pid = c.add_plot("Decode")
+    for k, v in settings.items():
+        c.set_plot(pid, k, v)
+    return c, pid
+
+@need_rpps
+def test_decode_lists_the_profiles_and_what_the_rate_can_run(tmp_path):
+    meta, _ = adsb_recording(tmp_path, frames=1)
+    c, pid = decoding(meta)
+    c.step()
+    f = c.latest[pid]
+    fits = {r.cells[0]: r.cells[1] for r in f.table.rows}
+    assert fits["adsb/mode_s"] == "yes" and fits["ieee80211b/long"].startswith("needs")
+    assert "symbol rate" in fits["dvbs/qpsk"] # its rate is open
+    with pytest.raises(ValueError, match="no profile"):
+        c.set_plot(pid, "profile", "adsb/nope")
+
+@need_rpps
+def test_decode_reads_adsb_off_a_recording_newest_first_at_its_time(tmp_path):
+    meta, payloads = adsb_recording(tmp_path)
+    c, pid = decoding(meta, profile="adsb/mode_s")
+    while c.step():
+        pass
+    f = c.latest[pid]
+    r = dict(f.readout)
+    assert r["State"] == "locked" and r["Messages"].startswith(f"{len(payloads)} good")
+    rows = [row.cells for row in f.table.rows]
+    assert [row[4] for row in rows] == payloads[::-1] # every frame, newest first, nothing failed listed
+    assert all(row[1] == "frame" and row[2] == "ok" and row[3] == "df=17" for row in rows)
+    import datetime as dt
+    t0 = c.sink.dev.meta.start_time # the recording's start, plus each frame's place in it
+    first = dt.datetime.strptime(rows[-1][0], "%H:%M:%S.%f").time()
+    start = dt.datetime.fromtimestamp(t0, dt.timezone.utc)
+    assert (dt.datetime.combine(start.date(), first, dt.timezone.utc) - start).total_seconds() == pytest.approx(0.01, abs=2e-3)
+    good = f.axes[0].traces[0]
+    assert sum(good.y) == len(payloads) # each block's good messages drawn
+    c.set_plot(pid, "failed", True) # failed checks listed too, now
+    c.command("reset")
+    while c.step():
+        pass
+    assert any(row.cells[2] == "FAIL" for row in c.latest[pid].table.rows)
+
+@need_rpps
+def test_decode_says_why_it_cannot(tmp_path):
+    meta, _ = adsb_recording(tmp_path, frames=1)
+    c, pid = decoding(meta, profile="ieee80211b/long") # 22 MHz of channel at 2 MS/s
+    c.step()
+    assert "needs" in dict(c.latest[pid].readout)["Decode"]

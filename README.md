@@ -146,6 +146,13 @@ Without it everything else works the same, and these plots are not listed.
 - "Cyclic Spectrum": the spectral correlation against cycle frequency and the spectral coherence image, with the symbol
   rate and carrier symmetry found blind (no lock needed)
 - "Symbol Table": the decided symbols
+- "Decode": a signal through one of RPPS's profiles (ADS-B, BLE advertising, AX.25, DVB-S/S2, CCSDS, LTE and NR to
+  SIB1...): its messages as a table, newest first (time, kind, check, framing fields, payload in hex), and how many each
+  block gave. `profile` picks one; left blank, the table lists them and which the sample rate can run. It decodes at the
+  center frequency, at `channel`, or with `follow` at the analysed signal; `kinds` keeps only some messages (and skips
+  the work the others need); failed checks are listed with `failed`. The readout has the decoder's state (measuring,
+  searching, locked, lost) and its load: over 100% it can not keep up. Messages carry the radio's time (its clock when
+  it has a date, else the host's), or a SigMF recording's
 - The "Analysis" globals (`--dsp_freq`, `--dsp_bw`, `--dsp_mod`, `--dsp_baud`) pick the signal and, when known, its
   modulation and symbol rate. Blank picks the strongest signal and finds the rest
 ```

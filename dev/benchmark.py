@@ -33,6 +33,8 @@ from demo import capture  # noqa: E402
 
 REFERENCE = "PSD"
 DSP_GLOBALS = {"dsp_freq": "150k", "dsp_bw": "60k"}
+# plots that do nothing at their own defaults are timed doing their work (--set wins)
+PLOT_DEFAULTS = {"Decode": {"profile": "ax25/afsk1200"}}
 
 class Model:
     """The parts of a model plots read, fed one block at a time"""
@@ -101,6 +103,8 @@ def main():
     a.block = int(round(a.fs * a.sweep / 1000))
     data = capture((a.warmup + a.blocks) * a.block + 1)
     sets = parse_sets(a.set)
+    for name, values in PLOT_DEFAULTS.items():
+        sets[name] = {**values, **sets.get(name, {})}
     # plots that tune a radio themselves (Sweep) have nothing to time on a capture
     names = [layout.resolve_type(n) for n in a.plots.split(",") if n.strip()] if a.plots else \
         [n for n in PLOTS.names() if not PLOTS.get(n).NEEDS_RADIO]

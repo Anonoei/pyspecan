@@ -51,10 +51,14 @@ class SinkTcpIq(Sink):
         return self.dev.set_rx_freq(cf)
 
     def next(self, count: int):
+        from .live import block_time
         try:
-            self._samples = np.asarray(self.dev.read(count, timeout=self.timeout))
+            x, meta = self.dev.read(count, timeout=self.timeout, meta=True)
         except _err.Timeout:
             return False
+        self.contiguous = self.block_index is not None and meta.index == self.block_index + count and not meta.gaps
+        self.block_index, self.block_time = meta.index, block_time(meta)
+        self._samples = np.asarray(x)
         return True
 
     def close(self):

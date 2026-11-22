@@ -53,7 +53,7 @@ def test_a_format_given_holds_for_every_file(tmp_path):
     assert sink.get_fmt().name == "ci8t"
 
 def _sigmf(tmp_path, rate=2e6, freq=433.92e6):
-    with FileSink(tmp_path / "rec.sigmf", rate=rate, freq=freq, open=True) as out:
+    with FileSink(tmp_path / "rec.sigmf", rate=rate, freq=freq) as out:
         out.write(tones())
     return tmp_path / "rec.sigmf-meta"
 
@@ -98,16 +98,26 @@ def test_blocks_follow_each_other_unless_samples_were_lost_or_skipped(radio):
     m = lambda index, gaps=(), discarded=0: RxMeta(index=index, count=1000, freq=100e6, rate=1e6, gaps=gaps, discarded=discarded)
     scripted(sink, [m(0), m(1000), m(2000, gaps=((400, 50),)), m(3050), m(4057, gaps=((0, 7),)), m(5057),
                     m(9000, discarded=2943)])
-    seen = []
+    seen, where = [], []
     for _ in range(7):
         assert sink.next(1000)
         seen.append(sink.contiguous)
+        where.append(sink.block_index)
+    assert where == [0, 1000, 2000, 3050, 4057, 5057, 9000] # each block's place in the stream, lost samples counted
     # the first has nothing before it; a gap inside a block breaks it, the next follows it (the gap was inside it);
     # a gap at its start (already counted in its index) breaks a block, the next follows; samples skipped to show the newest break it too
     assert seen == [False, True, False, True, False, True, False]
     assert sink.dropped == 57 and sink.skipped == 2943
     live = sink.live_status()
     assert live["dropped"] == 57 and live["skipped"] == 2943 and live["recording"] is None
+
+def test_a_block_is_timed_by_the_radio_when_its_clock_holds_a_date_else_by_the_host():
+    from pyspecan.model.sink.live import block_time
+    m = RxMeta(index=0, count=10, freq=1e8, rate=1e6, time=time.monotonic() - 0.5, hw_time=1.8e9)
+    assert block_time(m, 0.25) == 1.8e9 + 0.25
+    m = RxMeta(index=0, count=10, freq=1e8, rate=1e6, time=time.monotonic() - 0.5, hw_time=12.0) # counting from power-up
+    assert abs(block_time(m) - (time.time() - 0.5)) < 0.05
+    assert block_time(RxMeta(index=0, count=10, freq=1e8, rate=1e6)) is None
 
 def test_a_break_skips_a_sequence_number_so_streams_start_over(radio):
     c = Recorder(radio, nfft=256)

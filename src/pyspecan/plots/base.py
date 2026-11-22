@@ -18,7 +18,7 @@ PLOTS: Registry = Registry("plot")
 
 # what views group the plot picker by, in this order (a plot that names none is "Other")
 CATEGORIES = ("Spectrum", "Time-frequency", "Time domain", "Measurements", "Analog demodulation", "Digital demodulation",
-              "Modulation quality", "Channel and signal analysis", "Other")
+              "Modulation quality", "Channel and signal analysis", "Decoding", "Other")
 
 @dataclass(frozen=True)
 class About:

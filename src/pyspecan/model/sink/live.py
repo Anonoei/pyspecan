@@ -13,6 +13,7 @@ from .sink import Sink, SinkConfig
 PROGRAM = "pyspecan" # what a pysdrlib server shows next to a radio this program holds
 SERVERS_ENV = "PYSPECAN_SERVERS" # known pysdrlib servers when --servers is not given (else pysdrlib's PYSDRLIB_SERVERS)
 PROBE_TIMEOUT = 2.0 # [s] a known server has to answer in when looking for a radio, else it is skipped
+EPOCH_PLAUSIBLE = 946684800.0 # 2000-01-01: a radio clock later than this was set to a date, not counting from 0
 
 def parse_servers(value=None) -> list[str]:
     """Known pysdrlib servers as endpoints: 'radiohost, tcp://other:5556' (commas or whitespace, or a list); None:
@@ -304,6 +305,7 @@ class SinkLive(Sink):
             self.contiguous = start == self._next_index and not any(at > shown for at, _ in meta.gaps)
             self._next_index = meta.index + meta.count + sum(k for at, k in meta.gaps if at > 0)
             self.hw_time = meta.hw_time
+            self.block_index, self.block_time = start, block_time(meta, shown / fs)
             if self.dc_block:
                 x = x - x.mean() # the receiver's own DC offset is the spike at the center, a signal there is only its average
             self._samples = x
@@ -523,6 +525,15 @@ def radio_antennas(dev, selected=None) -> list[dict]:
                     "inverted": bool(chain and chain.invert),
                     "label": name + (f" - {text}" if text and name else text)})
     return out
+
+def block_time(meta, after: float = 0.0) -> float | None:
+    """Wall-clock time [s since the epoch] of a block's first sample (`after` seconds into it): the radio's own clock when
+    it holds a date (GPS, set), else the host's time it was received at"""
+    if meta.hw_time is not None and meta.hw_time > EPOCH_PLAUSIBLE:
+        return meta.hw_time + after
+    if meta.time is None:
+        return None
+    return time.time() - (time.monotonic() - meta.time) + after
 
 # --- what radios there are --- #
 def _discover(servers, local=True, timeout=5.0, errors=None, raise_errors=False) -> list:
