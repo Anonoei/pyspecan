@@ -178,6 +178,22 @@ def test_constellation_finds_the_modulation_and_rate(mod, points):
     assert f.axes[0].square and f.axes[0].traces[0].kind == "scatter"
 
 @need_rpps
+def test_a_lock_is_followed_and_found_again_when_the_modulation_changes(monkeypatch):
+    from pyspecan.plots.dsp import analyzer as an_mod
+    monkeypatch.setattr(an_mod, "RECHECK_S", 0.0) # every block: the test does not wait a second
+    model, src, (con,) = setup("Constellation")
+    qpsk = capture(QPSK, baud=40e3, tone=False, seed=3)
+    psk8 = capture(np.exp(2j * np.pi * np.arange(8) / 8), baud=40e3, tone=False, seed=4)
+    (f,) = run(model, src, [con], qpsk)
+    assert dict(f.readout)["Mod"] == "qpsk"
+    first = an_mod.analyzer(src)._found
+    assert len(first) == 1
+    (f,) = run(model, src, [con], qpsk[4 * BLOCK:], blocks=2)
+    assert dict(f.readout)["Mod"] == "qpsk" # followed, not searched again
+    mods = [dict(run(model, src, [con], psk8[i * BLOCK:], blocks=1)[0].readout).get("Mod") for i in range(4)]
+    assert mods[-1] == "8psk", mods # the lock went stale and the search found the new one
+
+@need_rpps
 def test_given_modulation_and_rate_are_used():
     model, src, (con,) = setup("Constellation", dsp_mod="bpsk", dsp_baud="50k")
     (f,) = run(model, src, [con], capture(tone=False))

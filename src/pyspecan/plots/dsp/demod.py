@@ -39,7 +39,7 @@ class Constellation(DSPPlot):
             'Identify a modulation and judge its quality',
             'Spot phase noise (arcs), IQ imbalance (skew), compression (squeezed outer points)',
         ),
-        cost=10,
+        cost=15,
     )
     FEATURES = frozenset({SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -73,7 +73,7 @@ class VectorDiagram(DSPPlot):
              "(rpps); the matched filter's output between the symbols as well",
         shows='The path between symbols as lines, the symbols marked, the ideal points',
         use=('See transitions: through the origin or around it, filtering', 'Spot timing errors (smeared arrivals)'),
-        cost=14,
+        cost=21,
     )
     FEATURES = frozenset({LINE, SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -117,7 +117,7 @@ class ConstellationDensity(DSPPlot):
             'See how each point spreads: round for noise, along the circle for phase noise, along the radius for compression',
             'Tell a few outliers from the bulk',
         ),
-        cost=11,
+        cost=16,
     )
     FEATURES = frozenset({IMAGE, SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -163,7 +163,7 @@ class Constellation3D(DSPPlot):
              "(rpps); the matched filter's output",
         shows='I and Q against time: the path between symbols and the symbols on it. Drag to turn it',
         use=('See the timing of transitions', 'Show how symbols follow each other'),
-        cost=14,
+        cost=20,
     )
     FEATURES = frozenset({LINE, SCATTER, THREE_D})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -210,7 +210,7 @@ class EyeDiagram(DSPPlot):
             'Spot timing jitter (blurred crossings)',
             'See filter problems (closed or lopsided eyes)',
         ),
-        cost=27,
+        cost=30,
     )
     FEATURES = frozenset({IMAGE})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -256,7 +256,7 @@ class SymbolTable(DSPPlot):
              '(rpps); each symbol decided to the nearest ideal point',
         shows='The decided points (their index in the constellation), eight to a row, and against time',
         use=('Read out the symbol stream', 'Look for repeating patterns: preambles, idle fill'),
-        cost=10,
+        cost=16,
     )
     FEATURES = frozenset({SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (

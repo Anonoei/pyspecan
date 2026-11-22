@@ -41,7 +41,7 @@ class NetworkAnalyzer(ResponseMixin, DSPPlot):
             "Measure a channel's or filter's response on live traffic, no stimulus",
             'Find ripple, tilt and group delay distortion',
         ),
-        cost=15,
+        cost=19,
     )
     FEATURES = frozenset({LINE})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -113,7 +113,7 @@ class ImpulseResponse(ResponseMixin, DSPPlot):
              "(rpps); the link's frequency response, tapered and inverse transformed",
         shows="The link's impulse response: the main path at 0, each echo by its delay and level",
         use=('Find multipath echoes and their delays', "Check a cable's or antenna's reflections"),
-        cost=14,
+        cost=19,
     )
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("resolution", "Points / symbol rate", "int", default=32, min=4, max=256, group="Display",
