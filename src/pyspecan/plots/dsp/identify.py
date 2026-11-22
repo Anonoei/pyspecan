@@ -25,7 +25,15 @@ def identify(x: np.ndarray, Fs: float, syms: np.ndarray | None):
 
 
 def verdict(w, cm, fk) -> str:
-    """In a few words, what the tests say it is"""
+    """In a few words, what the tests say it is, and when it comes in bursts their period"""
+    what = _kind(w, cm, fk)
+    if w.bursts is not None:
+        every = f" every {fmt_time(w.bursts.period)}" if w.bursts.period else ""
+        return f"{what}, in bursts{every}"
+    return what
+
+
+def _kind(w, cm, fk) -> str:
     if w.kind == "tones":
         return "tones" if len(w.tones.lines) > 1 else "an unmodulated carrier"
     if w.kind == "ofdm":

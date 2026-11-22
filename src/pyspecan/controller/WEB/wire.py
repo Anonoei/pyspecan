@@ -59,7 +59,8 @@ def quantize(a) -> tuple[np.ndarray, float, float]:
     if -Q_MAX * Q_STEP <= lo and hi <= Q_MAX * Q_STEP:
         mid, step = 0.0, Q_STEP
     else:
-        step = Q_STEP * 2.0 ** max(0, math.ceil(math.log2((hi - lo) / 60000 / Q_STEP)))
+        span = max(hi - lo, Q_STEP) # a constant (a marker's frequency block after block) still needs a step
+        step = Q_STEP * 2.0 ** max(0, math.ceil(math.log2(span / 60000 / Q_STEP)))
         grain = step * 2048 # 60000 steps cover the span, the margin takes mid's rounding
         mid = round((lo + hi) / 2 / grain) * grain
     q = np.full(a.size, Q_NAN, dtype="<i2")

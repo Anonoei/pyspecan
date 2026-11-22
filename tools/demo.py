@@ -1,7 +1,9 @@
-"""The synthetic capture the dev tools (screenshots.py, benchmark.py) run on: the same signals every time, numpy only
+"""The synthetic captures the dev tools (screenshots.py, benchmark.py) run on: the same signals every time, numpy only
 
-a QPSK signal with an echo, an FM carrier, a clean carrier with phase noise, two tones with their third order products,
-a bursty signal, a slow chirp, and noise, at 1 MS/s
+`capture`: a QPSK signal with an echo, an FM carrier, a clean carrier with phase noise, two tones with their third order
+products, a bursty signal, a slow chirp, and noise, at 1 MS/s.
+`structured`: signals cut in time, for the plots that find how (gated PSD, Waveform ID, Bursts, Hopping, Frame Raster):
+TDMA bursts sharing a preamble, a frequency hopping FSK, and a QPSK carrier framed by a unique word, at 1 MS/s.
 """
 import numpy as np
 
@@ -45,3 +47,32 @@ def capture(n: int = int(FS * SECONDS), seed: int = 1) -> np.ndarray:
     x += 0.01 * (rng.standard_normal(n) + 1j * rng.standard_normal(n))
     return x.astype(np.complex64)
 
+
+
+def structured(n: int = int(FS * SECONDS), seed: int = 2) -> np.ndarray:
+    rng = np.random.default_rng(seed)
+    t = np.arange(n) / FS
+    qpsk = lambda k: np.exp(1j * (np.pi / 4 + np.pi / 2 * rng.integers(0, 4, k)))
+    x = np.zeros(n, complex)
+    # TDMA at -250 kHz: QPSK bursts at 100 kBd (348 symbols: a shared 48 symbol preamble, then data), one every 10 ms,
+    # each with a carrier phase and a small offset of its own (another transmitter)
+    sps, period = 10, 10_000
+    preamble = qpsk(48)
+    for start in range(200, n - 3600, period):
+        b = _shaped(np.concatenate((preamble, qpsk(300))), sps, 0.35)
+        k = np.arange(len(b))
+        x[start:start + len(b)] += 1.3 * b * np.exp(1j * (rng.uniform(0, 2 * np.pi) + 2 * np.pi * rng.uniform(-300, 300) / FS * k))
+    x *= np.exp(2j * np.pi * -250e3 * t)
+    # a hopper around 0 Hz: 2-FSK (constant envelope, as most hoppers) at 2.5 kBd, +-1.25 kHz, 2 ms on each of 8
+    # channels 30 kHz apart
+    dwell = 2000
+    chans = (np.arange(8) - 3.5) * 30e3
+    f = np.repeat(rng.choice(chans, n // dwell + 1), dwell)[:n]
+    f += np.repeat(rng.choice((-1.25e3, 1.25e3), n // 400 + 1), 400)[:n]
+    x += np.exp(2j * np.pi * np.cumsum(f) / FS)
+    # a framed QPSK carrier at +300 kHz: 50 kBd, a 24 symbol unique word every 200 symbols
+    uw = qpsk(24)
+    frames = np.concatenate([np.concatenate((uw, qpsk(176))) for _ in range(n // (20 * 200) + 1)])
+    x += 0.3 * _shaped(frames, 20, 0.35)[:n] * np.exp(2j * np.pi * 300e3 * t)
+    x += 0.01 * (rng.standard_normal(n) + 1j * rng.standard_normal(n))
+    return x.astype(np.complex64)

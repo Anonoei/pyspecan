@@ -267,8 +267,8 @@ class Autocorrelation(Plot):
     ABOUT = About(
         data="The block (its mean taken out), correlated with itself at every lag up to the span by a zero padded FFT; "
              "averaged over blocks",
-        shows="|R(lag)| / R(0) against the lag (linear or dB), the strongest peaks past the main lobe (and over the "
-              "noise's own, 4 / sqrt(samples)) marked with their lag and its rate",
+        shows="|R(lag)| / R(0) against the lag (linear or dB), the highest peaks past the main lobe that stand out "
+              "from their surroundings (and over the noise's own, 4 / sqrt(samples)) marked with their lag and its rate",
         use=("Find an OFDM signal's useful symbol length (the cyclic prefix correlates at Tu)",
              "Find repetition: preambles, frames, a pulse repetition interval",
              "Tell noise (one spike at 0) from structured signals"),

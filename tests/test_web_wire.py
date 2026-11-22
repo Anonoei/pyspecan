@@ -110,6 +110,8 @@ def test_quantize_grid():
     q, mid, step = quantize(np.array([-1e5, 2e5]))
     assert step >= 2e5 * 1.5 / 65534 and np.log2(step / 0.01) == int(np.log2(step / 0.01))
     np.testing.assert_allclose(mid + q * step, [-1e5, 2e5], atol=step / 2)
+    q, mid, step = quantize(np.full(5, 72120.1)) # constant, beyond the fine grid: a marker trend's frequency
+    np.testing.assert_allclose(mid + q * step, 72120.1, atol=step / 2)
 
 def test_two_traces_under_one_key_always_carry_their_x():
     enc = Encoder()
