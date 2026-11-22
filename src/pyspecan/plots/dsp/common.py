@@ -85,35 +85,15 @@ def welch(x: np.ndarray, nfft: int) -> np.ndarray:
     return np.mean(np.abs(X)**2, axis=0)
 
 
+PATH_UP = 32 # matched filter points a symbol for the paths between symbols
+
+
 def eye_points(lk: Lock, cols: int = 128) -> tuple[np.ndarray, np.ndarray]:
     """(position in [0, 2) symbols, matched filter output) of the selection's waveform, interpolated finer than `cols`
     columns across two symbols (sample spacing would leave stripes). The symbol instants are at 1 (and 0 / 2): the eye
     opens in the middle"""
-    t, z = matched(lk, max(1, int(np.ceil(1.5 * cols / (2 * lk.sps)))))
+    t, z = lk.rpps.matched(int(np.ceil(0.75 * cols))) # type: ignore
     return (t + 1.0) % 2.0, z
-
-
-def matched(lk: Lock, up: int) -> tuple[np.ndarray, np.ndarray]:
-    """(time in symbols from the first instant, matched filter output) of the selection's waveform, `up` times finer
-    than its samples: unit rms at the symbol instants, the carrier offset and phase taken out. rpps' Lock.matched gives
-    the same exactly, but evaluates the filter at every point: ~20x the cost at an eye diagram's density"""
-    from rpps.signal.filters import rrc_pulse
-    xr = lk.rpps.derotated() # type: ignore
-    L = int(np.ceil(SPAN * lk.sps))
-    h = rrc_pulse(np.arange(-L, L + 1) / lk.sps, lk.beta)
-    h = h / np.sqrt(np.sum(h**2))
-    z = np.convolve(xr, h, "same")[L:-L] # unit rms at the symbol instants (the lock's gain is in xr already)
-    n = len(z)
-    if n < 16:
-        return np.zeros(0), np.zeros(0, complex)
-    Z = np.fft.fft(z)
-    pad = np.zeros(n * up, complex)
-    half = n // 2
-    pad[:half], pad[-(n - half):] = Z[:half], Z[half:]
-    zu = np.fft.ifft(pad) * up
-    t = (L + np.arange(n * up) / up - lk.centres[0]) / lk.sps # symbols from the first instant
-    edge = up * int(np.ceil(lk.sps)) # the interpolation wraps around at the ends
-    return t[edge:-edge], zu[edge:-edge]
 
 
 def pair(lk: Lock) -> tuple[np.ndarray, np.ndarray]:
