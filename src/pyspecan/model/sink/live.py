@@ -278,10 +278,6 @@ class SinkLive(Sink):
             except _err.NotStreaming:
                 if self.controlling:
                     raise
-                if attempt == 0: # a viewer is told by the server, ask what it is doing now
-                    self.dev.refresh()
-                    if self.dev.state["rx"]:
-                        continue
                 raise RuntimeError("this radio is not receiving and you are only watching it, claim it to start it (--claim, or the Claim control)") from None
             self.stalls = 0
             self.dropped += meta.dropped
@@ -488,35 +484,23 @@ class SinkLive(Sink):
 
 
 # --- antennas --- #
-def describe_antenna(chain) -> str:
-    """What is fitted on a chain as text: `ANT500 (Whip / monopole, length 20-88 cm, 50 ohm)`, '' when it names none"""
-    if chain is None or not getattr(chain, "antenna", None):
-        return ""
-    return format_antenna(chain.describe() or {"name": chain.antenna})
-
-def radio_antennas(dev, selected=None) -> list[dict]:
-    """The receive antenna ports of a `pysdrlib.Device` (opened or not), with what is fitted on each: [{port, antenna, label,
-    selected, inverted}]. `selected`: the port in use (default: ask the device)"""
+def radio_antennas(dev) -> list[dict]:
+    """The receive antenna ports of an open `pysdrlib.Device` with what is fitted on each (its rx_antenna_info):
+    [{port, antenna, label, selected, inverted}], [] for a lone port with nothing said about it"""
     if dev is None:
         return []
     try:
-        ports = list(dev.caps.antennas.get("rx", []))
-        chains = [c for c in dev.caps.chains if c.direction == "rx"]
-        if selected is None:
-            selected = dev.get_rx_antenna()
+        info = dev.rx_antenna_info()
     except Exception:
         return []
     out = []
-    for port in ports or [None]:
-        chain = next((c for c in chains if port is not None and c.port == port), None) or \
-            next((c for c in chains if c.port is None), None) or (chains[0] if chains and not ports else None)
-        if port is None and chain is None:
+    for a in info:
+        port = a["port"] or ""
+        text = format_antenna(a["antenna"]) if a["antenna"] else ""
+        if not port and not text and not a["inverted"]:
             continue
-        text = describe_antenna(chain)
-        name = port if port is not None else (chain.port or "")
-        out.append({"port": name, "antenna": text, "selected": port is not None and port == selected,
-                    "inverted": bool(chain and chain.invert),
-                    "label": name + (f" - {text}" if text and name else text)})
+        out.append({"port": port, "antenna": text, "selected": bool(port) and bool(a["selected"]), "inverted": a["inverted"],
+                    "label": port + (f" - {text}" if text and port else text)})
     return out
 
 # --- what radios there are --- #
