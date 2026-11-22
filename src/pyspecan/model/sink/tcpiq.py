@@ -68,6 +68,8 @@ class SinkTcpIq(Sink):
             x, meta = self.dev.read(count, timeout=self.timeout, meta=True)
         except _err.Timeout:
             return False
+        except _err.Lost as e: # the server closed the stream, or stopped answering
+            raise ConnectionError(f"the TCP IQ stream is gone: {e}") from None
         self.contiguous = self.block_index is not None and meta.index == self.block_index + count and not meta.gaps
         self.block_index, self.block_time = meta.index, block_time(meta)
         self._samples = np.asarray(x)

@@ -105,7 +105,7 @@ class SinkLive(Sink):
     @property
     def controlling(self) -> bool:
         """Can this program tune and start the device (always for a local one)"""
-        return not self.remote or bool(getattr(self.dev, "is_controller", False))
+        return self.dev.is_controller if self.dev is not None else not self.remote
 
     def close(self):
         """Let go of the device. A radio a server already hosted is detached from, so it stays open there for others"""
@@ -143,14 +143,14 @@ class SinkLive(Sink):
                 if not types or "attached: none" not in str(e): # attached radios that do not fit are an answer
                     raise
                 dev = pysdrlib.connect(address, types[0], **who)
-            self.granted = getattr(dev, "granted", None)
+            self.granted = dev.granted
             print(f"using {dev.id} on {where}" + self._granted_note(), flush=True)
         else: # hosted (attach), a driver (open a new one), or driver@serial (one attached to it)
             dev = pysdrlib.open(_targets.format_target(address, device, serial), program=PROGRAM,
                                 **({} if serial else {"claim": self.claim}))
         self.remote = True
         # attaching to a hosted id gives the device with that id, naming a driver opens a new one (hackrf-N) that is ours to close
-        self.hosted = getattr(dev, "id", None) == device and not serial
+        self.hosted = dev.id == device and not serial
         atexit.register(self.close)
         return dev
 
@@ -322,7 +322,7 @@ class SinkLive(Sink):
         path = str(path)
         sigmf = Formats.from_extension(path) is None # no format in its name: SigMF says what it is
         sink = FileSink(path, sigmf=sigmf, scale=True, clip=True, rate=self._Fs.raw, freq=self._cf.raw,
-                        hw=getattr(self.dev, "id", None) or self.name)
+                        hw=self.dev.id or self.name)
         sink.open()
         self.recorder, self.record_error = sink, ""
         self._next_index = None # what was queued is read whole: the display starts over
@@ -443,7 +443,7 @@ class SinkLive(Sink):
         """What the views show about the radio"""
         control = "local" if not self.remote else ("controlling" if self.controlling else "watching")
         return {
-            "control": control, "device": self.name, "server": self.server, "id": getattr(self.dev, "id", None),
+            "control": control, "device": self.name, "server": self.server, "id": self.dev.id if self.dev is not None else None,
             **self.live_status(),
             "can_claim": self.remote and not self.controlling, "inverted": self.inverted,
             "antennas": self.antennas(), "antenna": self.get_antenna(),

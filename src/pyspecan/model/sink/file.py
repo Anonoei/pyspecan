@@ -74,7 +74,7 @@ class SinkFile(Sink):
             self.note = f"{path.name}: read as {DEFAULT_FORMAT}, its name does not say its format (choose one with -F / fmt)"
             self.log.warning(self.note)
             print(self.note, flush=True)
-        if old.f is not None:
+        if old.is_open:
             old.close()
         self.dev = dev
         if dev.rate and not self.given["Fs"]:
@@ -151,5 +151,5 @@ class SinkFile(Sink):
         return self.dev.max_samp
 
     def close(self):
-        if self.dev.f is not None:
+        if self.dev.is_open:
             self.dev.close()

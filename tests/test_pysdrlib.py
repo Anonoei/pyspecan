@@ -219,6 +219,24 @@ def test_tcpiq_reads_the_format_the_sender_sends(fmt, dtype, scale):
         m.sink.close()
         srv.close()
 
+def test_tcpiq_says_the_stream_is_gone_when_the_server_closes():
+    import socket
+    import threading
+    srv = socket.create_server(("127.0.0.1", 0))
+    def send():
+        conn, _ = srv.accept()
+        with conn:
+            conn.sendall(np.zeros(2048, np.complex64).tobytes())
+    threading.Thread(target=send, daemon=True).start()
+    m = GetModel(Sink.TCPIQ)(tcp_host="127.0.0.1", tcp_port=srv.getsockname()[1], Fs="1M", nfft=256)
+    try:
+        with pytest.raises(ConnectionError, match="TCP IQ stream is gone"):
+            for _ in range(10): # what arrived is read, then the closed stream says so
+                m.sink.next(1024)
+    finally:
+        m.sink.close()
+        srv.close()
+
 def test_tcpiq_shows_the_rate_samples_arrive_at_and_uses_it_when_asked():
     import socket
     import threading
