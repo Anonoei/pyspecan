@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyspecan"
-version = "0.7.0"
+version = "0.7.1"
 description = "A spectrum analyzer library"
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -74,7 +74,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.bumpver]
-current_version = "0.7.0"
+current_version = "0.7.1"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 tag_message = "{new_version}"

@@ -50,7 +50,7 @@ through the `pyspecan.plots` entry point group (see `pyspecan.plots`); `PYSPECAN
 rpps (or with `PYSPECAN_NO_RPPS=1`) the DSP plots are not registered and everything else works the same.
 """
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __author__ = "Anonoei <to+dev@an0.us>"
 
 from . import _internal, err, obj, utils
