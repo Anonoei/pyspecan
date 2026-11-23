@@ -315,7 +315,17 @@ def test_clicking_a_found_signal_selects_it_for_analysis(page):
     xy = page.evaluate("""(id) => { const rt = runtime[id], g = rt.geom[0], r = rt.canvas.getBoundingClientRect();
         const b = rt.frame.axes[0].bands.find((b) => b.owner === '' && b.edit), f = (b.lo + b.hi) / 2, y = (b.ylo + b.yhi) / 2;
         return [r.left + g.x0 + (f - g.xmin) / (g.xmax - g.xmin) * g.w, r.top + g.y0 + (1 - (y - g.ymin) / (g.ymax - g.ymin)) * g.h, f]; }""", pid)
+    # while one box is dragged, only that box moves (the found signals share owner and settings)
+    page.mouse.move(*xy[:2]); page.mouse.down(); page.mouse.move(xy[0] + 30, xy[1], steps=3)
+    moved = page.evaluate("""(id) => { const rt = runtime[id], ax0 = rt.frame.axes[0];
+        const b = ax0.bands.find((b) => b.owner === '' && b.edit), w = b.hi - b.lo; // and another signal beside it
+        const ax = {...ax0, bands: [...ax0.bands, {...b, lo: b.lo + 3 * w, hi: b.hi + 3 * w}]}, d = dragged(rt, ax, 0);
+        return d.bands.map((x, j) => x.lo !== ax.bands[j].lo); }""", pid)
+    assert moved.count(True) == 1 and not moved[-1], moved
+    page.evaluate("(id) => { runtime[id].drag = null; }", pid) # let go without dropping it (the pointer is still down)
+    page.mouse.up()
     page.mouse.click(*xy[:2])
+    assert page.evaluate("(id) => runtime[id].drag", pid) is None # a click leaves no preview to follow the mouse
     page.wait_for_function("state.globals.settings.dsp_freq !== ''")
     assert abs(float(page.evaluate("state.globals.settings.dsp_freq")) - xy[2]) < 1.0 # the box's center: a click picks it
     assert page.evaluate("[...document.querySelectorAll('#globals input')].some((e) => e.value !== '' && Math.abs(parseFloat(e.value) - %f) < 1)" % xy[2])

@@ -11,7 +11,10 @@ EDIT = ("dsp_freq", "dsp_bw") # a box's center and width set the analysed signal
 
 @marker_kind("signals")
 class Signals(MarkerKind):
-    """Every signal found in the block, boxed from the noise floor to its peak. The one the DSP plots analyse is
+    """Every signal found in the block, boxed from the noise floor to its peak on the trace as drawn (after the vbw,
+    where the plot keeps one: a box measured on the unsmoothed trace stands above a smoothed signal). A signal keeps
+    its number (rpps' survey id) however others come and go, and one the search misses keeps a fainter box for a block
+    or two (`Analyzer.signals`). The one the DSP plots analyse is
     green: click another box to analyse it, drag a box's edges to adjust what is analysed"""
     COLOR = BLUE
     PARAMS = (
@@ -21,26 +24,31 @@ class Signals(MarkerKind):
 
     def evaluate(self, ctx, mid, p):
         an = analyzer(ctx.plot.source)
-        sv = an.survey(float(p["min_snr"]) if p["min_snr"] else None)
+        sv = an.signals(float(p["min_snr"]) if p["min_snr"] else None)
         if sv is None:
             return Result([["-", "no samples"]])
         sel = an.selection(ctx.plot.dsp_freq, ctx.plot.dsp_bw)
-        trace = np.asarray(ctx.trace)
+        shown = getattr(ctx.plot, "last_shown", None)
+        trace = np.asarray(shown if shown is not None and len(shown) == ctx.n else ctx.trace)
         floor = float(np.median(trace))
         rows, bands, chosen_any = [], [], False
-        for k, s in enumerate(sv, 1):
+        for t in sv:
+            s, k, held = t.signal, t.number, t.missed > 0
             lo, hi = s.cf + s.lo, s.cf + s.hi
             inside = (ctx.freqs >= lo) & (ctx.freqs <= hi)
             peak = float(trace[inside].max()) if inside.any() else floor
             chosen = sel is not None and abs(sel.freq - s.freq) < max(s.width, sel.width) / 2
             chosen_any = chosen_any or chosen
-            bands.append(Band(lo, hi, GREEN if chosen else self.COLOR, 0.22 if chosen else 0.12, f"S{k}", owner="", edit=EDIT,
-                              ylo=floor, yhi=peak + 3.0))
+            alpha = (0.22 if chosen else 0.12) / (3 if held else 1)
+            bands.append(Band(lo, hi, GREEN if chosen else self.COLOR, alpha, f"S{k}", owner="", edit=EDIT,
+                              ylo=floor, yhi=peak + 1.0))
             info = [f"{fmt_hz(s.width)} wide"]
             if s.snr is not None:
                 info.append(f"SNR {s.snr:.1f} dB")
             if s.duty is not None and s.duty < 0.9:
                 info.append(f"{s.duty*100:.0f}% on")
+            if held:
+                info.append("not found this block")
             if chosen:
                 info.append("analysed")
             rows.append([f"S{k} {fmt_hz(s.freq)}", ", ".join(info)])

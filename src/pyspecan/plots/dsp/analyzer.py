@@ -4,7 +4,8 @@ baseband, and its symbols
 Every plot of a source asks the same `Analyzer` (`analyzer(source)`), which works each thing out once per block:
 
 - `survey()`: rpps' signal search over the block (`rpps.analysis.find_signals`), each signal keeping its id from block
-  to block (`Survey.match`)
+  to block (`Survey.match`: a signal missed for a few blocks gets its id back, a new one an id never used)
+- `signals()`: the survey's signals to show (`Shown`), with those it missed in the last HOLD blocks
 - `selection(freq, bw)`: the signal the "Analysis" globals name (`rpps.analysis.measure_band`), or the strongest one
   found (sticky: it stays the selection while it is there, so a close runner-up does not make it jump)
 - `baseband(sel)`: the selection shifted to 0 Hz, filtered and decimated (`Signal.channel`), the filter state
@@ -29,6 +30,7 @@ DETECT_SAMPLES = 4096   # baseband samples the full search looks at (its time gr
 HISTORY = 8192          # baseband samples kept for the plots
 SPAN = 8                # matched filter half length, symbols
 MIN_SAMPLES = 512       # baseband samples needed to look for symbols
+HOLD = 2                # blocks a signal the search missed is still shown
 RECHECK_S = 1.0         # seconds between checks that the modulation is still the one found (about half a follow's cost)
 
 class NoLock(Exception):
@@ -71,6 +73,14 @@ class Lock:
         return cls(d.mod, float(d.baud), float(d.sps), float(d.beta), float(d.cfo), Fs,
                    lk.centres, lk.symbols, lk.points, float(lk.quality.esn0_db), float(lk.quality.evm_pct), lk)
 
+@dataclass
+class Shown:
+    """A signal as shown: its number (S1, S2...: its survey id + 1, its own however others come and go), the rpps
+    Signal, and how many blocks ago it was last found (0: this one)"""
+    number: int
+    signal: object
+    missed: int = 0
+
 def analyzer(source) -> "Analyzer":
     """The analyzer every plot of `source` shares"""
     an = getattr(source, "_dsp_analyzer", None)
@@ -83,7 +93,7 @@ class Analyzer:
         self.source = source
         self._tick = None
         self._surveys: dict = {}
-        self._last_survey = None # the previous block's, its ids carried over
+        self._last_surveys: dict = {} # min_snr -> (epoch, the latest survey): its ids carried over
         self._auto: Selection | None = None
         self._bb_key = None     # channel the baseband history is of
         self._bb_front = None
@@ -115,12 +125,23 @@ class Analyzer:
                 return None
             from rpps.analysis import find_signals
             sv = find_signals(samps, self.source.fs, cf=self.source.cf, min_snr_db=min_snr, nested=False)
-            if min_snr is None:
-                if self._last_survey is not None:
-                    sv.match(self._last_survey)
-                self._last_survey = sv
+            epoch, last = self._last_surveys.get(min_snr, (None, None))
+            if last is not None and epoch == self.source.epoch: # a reset (another recording, a retune) starts over
+                sv.match(last)
+            else:
+                sv.match([])
+            self._last_surveys[min_snr] = (self.source.epoch, sv)
             self._surveys[min_snr] = sv
         return self._surveys[min_snr]
+
+    def signals(self, min_snr: float | None = None) -> list[Shown] | None:
+        """The survey's signals and those it missed in the last HOLD blocks (rpps remembers them in `Survey.lost`, for
+        their ids), by frequency. None without samples"""
+        sv = self.survey(min_snr)
+        if sv is None:
+            return None
+        out = [Shown(s.id + 1, s) for s in sv] + [Shown(s.id + 1, s, age) for s, age in sv.lost if age <= HOLD]
+        return sorted(out, key=lambda t: t.signal.freq)
 
     def selection(self, freq_text: str = "", bw_text: str = "") -> Selection | None:
         """The signal to analyse: the one at `freq_text` (the found one nearest it, or `bw_text` wide when given),

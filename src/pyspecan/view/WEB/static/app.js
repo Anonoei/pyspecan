@@ -625,16 +625,30 @@ function applyFrame(data) {
     }
 }
 
-// the marker table: results of the markers, read only (they are edited in the rows below it)
+// the marker table: results of the markers, read only (they are edited in the rows below it). Each marker keeps
+// the most rows it has had (blank ones fill in), so rows coming and going (signals found and lost) do not resize
+// the canvas above it every frame; a marker removed drops its rows
 function applyTable(rt, table) {
     const key = JSON.stringify(table);
     if (rt.tableKey === key) return;
     rt.tableKey = key;
     rt.table.hidden = !table || !table.rows.length;
-    if (rt.table.hidden) { rt.table.replaceChildren(); return; }
+    if (rt.table.hidden) { rt.table.replaceChildren(); rt.tableRows = {}; return; }
+    const groups = [];
+    for (const r of table.rows) {
+        if (r.id || !groups.length) groups.push({id: r.id, rows: []});
+        groups[groups.length - 1].rows.push(r);
+    }
+    const most = {};
+    for (const g of groups) most[g.id] = Math.max(g.rows.length, (rt.tableRows || {})[g.id] || 0);
+    rt.tableRows = most;
+    const blank = () => el("tr", {className: "cont"}, ...table.columns.map(() => el("td", {textContent: " "})));
+    const rows = groups.flatMap((g) => [
+        ...g.rows.map((r) => el("tr", {className: r.id ? "" : "cont"}, ...r.cells.map((c) => el("td", {textContent: c})))),
+        ...Array.from({length: most[g.id] - g.rows.length}, blank)]);
     rt.table.replaceChildren(el("table", {},
         el("thead", {}, el("tr", {}, ...table.columns.map((c) => el("th", {textContent: c})))),
-        el("tbody", {}, ...table.rows.map((r) => el("tr", {className: r.id ? "" : "cont"}, ...r.cells.map((c) => el("td", {textContent: c})))))));
+        el("tbody", {}, ...rows)));
 }
 
 // the measurement table under the plot, rebuilt only when it changed
@@ -747,7 +761,16 @@ function dragged(rt, axis, i) {
     if (d.mode === "level") {
         return {...axis, markers: (axis.markers || []).map((m) => (same(m) && m.kind === "hline" ? {...m, y: d.lo} : m))};
     }
-    return {...axis, bands: (axis.bands || []).map((b) => (b.owner === d.owner && b.edit && b.edit[1] === d.edit[1] ? {...b, lo, hi} : b))};
+    // only the band grabbed: the plot's own boxes (found signals) share owner and settings, so it is the one of them
+    // nearest where the grabbed one was
+    const c0 = (d.lo0 + d.hi0) / 2, w0 = Math.abs(d.hi0 - d.lo0);
+    let k = -1, best = Infinity;
+    (axis.bands || []).forEach((b, j) => {
+        if (b.owner !== d.owner || !b.edit || b.edit[1] !== d.edit[1]) return;
+        const off = Math.abs((b.lo + b.hi) / 2 - c0) + Math.abs(b.hi - b.lo - w0);
+        if (off < best) { best = off; k = j; }
+    });
+    return {...axis, bands: (axis.bands || []).map((b, j) => (j === k ? {...b, lo, hi} : b))};
 }
 
 // can new markers be drawn on axis i: a frequency axis of a plot that has markers
@@ -768,7 +791,7 @@ function bindCanvas(id, canvas) {
             drawPlot(id);
             return;
         }
-        if (!rt.drag) {
+        if (!rt.drag || rt.drag.committed) { // a released drag only shows where it was dropped until the server answers
             drawPlot(id);
             const [px, py] = pointerPos(rt, ev), hit = hitTest(rt, px, py);
             const i = axisAt(rt, py);
@@ -856,7 +879,7 @@ function commitDrag(id, rt, d, g) {
         if (d.owner) plotOp("marker_set", {id, marker: d.owner, params});
         else for (const [key, value] of Object.entries(params)) plotOp("set", {id, key, value}); // a mark of the plot itself
     }
-    if (!sent) { rt.drag = null; return; }
+    if (!sent || !d.moved) { rt.drag = null; return; } // a click on a box applies it where it is: nothing to show
     // keep showing the dropped position until the server's state arrives (or a moment passes)
     const mine = rt.drag = {...d, committed: true};
     setTimeout(() => { if (rt.drag === mine) { rt.drag = null; drawPlot(id); } }, 1500);

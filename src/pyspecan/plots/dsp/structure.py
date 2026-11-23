@@ -12,6 +12,8 @@ from ..settings import Setting
 from .analyzer import analyzer
 from .common import DSPPlot, Job
 
+CONFIRM = 2 # frame searches in a row that must find a period before it is drawn
+DROP = 3    # searches in a row that do not find the period drawn before it is dropped
 SLOT_COLORS = (GREEN, BLUE, YELLOW, "#c678dd", "#56b6c2", "#e5a04b")
 MAX_ROWS = 512 # image rows drawn at most (rows beyond are max-pooled)
 
@@ -241,7 +243,8 @@ class FrameRaster(DSPPlot):
     to frame (1: the same symbol every frame). The lock is followed block by block (rpps' Lock.follow: each block's
     symbols join the last's with none dropped or repeated, on the same rotation), and the last `symbols` of them kept,
     so periods longer than a block show. A gap between blocks, or a follow rpps calls stale (a slip is likely), starts
-    the symbols over"""
+    the symbols over. A period is drawn once CONFIRM searches in a row find it, and kept until DROP in a row do not:
+    one search's chance match does not flash a raster up, nor one miss take a real one away"""
     TITLE = "Frame Raster"
     CATEGORY = "Decoding"
     FEATURES = frozenset({LINE, IMAGE})
@@ -253,11 +256,12 @@ class FrameRaster(DSPPlot):
               "coherence of each position; the period, the unique word's place and length",
         use=("Find a modem's frame length and unique word", "See fixed header fields and where the payload starts",
              "Prepare the frames for a code search (rpps.analysis.code)"),
-        cost=19, # the shared lock (6) and a follow (6) a block, and the frame search (on its own thread)
+        cost=45, # the shared lock (6) and a follow (6) a block, and the frame search over up to 200000 symbols (on its own thread)
     )
     SETTINGS = DSPPlot.SETTINGS + (
-        Setting("symbols", "Symbols", "int", default=8192, min=512, max=200000, step=1024, reset=True, group="Frames",
-                help="locked symbols kept from contiguous blocks: a period needs 8 frames in them"),
+        Setting("symbols", "Symbols", "int", default=200000, min=512, max=1000000, step=1024, reset=True, group="Frames",
+                help="locked symbols kept from contiguous blocks: a period needs 8 frames in them (each search looks at "
+                     "what is kept so far, so short periods show long before it is full)"),
         Setting("interval", "Analyse every", "number", default=0.0, min=0.0, max=60.0, step=0.5, hint="s of signal",
                 group="Frames", help="seconds of signal between frame searches, 0 for every block (a long record's "
                                      "search costs more: search less often)"),
@@ -277,6 +281,9 @@ class FrameRaster(DSPPlot):
         self._seq = None
         self.start_over()
         self.job.clear()
+        self._runs = self.job.runs # the searches seen
+        self._shown = None         # the result drawn: a confirmed period
+        self._streak = []          # periods (None: none found) of the latest searches
 
     def start_over(self):
         """Drop the kept symbols (a gap, a slip): the next block starts a new chain of follows"""
@@ -304,6 +311,21 @@ class FrameRaster(DSPPlot):
             self.start_over()
         self._pos += len(x)
 
+    def confirm(self, res):
+        """Take a new search's result: draw its period once CONFIRM searches in a row found it, drop the one drawn
+        once DROP in a row did not"""
+        P = res[0].period if res is not None and res[0] is not None else None
+        self._streak = (self._streak + [P])[-max(CONFIRM, DROP):]
+        same = lambda a, b: a is not None and b is not None and abs(a - b) <= max(1, 2e-3 * b)
+        last = self._streak[-CONFIRM:]
+        if len(last) == CONFIRM and all(same(q, P) for q in last):
+            self._shown = res
+        elif self._shown is not None:
+            if same(P, self._shown[0].period):
+                self._shown = res # still there: the newest frames
+            elif len(self._streak) >= DROP and not any(same(q, self._shown[0].period) for q in self._streak[-DROP:]):
+                self._shown = None
+
     def render(self):
         sel, lk, why = self.analyse()
         if lk is None:
@@ -324,11 +346,20 @@ class FrameRaster(DSPPlot):
                 self._since = 0.0
         readout = [*self.sel_readout(sel), ("Mod", lk.mod), ("Baud", fmt_hz(lk.baud).replace("Hz", "Bd"))]
         res = self.job.result
+        if self.job.runs != self._runs:
+            self._runs = self.job.runs
+            self.confirm(res)
         if res is not None:
             readout.append(("Symbols", str(res[4])))
-        if res is None or res[0] is None:
-            if res is not None:
-                readout.append(("Frames", f"none found in {res[4]} symbols"))
+        if self._shown is not None:
+            res = self._shown
+        if res is None or res[0] is None or self._shown is None:
+            if res is not None and res[0] is not None:
+                readout.append(("Frames", f"period {res[0].period} found, checking it repeats"))
+            elif res is not None:
+                full = res[4] >= self.symbols # type: ignore
+                readout.append(("Frames", f"none found in {res[4]} symbols" + ("" if full else
+                                f", gathering up to {self.symbols} (a period needs 8 frames)"))) # type: ignore
             readout += self.job.readout()
             rows = [TableRow(f"L{k}", [f"L{k}", str(lag), f"{c:.2f}"]) for k, (lag, c) in enumerate(res[3] if res else [], 1)]
             return Frame([Axis(ylabel="Frame"), Axis(ylabel="Coherence")], title=self.TITLE, readout=readout,

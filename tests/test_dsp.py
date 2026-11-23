@@ -111,14 +111,19 @@ def test_signals_marker_boxes_every_signal_and_marks_the_analysed_one():
     psd.markers.add("signals")
     (f,) = run(model, src, [psd], capture())
     bands = {b.label: b for b in f.axes[0].bands}
-    assert set(bands) == {"S1", "S2"}
-    tone, qpsk = bands["S1"], bands["S2"]
+    assert set(bands) == {"S1", "S2"} # numbered by survey id
+    tone, qpsk = sorted(bands.values(), key=lambda b: b.lo)
     assert tone.lo < -200e3 < tone.hi and qpsk.lo < 150e3 < qpsk.hi and 50e3 < qpsk.hi - qpsk.lo < 75e3
     assert qpsk.color == "#5cb85c" and tone.color != qpsk.color # the strongest (widest power) is analysed
     assert all(b.owner == "" and b.edit == ("dsp_freq", "dsp_bw") for b in bands.values()) # a click sets the globals
     assert qpsk.ylo < qpsk.yhi and qpsk.yhi > f.axes[0].ymin # a box from the floor to the peak
+    tr = f.axes[0].traces[-1] # the marker trace as drawn (vbw smoothed): each box tops out just over it
+    x, y = np.asarray(tr.x), np.asarray(tr.y)
+    for b in bands.values():
+        top = y[(x >= b.lo) & (x <= b.hi)].max()
+        assert top < b.yhi <= top + 1.5, (b.label, b.yhi, top)
     text = [" ".join(r.cells) for r in f.table.rows]
-    assert any("S2" in t and "analysed" in t and "SNR" in t for t in text), text
+    assert any(qpsk.label in t and "analysed" in t and "SNR" in t for t in text), text
 
 @need_rpps
 def test_a_click_on_a_box_selects_it_for_every_plot():
@@ -131,7 +136,7 @@ def test_a_click_on_a_box_selects_it_for_every_plot():
     psd, con = plots.get(psd_id), plots.get(con_id)
     psd.markers.add("signals")
     run(model, src, [psd, con], capture())
-    tone = next(b for b in psd.update().axes[0].bands if b.label == "S1")
+    tone = min(psd.update().axes[0].bands, key=lambda b: b.lo)
     d = hit_test(psd.update().axes[0], 0, lambda x: x / 100, (tone.lo + tone.hi) / 200) # 100 Hz a pixel: its body
     op, owner, params = commit("off", d, False) # a plain click, nothing moved
     assert (op, owner, set(params)) == ("plot", "", {"dsp_freq", "dsp_bw"})
@@ -547,6 +552,51 @@ def test_frame_raster_analyses_once_an_interval_of_signal():
         runs.append(plots[0].job.runs)
     started = np.flatnonzero(np.diff([0, *runs]))
     assert len(started) <= 5 and np.all(np.diff(started) >= 3) # not every block: 37.5 ms of signal between them
+
+def test_frame_raster_draws_a_period_only_once_it_repeats():
+    """One search's chance period does not flash a raster up, nor one miss take a confirmed one away"""
+    from types import SimpleNamespace as NS
+
+    from pyspecan.plots.dsp.structure import DROP, FrameRaster
+    fr = FrameRaster.__new__(FrameRaster) # confirm() only needs its own state
+    fr._shown, fr._streak = None, []
+    res = lambda P: (NS(period=P) if P else None, None, None, [], 1000)
+    for P in (257, 242, None, 6902):
+        fr.confirm(res(P))
+        assert fr._shown is None, P # each period seen once
+    fr.confirm(res(6903)) # within a symbol: the same period
+    assert fr._shown[0].period == 6903
+    fr.confirm(res(None)); fr.confirm(res(4000))
+    assert fr._shown is not None # missed fewer than DROP times: kept
+    for _ in range(DROP):
+        fr.confirm(res(None))
+    assert fr._shown is None
+
+@need_rpps
+def test_found_signals_keep_their_numbers():
+    """A signal is numbered by its survey id, the same however others come and go; one the search misses is still
+    shown for HOLD blocks"""
+    from pyspecan.plots.dsp.analyzer import HOLD, analyzer
+    model, src, _ = setup("PSD")
+    an = analyzer(src)
+    rng = np.random.default_rng(3)
+    t = np.arange(BLOCK) / FS
+    noise = lambda: 0.01 * (rng.standard_normal(BLOCK) + 1j * rng.standard_normal(BLOCK))
+    tone = lambda f: 0.3 * np.exp(2j * np.pi * f * t)
+    def block(*freqs):
+        model.samples = (noise() + sum(tone(f) for f in freqs)).astype(np.complex64)
+        src.tick()
+        return {round(s.signal.freq / 1e3): (s.number, s.missed) for s in an.signals()}
+    first = block(-300e3, 100e3, 250e3)
+    assert sorted(n for n, _ in first.values()) == [1, 2, 3]
+    s250 = first[250]
+    gone = block(-300e3, 250e3) # 100 kHz missed: still shown, its number kept
+    assert gone[250] == s250 and gone[100] == (first[100][0], 1)
+    back = block(-450e3, -300e3, 100e3, 250e3) # a new one: a number of its own, nobody renumbered
+    assert back[100] == first[100] and back[250] == s250 and back[-450][0] == 4
+    for _ in range(HOLD + 1):
+        shown = block(-300e3, 250e3)
+    assert 100 not in shown and -450 not in shown and shown[250] == s250
 
 @need_rpps
 def test_signal_profile_captures_then_lists_the_steps():
