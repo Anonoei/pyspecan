@@ -1,4 +1,4 @@
-"""dev/benchmark.py: every plot timed against a PSD on the same blocks"""
+"""tools/benchmark.py: every plot timed against a PSD on the same blocks"""
 import json
 import os
 import subprocess
@@ -8,7 +8,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def test_benchmark_writes_costs_in_psds(tmp_path):
     out = tmp_path / "benchmark.json"
-    proc = subprocess.run([sys.executable, os.path.join(ROOT, "dev", "benchmark.py"), "--plots", "scope,spectrogram",
+    proc = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "benchmark.py"), "--plots", "scope,spectrogram",
                            "--blocks", "3", "--warmup", "1", "--sweep", "10", "--markers", "--json", str(out)],
                           capture_output=True, text=True, timeout=300, check=False)
     assert proc.returncode == 0, proc.stderr

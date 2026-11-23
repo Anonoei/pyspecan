@@ -34,6 +34,7 @@ def args_controller(parser):
     """Options every view's controller takes"""
     ctrl = args.get_group(parser, "Playback")
     ctrl.add_argument("--show", default=ControllerConfig.show, type=float, help="[ms] time between frames")
+    ctrl.add_argument("--record_dir", default=None, help="where a live radio's recordings go when no path is given (default: here)")
     return ctrl
 
 class Controller:
@@ -41,7 +42,7 @@ class Controller:
     FEATURES: set[str] = {LINE, SCATTER, IMAGE}
 
     def __init__(self, model: Model, view, **kwargs):
-        self.log = logger.new(type(self).__module__.rsplit(".", 1)[-1])
+        self.log = logger.new(type(self).__module__.removeprefix("pyspecan.").removesuffix(".base")) # controller.WEB
         self.model = model
         self.view = view
         self.source = Source(model)
@@ -56,13 +57,14 @@ class Controller:
         self.running = True
         self.message = ""
         self.time_show = float(kwargs.get("show", ControllerConfig.show))
+        self.record_dir = pathlib.Path(kwargs.get("record_dir") or ".").expanduser()
         self.thread: threading.Thread | None = None
 
     # --- plots --- #
     @property
     def plot_types(self) -> list[str]:
         """Plots this view can draw"""
-        return available(self.FEATURES)
+        return available(self.FEATURES, radio=hasattr(self.sink, "sweep"))
 
     def _check_type(self, name):
         if name not in self.plot_types:
@@ -214,6 +216,12 @@ class Controller:
     def get_status(self) -> dict:
         """The parts of the state that change while streaming"""
         status = {"playing": self.playing, "message": self.message}
+        radio = self.sink.live_status()
+        if radio is not None: # what changes block to block, the rest of the radio is in the state
+            status["radio_live"] = radio
+        stream = self.sink.stream_status()
+        if stream is not None:
+            status["stream"] = stream
         if self.sink.SEEKABLE:
             status.update({
                 "cur_samp": self.sink.cur_samp,
@@ -265,8 +273,9 @@ class Controller:
             return state
 
     # --- commands --- #
+    QUIET_COMMANDS = ("next", "prev") # stepping block by block: logged at debug
     def command(self, cmd: str):
-        self.log.trace("command(%s)", cmd)
+        (self.log.debug if cmd in self.QUIET_COMMANDS else self.log.info)("command %s", cmd)
         if cmd == "stop":
             # not under the lock: the playback thread holds it for a whole block (a persistence plot takes long),
             # and waiting for it here freezes a view that calls this from its event loop. The flag is all it needs,
@@ -286,6 +295,10 @@ class Controller:
                 self.model.reset()
                 self.reset_plots()
                 self.message = ""
+            elif cmd == "record":
+                self.start_record()
+            elif cmd == "record_stop":
+                self.stop_record()
             elif cmd in ("claim", "release", "reconnect"):
                 self._need_radio()
                 self.playing = False
@@ -310,8 +323,10 @@ class Controller:
                 raise ValueError(f"unknown command {cmd!r}")
 
     def setting(self, key: str, value):
-        self.log.trace("setting(%s, %s)", key, value)
+        self.log.info("set %s = %s", key, value)
         with self.lock:
+            if key == "fs" and str(value).strip().lower() == "measured": # a network stream's arrival rate, when asked
+                value = self.measured_fs()
             if key in ("fs", "cf"):
                 asked = Frequency.get(value)
                 (self.model.set_fs if key == "fs" else self.model.set_cf)(value)
@@ -367,6 +382,13 @@ class Controller:
             else:
                 raise ValueError(f"unknown setting {key!r}")
 
+    def measured_fs(self) -> float:
+        """The rate samples arrive at (a network stream), to 4 significant digits: a second's measurement jitters"""
+        rate = self.sink.measured_rate()
+        if not rate:
+            raise ValueError("no measured rate: nothing has arrived yet, or this source does not measure one")
+        return float(round(rate, 3 - int(math.floor(math.log10(rate)))))
+
     def _need_radio(self):
         if self.sink.status() is None:
             raise ValueError("the sink is a file, there is no radio")
@@ -374,6 +396,34 @@ class Controller:
     def radios(self) -> list[dict]:
         """Radios that can be picked, a server that is down does not get in the way"""
         return self.sink.radios() if self.sink.status() is not None else []
+
+    # --- recording a live radio --- #
+    def record_path(self) -> pathlib.Path:
+        """A new recording's path when none is given: pyspecan-<UTC time>-<center frequency>.sigmf in record_dir"""
+        stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        return self.record_dir / f"pyspecan-{stamp}-{int(self.sink.get_cf().raw)}Hz.sigmf"
+
+    def start_record(self, path=None) -> str:
+        """Record every sample the radio delivers to `path` (default: record_path()), and play if stopped: reading is what
+        records. A path whose extension names no format (.cfile, .cs16, .cu8...) is a SigMF recording"""
+        with self.lock:
+            self._need_radio()
+            path = pathlib.Path(path).expanduser() if path else self.record_path()
+            written = self.sink.start_record(path)
+            self.playing = True
+            self.message = f"recording to {written}"
+        self.log.info("recording to %s", written)
+        self.state_changed()
+        return written
+
+    def stop_record(self):
+        with self.lock:
+            self._need_radio()
+            rec = self.sink.recording()
+            self.sink.stop_record()
+            self.message = f"recorded {rec['seconds']:g} s to {rec['path']}" if rec else ""
+        self.log.info("%s", self.message or "recording stopped")
+        self.state_changed()
 
     def _need_file(self):
         if not self.sink.SEEKABLE:
@@ -388,7 +438,8 @@ class Controller:
         self.playing = False
         self.sink.set_path(path)
         self.reset_plots()
-        self.message = ""
+        self.message = self.sink.note # what was assumed about it (its format), else nothing
+        self.log.info("opened %s", path)
 
     # --- playback --- #
     def step(self, forward=True) -> bool:
@@ -404,7 +455,7 @@ class Controller:
             self.source.reset()
             self.plots.reset()
             self.state_changed()
-        self.source.tick()
+        self.source.tick(sink.contiguous)
         self.deliver(self.render(), self.get_status())
         return True
 
@@ -418,6 +469,7 @@ class Controller:
                 valid = self.step()
                 if not valid:
                     self.message = "END"
+                    self.log.info("playback stopped: %s", "end of the file" if self.sink.SEEKABLE else "no samples")
                 elif self.message == "END":
                     self.message = ""
             except Exception as e: # keep playback alive

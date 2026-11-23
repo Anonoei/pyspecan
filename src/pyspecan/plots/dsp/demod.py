@@ -21,7 +21,7 @@ from ..frame import (
 from ..freq import SETTING_CMAP
 from ..reduce import accumulate, density, log_image
 from ..settings import Setting
-from .common import SETTING_DECAY, DSPPlot, error_summary, eye_points, matched
+from .common import PATH_UP, SETTING_DECAY, DSPPlot, error_summary, eye_points
 
 
 @plot("Constellation")
@@ -39,7 +39,7 @@ class Constellation(DSPPlot):
             'Identify a modulation and judge its quality',
             'Spot phase noise (arcs), IQ imbalance (skew), compression (squeezed outer points)',
         ),
-        cost=10,
+        cost=6,
     )
     FEATURES = frozenset({SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -73,7 +73,7 @@ class VectorDiagram(DSPPlot):
              "(rpps); the matched filter's output between the symbols as well",
         shows='The path between symbols as lines, the symbols marked, the ideal points',
         use=('See transitions: through the origin or around it, filtering', 'Spot timing errors (smeared arrivals)'),
-        cost=14,
+        cost=7.5,
     )
     FEATURES = frozenset({LINE, SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -88,7 +88,7 @@ class VectorDiagram(DSPPlot):
             return self.empty([Axis(xmin=-lim, xmax=lim, ymin=-lim, ymax=lim, square=True, xlabel="I", ylabel="Q")], sel, why)
         n = min(self.count, len(lk.syms))
         k0 = len(lk.syms) - n
-        t, z = matched(lk, 8)
+        t, z = lk.rpps.matched(PATH_UP) # type: ignore
         on = (t >= k0 - 0.5) & (t <= len(lk.syms) - 0.5)
         path = z[on]
         lim = max(1.5, 1.1 * float(np.max(np.abs(path))) if len(path) else 1.5)
@@ -117,7 +117,7 @@ class ConstellationDensity(DSPPlot):
             'See how each point spreads: round for noise, along the circle for phase noise, along the radius for compression',
             'Tell a few outliers from the bulk',
         ),
-        cost=11,
+        cost=6,
     )
     FEATURES = frozenset({IMAGE, SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -163,7 +163,7 @@ class Constellation3D(DSPPlot):
              "(rpps); the matched filter's output",
         shows='I and Q against time: the path between symbols and the symbols on it. Drag to turn it',
         use=('See the timing of transitions', 'Show how symbols follow each other'),
-        cost=14,
+        cost=8,
     )
     FEATURES = frozenset({LINE, SCATTER, THREE_D})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -184,7 +184,7 @@ class Constellation3D(DSPPlot):
         s = lk.syms[k0:]
         traces = []
         if self.path:
-            t, z = matched(lk, 8)
+            t, z = lk.rpps.matched(PATH_UP) # type: ignore
             on = (t >= k0) & (t <= k0 + n - 1)
             traces.append(Trace(z.real[on], t[on] - k0, z=z.imag[on], color=BLUE, alpha=0.6, width=1.0, name="path"))
         traces.append(Trace(s.real, k, z=s.imag, color=YELLOW, kind=SCATTER, name="syms"))
@@ -210,7 +210,7 @@ class EyeDiagram(DSPPlot):
             'Spot timing jitter (blurred crossings)',
             'See filter problems (closed or lopsided eyes)',
         ),
-        cost=27,
+        cost=12,
     )
     FEATURES = frozenset({IMAGE})
     SETTINGS = DSPPlot.SETTINGS + (
@@ -256,7 +256,7 @@ class SymbolTable(DSPPlot):
              '(rpps); each symbol decided to the nearest ideal point',
         shows='The decided points (their index in the constellation), eight to a row, and against time',
         use=('Read out the symbol stream', 'Look for repeating patterns: preambles, idle fill'),
-        cost=10,
+        cost=6,
     )
     FEATURES = frozenset({SCATTER})
     SETTINGS = DSPPlot.SETTINGS + (

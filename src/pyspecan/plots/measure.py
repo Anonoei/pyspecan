@@ -1,15 +1,19 @@
-"""Measurement plots that are not markers on a frequency trace: CCDF and power vs time
+"""Measurement plots that are not markers on a frequency trace: CCDF, power vs time, occupancy, marker trend and
+autocorrelation
 
 Channel power, ACPR and occupied bandwidth are marker kinds, see markers.py.
 """
+from collections import deque
+
 import numpy as np
 
 from ..measure import CCDF as _CCDF
-from ..measure import channel, units, windows
+from ..measure import channel, correlate, units, windows
 from .base import About, Plot, plot
-from .frame import GREEN, RED, YELLOW, Axis, Frame, Marker, Trace
+from .frame import BLUE, GREEN, RED, YELLOW, Axis, Frame, Marker, Trace, fmt_time
 from .freq import POWER_UNIT, FreqPlot, _ref_level, fmt_hz, freq_text, hz
-from .settings import Setting, override, without
+from .psd import PSD
+from .settings import Setting, override, parse_time, time_text, without
 
 
 def _db(p: float) -> float:
@@ -165,3 +169,151 @@ class Occupancy(FreqPlot):
             ("Frames", str(self.frames)), ("Threshold", f"{self.thr:.1f} {u}"),
             ("Occupied", f"{pct.mean():.1f}%"), ("Bins > 50%", f"{100.0 * np.mean(pct > 50):.1f}%"),
         ])
+
+TREND_COLORS = (YELLOW, RED, BLUE, GREEN, "#c678dd", "#56b6c2", "#e5a04b", "#a0a0a0")
+TREND_AXES = 3 # most value axes (one per unit), the rest share the last
+
+@plot("Marker Trend")
+class MarkerTrend(PSD):
+    """What the markers measure, against time: a PSD with its markers, and under it each marker's numbers (a level,
+    a channel's power, ACPR, OBW, THD, a limit's margin...) over the last `history` blocks, one axis per unit. Link it
+    to a PSD to trend that PSD's markers"""
+    TITLE = "Marker Trend"
+    CATEGORY = "Measurements"
+    ABOUT = About(
+        data="A PSD (the same traces, gate and markers); each block, every marker's measured numbers kept with the "
+             "block's time",
+        shows="The spectrum with the markers (hidden with Spectrum off), and under it each marker's numbers against "
+              "time, one axis per unit (levels, dBc, Hz, dB)",
+        use=("Watch a channel's power, ACPR or a limit margin drift while something warms up or is tuned",
+             "Log a peak's frequency and level over minutes",
+             "Link to a PSD to trend the markers set there"),
+        cost=1.1,
+    )
+    SETTINGS = PSD.SETTINGS + (
+        Setting("history", "History", "int", default=500, min=2, max=100000, reset=True, group="Trend",
+                help="blocks kept"),
+        Setting("spectrum", "Spectrum", "check", default=True, group="Trend",
+                help="draw the spectrum the markers sit on (off: only the trends; the table stays)"),
+    )
+
+    def reset(self):
+        super().reset()
+        self.trend: dict[str, tuple[deque, deque, str]] = {} # "M1 level" -> (times, values, unit)
+        self._clock = 0.0 # seconds of samples seen, for sources that do not say a block's time
+        self._t0 = None
+
+    def _now(self) -> float:
+        t = self.source.time
+        self._clock += len(self.source.samples) / self.source.fs
+        if t is None:
+            return self._clock
+        if self._t0 is None:
+            self._t0 = t - self._clock
+        return t - self._t0
+
+    def render(self):
+        frame = super().render()
+        if frame is None or self.last is None:
+            return frame
+        now = self._now()
+        values = self.marker_values if len(self.markers) else {}
+        for key in list(self.trend):
+            if key not in values:
+                del self.trend[key] # its marker is gone or measures something else now
+        for key, (v, unit) in values.items():
+            t = self.trend.get(key)
+            if t is None or t[2] != unit:
+                t = self.trend[key] = (deque(maxlen=self.history), deque(maxlen=self.history), unit) # type: ignore
+            t[0].append(now)
+            t[1].append(v)
+        if not self.spectrum: # type: ignore
+            frame.axes = frame.axes[1:] if len(frame.axes) > 1 else []
+        frame.axes += self.trend_axes(now)
+        if not self.trend:
+            frame.readout.append(("Trend", "add a marker to trend what it measures"))
+        return frame
+
+    def trend_axes(self, now: float) -> list[Axis]:
+        units_ = list(dict.fromkeys(u for _, _, u in self.trend.values()))
+        groups = units_[:TREND_AXES - 1] + (["/".join(units_[TREND_AXES - 1:])] if len(units_) >= TREND_AXES else [])
+        def group(u):
+            return u if u in groups else groups[-1]
+        span = max((now - t[0][0] for t in self.trend.values() if t[0]), default=0.0)
+        axes = []
+        for g in groups:
+            traces, ys = [], []
+            for k, (key, (ts, vs, u)) in enumerate(self.trend.items()):
+                if group(u) != g:
+                    continue
+                x, y = np.asarray(ts) - now, np.asarray(vs)
+                ys.append(y)
+                traces.append(Trace(y, x, color=TREND_COLORS[k % len(TREND_COLORS)], name=key, width=1.2))
+            y = np.concatenate(ys)
+            lo, hi = float(y.min()), float(y.max())
+            pad = max((hi - lo) * 0.1, 1.0 if g != "Hz" else max(abs(hi) * 1e-6, 1.0))
+            axes.append(Axis(xmin=-max(span, 1e-3), xmax=0.0, ymin=lo - pad, ymax=hi + pad, xfmt="time",
+                             yfmt="freq" if g == "Hz" else "num", xlabel="Time", ylabel=g, traces=traces))
+        return axes
+
+
+@plot("Autocorrelation")
+class Autocorrelation(Plot):
+    """|R(lag)|: how much the signal resembles itself a lag later, over the block (zero padded FFT), averaged over
+    blocks. A symbol rate, an OFDM symbol (its cyclic prefix correlates at the useful length Tu), a frame or a
+    repeated preamble each make a peak at their period, which the readout lists with its rate"""
+    TITLE = "Autocorrelation"
+    CATEGORY = "Time domain"
+    ABOUT = About(
+        data="The block (its mean taken out), correlated with itself at every lag up to the span by a zero padded FFT; "
+             "averaged over blocks",
+        shows="|R(lag)| / R(0) against the lag (linear or dB), the highest peaks past the main lobe that stand out "
+              "from their surroundings (and over the noise's own, 4 / sqrt(samples)) marked with their lag and its rate",
+        use=("Find an OFDM signal's useful symbol length (the cyclic prefix correlates at Tu)",
+             "Find repetition: preambles, frames, a pulse repetition interval",
+             "Tell noise (one spike at 0) from structured signals"),
+        cost=1.3,
+    )
+    SETTINGS = (
+        Setting("span", "Span", "text", default="auto", coerce=time_text, hint="auto, 100u, 5m", reset=True, group="Measurement",
+                help="largest lag shown ('auto': one FFT); at most half the block"),
+        Setting("scale", "Scale", "select", default="linear", options=("linear", "dB"), group="Display"),
+        Setting("decay", "Decay", "number", default=0.7, min=0.0, max=0.99, step=0.05, group="Measurement",
+                help="how much of the earlier blocks stays each block, 0 shows only the latest"),
+        Setting("remove_dc", "Remove DC", "check", default=True, reset=True, group="Measurement",
+                help="take the mean out first (a DC offset correlates at every lag)"),
+        Setting("count", "Peaks", "int", default=3, min=0, max=10, group="Display", help="peaks marked past the main lobe"),
+    )
+
+    def reset(self):
+        self.r: np.ndarray | None = None
+
+    def render(self):
+        x = np.asarray(self.source.samples)
+        if len(x) < 4:
+            return None
+        fs = self.source.fs
+        span = parse_time(self.span) # type: ignore
+        lags = int(round(span * fs)) if span > 0 else self.source.nfft
+        lags = max(2, min(lags, len(x) // 2))
+        r = correlate.autocorr(x, lags, self.remove_dc) # type: ignore
+        if self.r is None or len(self.r) != len(r):
+            self.r = r
+        else:
+            self.r = self.decay * self.r + (1 - self.decay) * r # type: ignore
+        r = self.r
+        t = np.arange(len(r)) / fs
+        found = correlate.peaks(r, self.count, floor=4 / np.sqrt(len(x))) # type: ignore # noise reads about 1/sqrt(n)
+        db = self.scale == "dB" # type: ignore
+        y = 10 * np.log10(np.maximum(r, 1e-6)) if db else r
+        marks, readout = [], []
+        for k, (lag, v) in enumerate(found, 1):
+            yv = 10 * np.log10(max(v, 1e-6)) if db else v
+            marks.append(Marker(lag / fs, yv, f"R{k}", GREEN))
+            readout.append((f"R{k}", f"{fmt_time(lag / fs)} ({fmt_hz(fs / lag)}), {v:.3f}"))
+        lobe = correlate.lobe_end(r)
+        readout.insert(0, ("Main lobe", fmt_time(lobe / fs)))
+        return Frame([Axis(
+            xmin=0.0, xmax=t[-1], ymin=-40.0 if db else 0.0, ymax=0.0 if db else 1.05, xfmt="time", xlabel="Lag",
+            ylabel="|R| (dB)" if db else "|R| / R(0)", traces=[Trace(y, t, name="r")], markers=marks,
+        )], title=self.TITLE, readout=readout)

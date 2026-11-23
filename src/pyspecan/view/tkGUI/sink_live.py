@@ -7,7 +7,7 @@ from .sink import Sink
 class SinkLive(Sink):
     __slots__ = (
         # control panel
-        "cl_var_dev", "cl_cb_dev", "cl_lbl_status", "cl_btn_claim", "cl_btn_reconnect",
+        "cl_var_dev", "cl_cb_dev", "cl_lbl_status", "cl_btn_claim", "cl_btn_reconnect", "cl_btn_record", "cl_lbl_live",
         "cl_var_rx", "cl_ent_rx",
         "cl_fr_stages", "cl_stage_vars", "cl_stage_ents",
         "cl_lbl_ant", "cl_var_ant", "cl_cb_ant"
@@ -27,10 +27,9 @@ class SinkLive(Sink):
 
     def draw_cl(self, parent, row=0):
         parent.columnconfigure(1, weight=1)
-        self.cl_var_dev = tk.StringVar(parent) # TODO: switch from ent to combo
+        self.cl_var_dev = tk.StringVar(parent)
         ttk.Label(parent, text="Device:").grid(row=row,column=0, sticky=tk.W)
         self.cl_cb_dev = ttk.Combobox(parent, textvariable=self.cl_var_dev, width=20)
-        # self.ent_dev = ttk.Entry(root, textvariable=self.var_dev, state=tk.DISABLED, width=10)
         self.cl_cb_dev.grid(row=row,column=1, sticky=tk.NSEW)
         row += 1
         self.cl_lbl_status = ttk.Label(parent, text="", wraplength=220, justify=tk.LEFT)
@@ -42,6 +41,11 @@ class SinkLive(Sink):
         self.cl_btn_claim.pack(side=tk.LEFT)
         self.cl_btn_reconnect = ttk.Button(buttons, text="Reconnect")
         self.cl_btn_reconnect.pack(side=tk.LEFT, padx=4)
+        self.cl_btn_record = ttk.Button(buttons, text="Record")
+        self.cl_btn_record.pack(side=tk.LEFT)
+        row += 1
+        self.cl_lbl_live = ttk.Label(parent, text="", wraplength=220, justify=tk.LEFT) # samples lost, the recording
+        self.cl_lbl_live.grid(row=row,column=0,columnspan=2, sticky=tk.W)
         row += 1
         ttk.Separator(parent, orient=tk.HORIZONTAL).grid(row=row, column=0, columnspan=2, pady=5, sticky=tk.EW)
         row += 1

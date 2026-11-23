@@ -35,13 +35,13 @@ def qpsk_capture(n=1_000_000, baud=50e3, f0=150e3, beta=0.35, seed=0) -> np.ndar
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    capture = tmp_path_factory.mktemp("data") / "qpsk.cf64"
+    capture = tmp_path_factory.mktemp("data") / "qpsk.cf32"
     qpsk_capture().tofile(capture)
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
-    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64",
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf32",
                              "-fs", "1M", "-n", "1024"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     log: list[str] = []
     reader = threading.Thread(target=lambda: log.extend(proc.stdout), daemon=True) # type: ignore[arg-type]
@@ -93,9 +93,9 @@ def _clear(page):
 def test_every_plot_type_draws(page):
     from pyspecan.plots.settings import HAVE_RPPS
     types = page.evaluate("state.plot_types")
-    assert {"3D Spectrogram", "IQ 3D", "Phase Noise", "Analog Demod"} <= set(types) # the web view draws 3d now
+    assert {"3D Spectrogram", "IQ 3D", "Phase Noise"} <= set(types) # the web view draws 3d now
     if HAVE_RPPS:
-        assert {"3D Constellation", "Constellation", "Eye Diagram", "Network Analyzer", "Impulse Response", "Cyclic Spectrum",
+        assert {"Analog Demod", "3D Constellation", "Constellation", "Eye Diagram", "Network Analyzer", "Impulse Response", "Cyclic Spectrum",
                 "Symbol Table", "Error Vector", "Error Vector Spectrum"} <= set(types)
     problems = []
     for name in types:
@@ -113,7 +113,8 @@ def test_every_plot_type_draws(page):
             continue
         frame = page.evaluate("(id) => runtime[id].frame", pid)
         drawn = _drawn(page, pid)
-        has_data = any(a["traces"] or a.get("image") or a.get("surface") for a in frame["axes"])
+        has_data = any(a["traces"] or a.get("image") or a.get("surface") for a in frame["axes"]) \
+            or bool((frame.get("table") or {}).get("rows")) # a table's rows (Decode's catalogue) are its data
         readout = dict(frame.get("readout") or [])
         if drawn < 500:
             problems.append(f"{name}: drew {drawn} pixels")

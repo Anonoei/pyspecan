@@ -19,11 +19,14 @@ class Sink:
     SEEKABLE = False # can jump around in the stream (files)
     __slots__ = (
         "log", "model",
-        "_samples", "_cf", "_Fs"
+        "_samples", "_cf", "_Fs", "contiguous", "block_index", "block_time"
     )
     def __init__(self, model, **kwargs):
         self.log = logger.new(f"model.{type(self).__name__}")
         self.model = model
+        self.contiguous = True # the last block read follows the one before it, nothing lost or skipped in between
+        self.block_index = None # the stream index of the last block's first sample (None: not known)
+        self.block_time = None  # its time [s, wall clock or a file's own], None when not known
         self._cf: Frequency = Frequency.get(kwargs.get("cf", SinkConfig.cf))
         self._Fs: Frequency = self._valid_fs(Frequency.get(kwargs.get("Fs", SinkConfig.Fs)))
         self._samples = np.empty((), dtype=np.complex64)
@@ -43,6 +46,18 @@ class Sink:
 
     def status(self) -> dict | None:
         """What the views show about the source of live samples (None: a file)"""
+        return None
+
+    def stream_status(self) -> dict | None:
+        """A network stream's state, every frame (None: not a stream): who sends, the rate samples arrive at"""
+        return None
+
+    def measured_rate(self) -> float | None:
+        """The rate samples arrive at, when the source measures it (a network stream), None otherwise or not yet"""
+        return None
+
+    def live_status(self) -> dict | None:
+        """The part of status() that changes block to block, cheap enough for every frame (None: a file)"""
         return None
 
     def take_retuned(self) -> bool:

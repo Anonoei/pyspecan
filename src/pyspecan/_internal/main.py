@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from .. import err
+from .. import err, logger
 from ..arguments import build_parser, define_args, parse
 from ..config import Sink, View, config
 from ..plots import layout_from_kwargs
@@ -9,14 +9,17 @@ from ..specan import SpecAn
 
 
 def _list_radios(device, servers=None):
-    from ..model.sink.live import list_devices, parse_servers
-    address = [device] if device and "://" in device else []
+    from ..model.sink.live import list_devices, parse_servers, remote_target
+    target = remote_target(device)
+    address = [target.server] if target is not None else []
     print("\n".join(list_devices(address + parse_servers(servers))))
 
 def _main(ns: argparse.Namespace):
     kwargs = vars(ns)
     for key in ("mon_mem", "profile"):
         kwargs.pop(key)
+    level, path = kwargs.pop("log_level"), kwargs.pop("log_file")
+    logger.setup(level or ("warning" if kwargs["view"] == View.CUI.name else "info"), path)
     if kwargs.pop("list"):
         return _list_radios(kwargs.get("device"), kwargs.get("servers"))
     view, sink = kwargs.pop("view"), kwargs.pop("sink")

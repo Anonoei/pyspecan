@@ -1,0 +1,5 @@
+{"globals": {"cal_db": -10},
+ "rows": [
+   [{"type": "PSD", "link": "a", "settings": {"vbw": 5}, "markers": [{"kind": "peak"}]},
+    {"type": "Spectrogram", "link": "a"}],
+   [{"type": "Persistence", "settings": {"show_max": true}}]]}

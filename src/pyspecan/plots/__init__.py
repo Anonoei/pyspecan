@@ -1,15 +1,35 @@
-"""Toolkit independent plots
+"""Toolkit independent plots: what every view (web, tk, console) draws
 
     from pyspecan.plots import PLOTS, Source, PlotSet
 
-Importing this package registers every plot. To add a plot, write a `Plot`
-subclass decorated with `@plot("Name")` in this package and import it below, every
-view (web, tk, console) picks it up. Views list the plots whose FEATURES they can draw.
+## How a plot works
 
-Extensions
-----------
-Another package can add plots and marker kinds without changing pyspecan. Put them in a
-module and name it under the "pyspecan.plots" entry point group:
+- `Source` (`plots.source`) is what plots read: the model's current block, and FFT frame `Stream`s cut from it,
+  swept (back to back) or realtime (overlapped), carried across blocks and shared between the plots asking for the
+  same (mode, nfft, window). `Source.tick(contiguous)` announces a new block; `reset()` forgets carried samples.
+- `Plot` (`plots.base`) turns the source into a `Frame` in `update()` (`render()` in subclasses). It declares
+  `SETTINGS` (`plots.settings.Setting`: kind, default, limits, scope: its own, its link group's, or global),
+  `FEATURES` (what a view must draw to list it: LINE, SCATTER, IMAGE, THREE_D), `CATEGORY` and `ABOUT` (what pickers
+  say about it, including its cost in PSDs), and registers with `@plot("Name")`. It never touches a toolkit.
+- `Frame` (`plots.frame`) says what to draw (axes, traces, images, surfaces, marker tables, readouts) and nothing
+  about how, so the browser, matplotlib and the terminal draw the same frame. `plots.export` writes one as CSV / JSON.
+- `FreqPlot` (`plots.freq`) is the base of spectrum plots: traces, detector, averaging, units, and `markers`
+  (`plots.markers`: `MarkerKind` subclasses registered with `@marker_kind("name")`: point, peak, delta, channel
+  power, ACPR, OBW, harmonics, TOI, limit...).
+- `PlotSet` (`plots.plotset`) is a view's live plots: rows, links (plots of a `LINK_DOMAIN` sharing their "link"
+  scope settings and markers), the global settings (`GLOBAL_SETTINGS`: calibration, the DSP analysis), and
+  `update()`, which renders every enabled plot for the block (honouring each one's "Update every").
+- `LayoutSpec` (`plots.layout`) is what a view starts with and saves: rows of `PlotSpec`s from `--plot` / `--row` or
+  a JSON file (`layout_from_kwargs`).
+
+Importing this package registers every plot, in the order pickers list them. To add one, write a `Plot` subclass
+decorated with `@plot("Name")` in this package and import it below; every view picks it up. Views list the plots whose
+FEATURES they can draw (`available`).
+
+## Extensions
+
+Another package can add plots and marker kinds without changing pyspecan. Put them in a module and name it under the
+"pyspecan.plots" entry point group (the Extending guide has a runnable example):
 
     # pyproject.toml of the extension
     [project.entry-points."pyspecan.plots"]
@@ -40,7 +60,7 @@ from importlib import metadata
 
 # isort: off
 # registration order is the order views list them in (sorting would also let analog's import of scope go first)
-from . import psd, spg, pst, fft, iq, scope, measure, analog, timefreq, markers
+from . import psd, spg, pst, fft, iq, scope, measure, analog, timefreq, sweep, markers
 # isort: on
 from . import layout
 from .base import CATEGORIES, PLOTS, About, Plot, available, plot

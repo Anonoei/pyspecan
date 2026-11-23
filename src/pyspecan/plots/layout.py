@@ -183,6 +183,10 @@ def validate(spec: LayoutSpec, plot_types=None):
             cls = PLOTS.get(p.type)
             if plot_types is not None and p.type not in plot_types:
                 raise ValueError("this view can not draw it")
+            migrated = cls.migrate(p.settings) # keys of an older version, in place: the spec is what gets applied
+            if migrated is not p.settings:
+                p.settings.clear()
+                p.settings.update(migrated)
             for key, value in p.settings.items():
                 s = by_key(cls.SETTINGS, key)
                 if s is None:

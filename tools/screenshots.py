@@ -1,13 +1,14 @@
 """Screenshots for the README: the views (web, tkGUI, console), their plots and features, on a synthetic capture
 
-    python dev/screenshots.py                  # every scene into media/
-    python dev/screenshots.py --only web       # one view (web, tk, cui)
-    python dev/screenshots.py --scene dsp      # scenes whose name holds "dsp"
-    python dev/screenshots.py --list           # what it would take
+    python tools/screenshots.py                  # every scene into media/
+    python tools/screenshots.py --only web       # one view (web, tk, cui)
+    python tools/screenshots.py --scene dsp      # scenes whose name holds "dsp"
+    python tools/screenshots.py --list           # what it would take
 
-The capture is made here (numpy only), so the pictures are the same every time: a QPSK signal, an FM broadcast-like
-carrier, a clean carrier with phase noise, two tones with their third order products, a bursty signal, a slow chirp,
-and noise. Each scene is a
+The captures are made here (numpy only, tools/demo.py), so the pictures are the same every time: a QPSK signal, an FM
+broadcast-like carrier, a clean carrier with phase noise, two tones with their third order products, a bursty signal,
+a slow chirp, and noise; for the scenes of signals cut in time, TDMA bursts, a hopper and a framed carrier. Each scene
+is a
 layout (the same --plot / --row items the command line takes), a few blocks stepped, and sometimes something done
 with the mouse (a 3D plot turned, the cursor readout shown).
 
@@ -31,7 +32,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 
-from demo import capture  # noqa: E402 (the synthetic capture, shared with benchmark.py)
+import demo  # noqa: E402 (the synthetic captures, shared with benchmark.py)
 
 
 # --- scenes --- #
@@ -47,6 +48,7 @@ class Scene:
     hover: tuple | None = None # web: (plot index, x, y) the cursor rests on, fractions of the canvas
     store_ref: int | None = None # after this many blocks, press every plot's "store ref" (then step the rest)
     menu: str | None = None  # web: open "+ Add plot" and point at this plot (its description shows)
+    capture: str = "capture" # the tools/demo.py capture it runs on
     size: tuple = (1600, 1000)
 
 DSP = ["--dsp_freq", "150k", "--dsp_bw", "60k"]
@@ -63,6 +65,11 @@ SCENES = [
     Scene("3d", "web", ["3D Spectrogram", "IQ 3D", None, "Surface Spectrogram cmap=hot max_count=32", "Occupancy"], steps=34, turn=2),
     Scene("dsp", "web", ["PSD marker=signals", "Constellation", None, "Eye Diagram", "Network Analyzer"], steps=6, args=DSP, dsp=True),
     Scene("vsa", "web", ["3D Constellation", "Error Vector", None, "Impulse Response", "Cyclic Spectrum"], steps=6, args=DSP, dsp=True),
+    Scene("bursts", "web", ["PSD trig_mode=gated vbw=0 t1_mode=average marker=signals", "Waveform ID", None, "Bursts", "Hopping"],
+          steps=8, args=["--dsp_freq=-250k", "--dsp_bw", "140k"], dsp=True, capture="structured"),
+    Scene("frames", "web", ["Marker Trend marker=channel:freq=300k,bw=70k marker=obw:freq=300k,span=100k", "Autocorrelation span=12m scale=dB", None,
+                            "Frame Raster", "Signal Profile"],
+          steps=14, args=["--dsp_freq", "300k", "--dsp_bw", "70k"], dsp=True, capture="structured"),
     Scene("spectrum", "tk", ["PSD marker=peak marker=obw:freq=150k,span=100k", "Spectrogram max_count=40", None,
                              "Persistence show_max=on", "3D Spectrogram"], steps=30),
     Scene("dsp", "tk", ["PSD marker=signals", "Constellation", None, "Eye Diagram", "Error Vector"], steps=6, args=DSP, dsp=True),
@@ -86,7 +93,7 @@ def shoot_web(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=str(ROOT / "src"))
-    cmd = [sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(cap), "-F", "cf64", "-fs", "1M", "-n", "1024",
+    cmd = [sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(cap), "-F", "cf32", "-fs", "1M", "-n", "1024",
            *plot_args(scene.plots), *scene.args]
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     try:
@@ -147,7 +154,7 @@ def shoot_tk(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
     from pyspecan.controller.controller import GetController
     from pyspecan.model.model import GetModel
     from pyspecan.view.view import GetView
-    kw = dict(path=str(cap), fmt="cf64", Fs="1M", nfft=1024, layout_items=list(scene.plots), **_globals(scene.args))
+    kw = dict(path=str(cap), fmt="cf32", Fs="1M", nfft=1024, layout_items=list(scene.plots), **_globals(scene.args))
     ctrl = GetController(View.tkGUI, Sink.FILE)(GetModel(Sink.FILE)(**kw), GetView(View.tkGUI, Sink.FILE)(**kw), **kw)
     root = ctrl.view.root
     errors = []
@@ -161,6 +168,16 @@ def shoot_tk(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
             time.sleep(0.01)
     try:
         pump(1.0)
+        for pid, pane in ctrl.panels.panes.items(): # the plots, not their settings columns
+            if pane.pane.fr_sets.winfo_manager():
+                ctrl.panels.toggle_settings(pid)
+        pump(0.3)
+        rows = ctrl.panels.panel.main # rows of even height, columns of even width
+        for k in range(len(rows.panes()) - 1):
+            rows.sashpos(k, rows.winfo_height() * (k + 1) // len(rows.panes()))
+        for row in ctrl.panels.rows:
+            for k in range(len(row.main.panes()) - 1):
+                row.main.sashpos(k, row.main.winfo_width() * (k + 1) // len(row.main.panes()))
         for k in range(scene.steps):
             if k == scene.store_ref:
                 for pid, plot in list(ctrl.plots.plots.items()):
@@ -242,7 +259,7 @@ def shoot_cui(scene: Scene, cap: pathlib.Path, out: pathlib.Path):
     from pyspecan.controller.controller import GetController
     from pyspecan.model.model import GetModel
     from pyspecan.view.view import GetView
-    kw = dict(path=str(cap), fmt="cf64", Fs="1M", nfft=1024, layout_items=list(scene.plots), **_globals(scene.args))
+    kw = dict(path=str(cap), fmt="cf32", Fs="1M", nfft=1024, layout_items=list(scene.plots), **_globals(scene.args))
     view = GetView(View.CUI, Sink.FILE)(**kw)
     ctrl = GetController(View.CUI, Sink.FILE)(GetModel(Sink.FILE)(**kw), view, **kw)
     view.size = lambda: scene.size # a terminal this big
@@ -280,8 +297,10 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     dsp = have_rpps()
     with tempfile.TemporaryDirectory() as tmp:
-        cap = pathlib.Path(tmp) / "demo.cf64"
-        capture().tofile(cap)
+        caps = {}
+        for name in sorted({s.capture for s in scenes}):
+            caps[name] = pathlib.Path(tmp) / f"{name}.cf32"
+            getattr(demo, name)().tofile(caps[name])
         failed = []
         for s in scenes:
             out = out_dir / f"{s.view}_{s.name}.png"
@@ -289,6 +308,7 @@ def main():
                 print(f"skip {out.name}: needs rpps (pip install pyspecan[dsp])")
                 continue
             t = time.monotonic()
+            cap = caps[s.capture]
             try:
                 if s.view == "tk":
                     subprocess.run([sys.executable, __file__, "--out", str(out_dir), "--child", s.name, str(cap)], check=True)

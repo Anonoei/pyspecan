@@ -16,17 +16,20 @@ from pyspecan.view.view import GetView
 
 @pytest.fixture
 def app(tmp_path):
-    path = tmp_path / "capture.cf64"
+    path = tmp_path / "capture.cf32"
     t = np.arange(20000) / 10000
     np.exp(2j*np.pi*1000*t).astype(np.complex64).tofile(path)
-    kw = dict(path=str(path), fmt="cf64", Fs="10k", nfft=256)
+    kw = dict(path=str(path), fmt="cf32", Fs="10k", nfft=256)
     model = GetModel(Sink.FILE)(**kw)
     try:
         view = GetView(View.tkGUI, Sink.FILE)(**kw)
     except tk.TclError:
         pytest.skip("no display")
     ctrl = GetController(View.tkGUI, Sink.FILE)(model, view, **kw)
-    view.root.geometry("1200x800")
+    # in the screen's corner and on top: a drop finds its plot with winfo_containing, which on Windows asks the desktop
+    # what is at that point (another window, or nothing past the edge of a runner's smaller screen; see drag())
+    view.root.geometry("1200x800+0+0")
+    view.root.attributes("-topmost", True)
     errors = []
     view.root.report_callback_exception = lambda *a: errors.append(a)
     yield ctrl
@@ -63,6 +66,9 @@ def drag(ctrl, pid, target, where):
     x, y, w, h = frame.winfo_rootx(), frame.winfo_rooty(), frame.winfo_width(), frame.winfo_height()
     at = {"left": (.1, .5), "right": (.9, .5), "above": (.5, .1), "below": (.5, .9)}[where]
     pos = dict(rootx=int(x + w*at[0]), rooty=int(y + h*at[1]))
+    if sys.platform == "win32": # on the screen, which can be smaller than the window: Windows finds nothing past its edge
+        pos["rootx"] = min(pos["rootx"], frame.winfo_screenwidth() - 10)  # X11 does, xvfb-run's screen is 640x480
+        pos["rooty"] = min(pos["rooty"], frame.winfo_screenheight() - 10)
     grip.event_generate("<ButtonPress-1>", x=3, y=3, rootx=grip.winfo_rootx() + 3, rooty=grip.winfo_rooty() + 3)
     grip.event_generate("<B1-Motion>", x=3, y=3, **pos)
     grip.event_generate("<ButtonRelease-1>", x=3, y=3, **pos)
@@ -350,3 +356,47 @@ def test_export_writes_files(app, tmp_path):
     assert (tmp_path / "psd.png").read_bytes()[:4] == b"\x89PNG"
     pane.export("table", str(tmp_path / "t.csv")) # no markers: says so, writes nothing
     assert not (tmp_path / "t.csv").exists()
+
+def test_a_tcp_iq_stream_shows_its_sender_and_the_rate_it_arrives_at():
+    import socket
+    import threading
+    srv = socket.create_server(("127.0.0.1", 0))
+    stop = threading.Event()
+    def send(): # paced at 200 kS/s, declared as 1 MS/s
+        conn, _ = srv.accept()
+        with conn:
+            chunk, t0 = (0.5 * np.ones(2000)).astype(np.complex64).tobytes(), time.monotonic()
+            for k in range(10**6):
+                if stop.is_set():
+                    break
+                time.sleep(max(0.0, t0 + k * 0.01 - time.monotonic()))
+                conn.sendall(chunk)
+    threading.Thread(target=send, daemon=True).start()
+    kw = dict(tcp_host="127.0.0.1", tcp_port=srv.getsockname()[1], Fs="1M", nfft=256)
+    model = GetModel(Sink.TCPIQ)(**kw)
+    try:
+        view = GetView(View.tkGUI, Sink.TCPIQ)(**kw)
+    except tk.TclError:
+        stop.set()
+        model.sink.close()
+        pytest.skip("no display")
+    ctrl = GetController(View.tkGUI, Sink.TCPIQ)(model, view, **kw)
+    try:
+        v = view.sink
+        settle(ctrl)
+        assert str(v.cl_btn_measured.cget("state")) == "disabled" # nothing measured yet
+        end = time.monotonic() + 6
+        while time.monotonic() < end and not model.sink.measured_rate():
+            model.sink.next(1000)
+            ctrl.view.root.update()
+        for _ in range(20): # a few more windows, then the panel follows the status
+            model.sink.next(1000)
+        ctrl.draw_tb()
+        assert "arriving at 19" in v.cl_lbl_stream.cget("text") or "arriving at 20" in v.cl_lbl_stream.cget("text")
+        assert "not the 1.000 MS/s declared" in v.cl_lbl_stream.cget("text")
+        v.cl_btn_measured.invoke()
+        assert model.get_fs().raw == pytest.approx(200e3, rel=0.05)
+    finally:
+        stop.set()
+        ctrl.quit()
+        srv.close()

@@ -11,7 +11,7 @@ from ..frame import (
     Trace,
 )
 from ..settings import Setting
-from .common import SETTING_DECAY, DSPPlot, error_summary, errors, pair, welch
+from .common import SETTING_DECAY, DSPPlot, error_summary, pair, welch
 
 
 @plot("Error Vector")
@@ -29,7 +29,7 @@ class ErrorVector(DSPPlot):
             'Find the symbols with large errors (bursts of interference)',
             'Tell amplitude problems from phase problems',
         ),
-        cost=10,
+        cost=6,
     )
     SETTINGS = DSPPlot.SETTINGS + (
         Setting("count", "Symbols", "int", default=500, min=16, max=20000, step=100, group="Display", help="latest symbols shown"),
@@ -39,7 +39,8 @@ class ErrorVector(DSPPlot):
         sel, lk, why = self.analyse()
         if lk is None:
             return self.empty([Axis(ylabel="EVM (%)"), Axis(ylabel="Mag err (%)"), Axis(ylabel="Phase err (deg)")], sel, why)
-        _, evm, mag, ph = errors(lk)
+        e = lk.rpps.errors() # type: ignore
+        evm, mag, ph = e.evm_pct, e.mag_pct, e.phase_deg
         n = min(self.count, len(evm))
         k = np.arange(n, dtype=float) # counted from the first one shown
         def sym(v, least):
@@ -70,7 +71,7 @@ class ErrorVectorSpectrum(DSPPlot):
              'pulse), its spectrum averaged',
         shows="The error's spectrum under the signal's, and the error to signal ratio in band",
         use=('Find interference or spurs hidden under the signal', 'See filter edges or a tilt causing errors'),
-        cost=14,
+        cost=10,
     )
     SETTINGS = DSPPlot.SETTINGS + (SETTING_DECAY.with_(default=0.7),)
 

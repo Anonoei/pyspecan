@@ -9,7 +9,7 @@ from .view.view import GetView
 
 
 class SpecAn:
-    """Run pyspecan: `SpecAn("web", "file", path="x.cf64", Fs="250k", layout=...)`
+    """Run pyspecan: `SpecAn("web", "file", path="x.cf32", Fs="250k", layout=...)`
 
     `kwargs` are the command line options by dest (`python -m pyspecan -v <view> -s <sink> -h` lists
     them), each part gets only its own. `layout`: a plots.LayoutSpec or a json layout file path"""

@@ -7,6 +7,7 @@ import textwrap
 from ...model.model import Model
 from ...plots import PLOTS, Scroller, layout
 from ...plots.frame import IMAGE, LINE, SCATTER, Frame
+from ...plots.freq import fmt_hz
 from ...view.CUI.base import View as CUI
 from ...view.CUI.base import args_view
 from ...view.CUI.draw import draw_frame
@@ -47,7 +48,9 @@ class Controller(_Controller):
             (("claim",), "claim", "take control of a hosted radio that is free", lambda a: self._radio_cmd("claim")),
             (("release",), "release", "give up control of a hosted radio, and keep watching", lambda a: self._radio_cmd("release")),
             (("reconnect",), "reconnect", "connect to the radio again", lambda a: self._radio_cmd("reconnect")),
-            (("fs",), "fs <rate>", "sample rate, e.g. 250k", self.cmd_fs),
+            (("record", "rec"), "record [path|stop]", "record what the radio delivers while playing (default: SigMF in --record_dir)",
+             self.cmd_record),
+            (("fs",), "fs <rate|measured>", "sample rate, e.g. 250k; `measured`: the rate a TCP IQ stream arrives at", self.cmd_fs),
             (("cf",), "cf <freq>", "center frequency", self.cmd_cf),
             (("nfft",), "nfft <n>", "FFT size, a power of two (or its exponent)", self.cmd_nfft),
             (("sweep",), "sweep <ms>", "ms of samples per block", self.cmd_sweep),
@@ -144,6 +147,19 @@ class Controller(_Controller):
             print(f"  radio {radio['device']} ({radio['control']}{', ' + str(radio['lag']) + ' s behind' if radio['lag'] else ''}{', spectrum mirrored, corrected' if radio.get('inverted') else ''})")
             for a in radio.get("antennas", []):
                 print(f"    antenna {'*' if a['selected'] else ' '} {a['label']}")
+            if radio["dropped"]:
+                print(f"    {radio['dropped']:,} samples lost by the radio")
+            if radio["recording"]:
+                print(f"    recording {radio['recording']['seconds']:g} s to {radio['recording']['path']}")
+            elif radio["record_error"]:
+                print(f"    {radio['record_error']}")
+        stream = st.get("stream")
+        if stream:
+            where = f"listening on {stream['address']}" if stream["listen"] else f"server {stream['address']}"
+            line = f"  stream from {stream['peer'] or '(waiting for a sender)'} ({where})"
+            if stream["measured"]:
+                line += f", arriving at {fmt_hz(stream['measured']).replace('Hz', 'S/s')}" + (" (not the declared rate: `fs measured` uses it)" if stream["mismatch"] else "")
+            print(line)
         if "path" in st:
             print(f"  file {st['path'] or '-'}  format {st['fmt']}  at {st['cur_samp']}/{st['max_samp']}  {st['time_cur']} / {st['time_tot']}")
         if self.message:
@@ -171,6 +187,16 @@ class Controller(_Controller):
             raise ValueError("the sink is a file, there is no radio")
         if not self.sink.antennas():
             raise ValueError("this radio has no selectable antennas")
+
+    def cmd_record(self, args):
+        """record [path|stop]: record the radio's samples while playing, or stop recording"""
+        if args and args[0] == "stop":
+            self.stop_record()
+            print(f"  {self.message}")
+            return
+        path = self.start_record(" ".join(args) or None)
+        self.playing = False # here playing is the `start` loop, which is what reads (and so records)
+        print(f"  recording to {path}: `start` plays and records, `record stop` ends it")
 
     def _radio_cmd(self, cmd):
         self.command(cmd)
@@ -231,8 +257,10 @@ class Controller(_Controller):
         self.setting("fmt", args[0])
 
     def cmd_fs(self, args):
-        self._need(args, 1, "fs <rate>")
+        self._need(args, 1, "fs <rate|measured>")
         self.setting("fs", args[0])
+        if args[0].strip().lower() == "measured":
+            print(f"  fs {self.model.get_fs()}")
 
     def cmd_cf(self, args):
         self._need(args, 1, "cf <freq>")

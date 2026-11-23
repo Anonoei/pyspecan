@@ -7,6 +7,7 @@ from pyspecan.obj import Frequency
 from pyspecan.plots import PLOTS, PlotSet, Scroller, Source, available
 from pyspecan.plots.frame import Image
 from pyspecan.plots.freq import to_psd
+from pyspecan.plots.settings import HAVE_RPPS
 from pyspecan.plots.source import Stream
 from pyspecan.utils.vbw import vbw, vbw_rows
 
@@ -123,9 +124,9 @@ def test_setting_reset_flag():
     psd = PLOTS.get("PSD")(src, vbw=0)
     feed(src, model, tone(256))
     psd.update()
-    assert psd._max is not None
+    assert psd.trace_data(1) is not None # trace 2: max hold
     psd.set("vbw", 5) # reset=True
-    assert psd._max is None
+    assert psd.trace_data(1) is None
 
 # --- plots --- #
 @pytest.mark.parametrize("name", PLOTS.names())
@@ -178,8 +179,58 @@ def test_hold_sees_every_frame():
     feed(src, model, np.concatenate((loud, quiet, quiet))) # loud frame is not the one displayed
     frame = psd.update()
     shown = frame.axes[0].traces[-1].y
-    held = frame.axes[0].traces[0].y
+    held = next(t for t in frame.axes[0].traces if t.name == "t2").y # max hold
     assert held.max() > shown.max() + 20
+
+def _psd_traces(**kw):
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    psd = PLOTS.get("PSD")(src, vbw=0, ref_level=0, points=0, **kw)
+    def step(scale):
+        feed(src, model, tone(64) * scale)
+        f = psd.update()
+        return {t.name: t for t in f.axes[0].traces}, f
+    return psd, step
+
+def test_trace_modes():
+    psd, step = _psd_traces(t1_mode="clear/write", t2_mode="max hold", t3_mode="min hold", t4_mode="average", avg_count=2)
+    step(1.0)
+    tr, f = step(0.01) # 40 dB down
+    peak = lambda name: float(tr[name].y.max())
+    assert peak("t2") > peak("t1") + 35 and abs(peak("t3") - peak("t1")) < 1 # max keeps the loud one, min follows down
+    assert peak("t2") > peak("t4") > peak("t1") # the average of the two
+    assert [t.color for t in f.axes[0].traces] == ["#5cb85c", "#5b9bd5", "#d9534f", "#e6d84a"] # 4..1, the marker trace last
+    assert _readout(f)["Avg"].startswith("2/2")
+
+def test_view_freezes_blank_hides_and_a_new_mode_starts_over():
+    psd, step = _psd_traces(t3_mode="blank")
+    step(1.0)
+    psd.set("t2_mode", "view") # keeps the hold it had
+    tr, _ = step(0.01)
+    assert "t3" not in tr and float(tr["t2"].y.max()) > float(tr["t1"].y.max()) + 35
+    psd.set("t2_mode", "max hold") # starts over
+    tr, _ = step(0.01)
+    assert abs(float(tr["t2"].y.max()) - float(tr["t1"].y.max())) < 1
+
+def test_markers_read_the_marker_trace():
+    psd, step = _psd_traces(marker_trace="2")
+    step(1.0)
+    tr, f = step(0.01)
+    assert np.array_equal(psd.last, psd.trace_data(1)) and f.axes[0].traces[-1].name == "t2"
+    psd.set("t2_mode", "blank")
+    psd.set("marker_trace", "2")
+    _, f = step(0.01)
+    assert psd.last is not None # blank keeps what it had: markers still read it, it is just not drawn
+    assert all(t.name != "t2" for t in f.axes[0].traces)
+
+def test_settings_from_before_traces_still_load():
+    from pyspecan.plots import layout
+    psd = PLOTS.get("PSD")(Source(FakeModel()), show_max=False, show_min=True, avg="log")
+    assert (psd.t1_mode, psd.t2_mode, psd.t3_mode, psd.avg) == ("average", "blank", "min hold", "log")
+    assert PLOTS.get("PSD")(Source(FakeModel()), avg="off").t1_mode == "clear/write"
+    spec = layout.parse_inline(["PSD show_max=off avg=power"])
+    layout.validate(spec)
+    assert spec.rows[0][0].settings == {"t2_mode": "blank", "avg": "power", "t1_mode": "average"}
 
 def test_available_filters_by_features():
     assert "IQ 3D" not in available({"line", "scatter", "image"})
@@ -339,20 +390,20 @@ def test_peak_marker_without_enough_peaks():
 def test_average_and_detector_points():
     model = FakeModel(nfft=1024)
     src = Source(model)
-    psd = PLOTS.get("PSD")(src, avg="power", avg_count=4, points=101, detector="peak")
+    psd = PLOTS.get("PSD")(src, t1_mode="average", avg="power", avg_count=4, points=101, detector="peak")
     feed(src, model, _two_tones(4096))
     f = psd.update()
     assert len(f.axes[0].traces[-1].y) == 101
     assert _readout(f)["Avg"].startswith("4/4")
     assert len(psd.last) == 1024
     psd.set("avg_count", 8)
-    assert psd._avg.n == 0
+    assert psd._traces[0].avg is None # starts over
 
 def test_reduced_traces_sit_on_the_bin_frequencies():
     """The detector's groups are drawn at the frequency of their center, so markers (at bin frequencies) sit on the line"""
     model = FakeModel(nfft=64)
     src = Source(model)
-    psd = PLOTS.get("PSD")(src, points=10, detector="peak", vbw=0, show_max=False, show_min=False)
+    psd = PLOTS.get("PSD")(src, points=10, detector="peak", vbw=0, t2_mode="blank", t3_mode="blank")
     psd.markers.add("peak")
     feed(src, model, _two_tones(4096, nfft=64))
     ax = psd.update().axes[0]
@@ -648,7 +699,7 @@ def test_scope_roll_fine_timebase_draws_samples():
     assert len(t.y) == 64 and t.x[-1] == 0.0
 
 def test_scope_time_parsing():
-    from pyspecan.plots.scope import parse_time
+    from pyspecan.plots.settings import parse_time
     assert parse_time("10u") == pytest.approx(1e-5)
     assert parse_time("2ms") == pytest.approx(2e-3)
     assert parse_time("auto") == 0.0 and parse_time("") == 0.0
@@ -692,8 +743,8 @@ def test_link_shares_link_settings_only():
     for key, value in (("ref_level", "-20"), ("scale_div", 5), ("window", "hanning"), ("unit", "dBFS")):
         plots.set(a, key, value)
         assert getattr(plots.get(b), key) == getattr(plots.get(a), key)
-    plots.set(a, "show_max", False) # plot scope stays per plot
-    assert plots.get(a).show_max is False
+    plots.set(a, "t2_mode", "blank") # plot scope stays per plot
+    assert plots.get(a).t2_mode == "blank"
     d = plots.describe()
     assert d["links"] == {lid: [b, a]} and d["plots"][a]["link"] == lid
     assert b in d["plots"][a]["linkable"]
@@ -703,9 +754,9 @@ def test_link_change_resets_every_member():
     plots.link(a, b)
     feed(src, model, tone(4096))
     plots.update()
-    assert plots.get(a)._max is not None
+    assert plots.get(a).trace_data(1) is not None
     plots.set(b, "window", "hanning") # reset flagged, set on the other plot
-    assert plots.get(a)._max is None
+    assert plots.get(a).trace_data(1) is None
 
 def test_linked_auto_ref_level_resolves_once():
     model, src, plots, (a, b) = _linked("PSD", "RT Spectrogram")
@@ -1118,10 +1169,12 @@ def test_phase_noise_follows_a_random_walk_phase():
     r = dict(f.readout)
     assert abs(float(r["Carrier"].split()[0]) - 100) < 0.1 and "° rms" in r["Integrated"]
 
+@pytest.mark.skipif(not HAVE_RPPS, reason="Analog Demod is on rpps (pyspecan[dsp])")
 @pytest.mark.parametrize("demod, check", [
-    ("FM", lambda r: r["Deviation"].startswith("5") and r["Mod freq"] == "1 kHz"),
+    ("FM", lambda r: r["Deviation"].startswith("5") and r["Mod freq"] == "1 kHz" and float(r["SINAD"].split()[0]) > 30),
     ("PM", lambda r: abs(float(r["Deviation"].split()[0]) - 2.0) < 0.1 and r["Mod freq"] == "1 kHz"),
-    ("AM", lambda r: r["Mod freq"] == "1 kHz" and r["Depth"].startswith("+50")),
+    ("AM", lambda r: r["Mod freq"] == "1 kHz" and r["Depth"] == "50.0%"),
+    ("USB", lambda r: abs(float(r["Mod freq"].split()[0]) * {"Hz": 1, "kHz": 1e3}[r["Mod freq"].split()[1]] - 1e3) < 5 and "Power" in r), # coarse: 7.5 kHz audio
 ])
 def test_analog_demod(demod, check):
     fs, n = 1e6, 50000
@@ -1131,11 +1184,14 @@ def test_analog_demod(demod, check):
         x = np.exp(1j * (2*np.pi*100e3*t + 5e3 / 1e3 * (1 - np.cos(2*np.pi*1e3*t)))) # 5 kHz deviation
     elif demod == "PM":
         x = np.exp(1j * (2*np.pi*100e3*t + 2.0 * m)) # 2 rad
+    elif demod == "USB":
+        x = np.exp(2j*np.pi*101e3*t) + 1e-6 * np.exp(2j*np.pi*100e3*t) # a 1 kHz tone above a (suppressed) carrier
     else:
         x = (1 + 0.5 * m) * np.exp(2j*np.pi*100e3*t) # 50 %
     model = FakeModel(fs=fs, nfft=4096)
     src = Source(model)
-    p = PLOTS.get("Analog Demod")(src, mode=demod, demod_bw="50k")
+    kw = {"carrier": "100k", "demod_bw": "3k"} if demod == "USB" else {"demod_bw": "50k"}
+    p = PLOTS.get("Analog Demod")(src, mode=demod, **kw)
     feed(src, model, x.astype(np.complex64))
     f = p.update()
     r = dict(f.readout)
@@ -1333,7 +1389,7 @@ def test_export_traces_table_and_json():
     from pyspecan.plots.export import frame_json, table_csv, traces_csv
     model = FakeModel(nfft=256)
     src = Source(model)
-    p = PLOTS.get("PSD")(src, unit="dBFS", points=0, show_min=False, show_max=False)
+    p = PLOTS.get("PSD")(src, unit="dBFS", points=0, t2_mode="blank", t3_mode="blank")
     p.markers.add("peak")
     feed(src, model, _two_tones(1024, nfft=256))
     f = p.update()
@@ -1341,11 +1397,103 @@ def test_export_traces_table_and_json():
     assert rows[0] == ["axis", "label", "trace", "x", "y"] and len(rows) == 1 + 256 # one row a point, no z column in 2d
     xs = [float(r[3]) for r in rows[1:]]
     np.testing.assert_allclose(xs, p.bin_freqs(256)) # x as views draw it: the bins' frequencies
-    assert {r[2] for r in rows[1:]} == {"psd"}
+    assert {r[2] for r in rows[1:]} == {"t1"}
     t = list(csv.reader(io.StringIO(table_csv(f))))
     assert t[0] == f.table.columns and t[1][1] == "peak"
-    assert json.loads(frame_json(f))["axes"][0]["traces"][0]["name"] == "psd"
+    assert json.loads(frame_json(f))["axes"][0]["traces"][0]["name"] == "t1"
     iq = PLOTS.get("IQ 3D")(src).update()
     rows = list(csv.reader(io.StringIO(traces_csv(iq))))
     assert rows[0][-1] == "z" and all(r[5] for r in rows[1:]) # 3d: z on every row
     assert table_csv(iq) == ""
+
+# --- gated spectrum, marker trend, autocorrelation --- #
+def bursty(n=8000, period=1000, on=300, f=0.2, seed=0):
+    """A tone on for `on` of every `period` samples, over weak noise"""
+    rng = np.random.default_rng(seed)
+    t = np.arange(n)
+    x = ((t % period) < on) * np.exp(2j * np.pi * f * t)
+    return (x + 1e-3 * (rng.standard_normal(n) + 1j * rng.standard_normal(n))).astype(np.complex64)
+
+def test_gated_psd_takes_only_the_frames_inside_the_burst():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    free = PLOTS.get("PSD")(src, t1_mode="average", avg_count=1000)
+    gated = PLOTS.get("PSD")(src, t1_mode="average", avg_count=1000, trig_mode="gated")
+    feed(src, model, bursty())
+    free.update()
+    frame = gated.update()
+    readout = dict(frame.readout)
+    assert readout["Gate"] == "32 frames in 8 openings" # 4 whole frames of 64 in each 300 sample burst
+    assert 4.0 < np.max(gated.last) - np.max(free.last) < 7.0 # not diluted by the 70% off (5.2 dB)
+    assert np.median(gated.last) < np.median(free.last) - 20 # no frame cut by a burst's edge splatters over the span
+    gate = frame.axes[-1]
+    assert gate.xfmt == "time" and len(gate.bands) == 8
+    level = next(mk for mk in gate.markers if mk.kind == "hline")
+    assert level.edit == "gate_level" # dragged to set the level
+    gated.set("gate_length", "0.05") # 50 samples at 1 kS/s: shorter than an FFT
+    gated.set("gate_level", "-20")
+    frame = gated.update()
+    assert dict(frame.readout)["Gate"] == "waiting: open shorter than an FFT"
+    assert gated.last is not None # the trace keeps what it had, like an analyzer waiting for its trigger
+
+def test_gated_psd_says_why_before_anything_passes():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    gated = PLOTS.get("PSD")(src, trig_mode="gated", gate_level="10")
+    feed(src, model, bursty())
+    frame = gated.update()
+    assert dict(frame.readout)["Gate"] == "waiting: never over the level"
+    assert frame.axes[-1].traces # the power to set the level by
+
+def test_marker_values_give_numbers_with_units():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    psd = PLOTS.get("PSD")(src, unit="dBFS")
+    psd.markers.add("peak", track=True)
+    psd.markers.add("obw")
+    psd.markers.add("limit", level=10)
+    feed(src, model, tone(640))
+    psd.update()
+    v = psd.marker_values
+    assert v["M1 level"][1] == "dBFS" and v["M1 level"][0] == pytest.approx(0.0, abs=1.5)
+    assert v["M1 freq"] == (pytest.approx(100.0, abs=10.0), "Hz")
+    assert v["M2 obw"][1] == "Hz" and v["M3 margin"][1] == "dB"
+
+def test_marker_trend_keeps_each_markers_numbers_over_time():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    tr = PLOTS.get("Marker Trend")(src, unit="dBFS")
+    frame = None
+    for i in range(3):
+        feed(src, model, tone(640, seed=i))
+        frame = tr.update()
+    assert dict(frame.readout)["Trend"] == "add a marker to trend what it measures"
+    tr.markers.add("peak", track=True)
+    tr.markers.add("channel", freq="100", bw="50")
+    for i in range(4):
+        feed(src, model, tone(640, seed=i) * (1 + i))
+        frame = tr.update()
+    assert [a.ylabel for a in frame.axes] == ["", "dBFS", "Hz"] # the spectrum, then one axis per unit
+    level = next(t for t in frame.axes[1].traces if t.name == "M1 level")
+    assert len(level.y) == 4 and np.all(np.diff(level.y) > 0) # louder every block
+    assert level.x[-1] == 0.0 and level.x[0] == pytest.approx(-3 * 0.64) # seconds ago (640 samples at 1 kS/s)
+    tr.markers.remove("M2")
+    tr.set("spectrum", False)
+    feed(src, model, tone(640))
+    frame = tr.update()
+    assert "M2 power" not in tr.trend
+    assert frame.axes[0].ylabel == "dBFS" and frame.table is not None # the table stays without the spectrum
+
+def test_autocorrelation_finds_a_repetition():
+    model = FakeModel(nfft=64)
+    src = Source(model)
+    ac = PLOTS.get("Autocorrelation")(src, span="0.2") # 200 lags at 1 kS/s
+    rng = np.random.default_rng(0)
+    word = rng.standard_normal(50) + 1j * rng.standard_normal(50)
+    feed(src, model, np.tile(word, 40).astype(np.complex64))
+    frame = ac.update()
+    readout = dict(frame.readout)
+    assert readout["R1"].startswith("50 ms (20 Hz)")
+    assert frame.axes[0].markers[0].x == pytest.approx(0.05)
+    ac.set("scale", "dB")
+    assert ac.update().axes[0].ymax == 0.0

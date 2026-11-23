@@ -4,9 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyspecan"
-version = "0.7.0"
+version = "0.7.1"
 description = "A spectrum analyzer library"
 readme = "README.md"
+license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 authors = [
@@ -25,14 +26,14 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 keywords = ["anonoei", "sdr", "speca", "specan"]
-dependencies = ["numpy>=2.0", "pysdrlib>=0.4.4"]
+dependencies = ["numpy>=2.0", "pysdrlib>=0.5.0"]
 
 [project.optional-dependencies]
 tk = ["matplotlib"]
 web = ["fastapi", "uvicorn", "jinja2", "websockets"]
-dsp = ["rpps>=0.5.0"] # signal search, constellation, eye diagram, network analyzer (pyspecan.plots.dsp)
+dsp = ["rpps>=0.6.0"] # the DSP plots: signal search, analog demod, constellation and quality, channel, waveform ID, hopping, bursts, framing, profiles, decode (pyspecan.plots.dsp)
 test = ["pytest", "httpx", "pysdrlib[remote]", "playwright"]
-docs = ["pdoc3"]
+docs = ["zensical>=0.1.3", "mkdocstrings-python>=2.0"]
 dev = ["pyspecan[tk,web,dsp,test,docs]", "twine", "build", "bumpver"]
 
 [project.scripts]
@@ -53,7 +54,7 @@ Source = "https://github.com/anonoei/pyspecan"
 
 [tool.ruff]
 line-length = 140
-src = ["src", "tests", "dev"]
+src = ["src", "tests", "tools", "examples"]
 
 [tool.ruff.lint]
 # syntax and runtime errors (E4, E7, E9), pyflakes (F), import order (I): the classic set, the rest is style
@@ -62,7 +63,7 @@ ignore = ["E701", "E702", "E731", "E741"] # one line ifs, a; b, small lambdas an
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"] # re-exports
-"dev/*.py" = ["E402"]    # sys.path set up before the imports
+"tools/*.py" = ["E402"]  # sys.path set up before the imports
 "tests/*.py" = ["E402"]
 
 [tool.ruff.lint.isort]
@@ -73,7 +74,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.bumpver]
-current_version = "0.7.0"
+current_version = "0.7.1"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 tag_message = "{new_version}"
@@ -81,7 +82,7 @@ tag_scope = "default"
 pre_commit_hook = ""
 post_commit_hook = ""
 commit = true
-tag = true
+tag = false
 push = false
 
 [tool.bumpver.file_patterns]

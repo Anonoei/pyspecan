@@ -1,19 +1,21 @@
 """Benchmark the plots: how long each takes to render a block, measured in PSDs (a PSD on the same blocks is 1.0)
 
-    python dev/benchmark.py                            # every plot, the analyzer's defaults (1 MS/s, 1024 FFT, 50 ms blocks)
-    python dev/benchmark.py --nfft 4096 --sweep 20     # other FFT size / block length
-    python dev/benchmark.py --plots psd,scope,scalogram
-    python dev/benchmark.py --markers                  # also what each marker kind adds to a PSD
-    python dev/benchmark.py --set "Scope trig_mode=roll" --set "PSD points=0"
-    python dev/benchmark.py --json benchmark.json        # the numbers, to compare runs
+    python tools/benchmark.py                            # every plot, the analyzer's defaults (1 MS/s, 1024 FFT, 50 ms blocks)
+    python tools/benchmark.py --nfft 4096 --sweep 20     # other FFT size / block length
+    python tools/benchmark.py --plots psd,scope,scalogram
+    python tools/benchmark.py --markers                  # also what each marker kind adds to a PSD
+    python tools/benchmark.py --set "Scope trig_mode=roll" --set "PSD points=0"
+    python tools/benchmark.py --json benchmark.json        # the numbers, to compare runs
 
 Each plot runs alone on its own source, so it pays for everything it needs (in a layout, plots share the source's
 FFT frames and the DSP plots one signal search and lock). The first blocks are a warm-up (caches, the DSP plots' full
 search), timed but left out of the median; "first" shows the first one. "realtime" is the median against the block's
 own duration: over 100% the plot can not keep up with live samples at this rate on its own. "declared" is the cost
 the plot's About says (its picker tooltip), marked "!" when the measured one is more than twice off it: update it.
+A plot that analyses in the background (a DSP plot's `job`) is waited for after each render and its run added: what it
+costs the machine, though the view does not wait for it.
 
-The blocks come from dev/demo.py's synthetic capture (QPSK, FM, tones, a burst, a chirp), the DSP plots analyse the
+The blocks come from tools/demo.py's synthetic capture (QPSK, FM, tones, a burst, a chirp), the DSP plots analyse the
 QPSK at 150 kHz.
 """
 import argparse
@@ -33,6 +35,8 @@ from demo import capture  # noqa: E402
 
 REFERENCE = "PSD"
 DSP_GLOBALS = {"dsp_freq": "150k", "dsp_bw": "60k"}
+# plots that do nothing at their own defaults are timed doing their work (--set wins)
+PLOT_DEFAULTS = {"Decode": {"profile": "ax25/afsk1200"}}
 
 class Model:
     """The parts of a model plots read, fed one block at a time"""
@@ -62,7 +66,14 @@ def run(name: str, settings: dict, a, data: np.ndarray, markers: tuple = ()) -> 
         src.tick()
         t0 = time.perf_counter()
         plot.update()
-        times.append(time.perf_counter() - t0)
+        took = time.perf_counter() - t0
+        job = getattr(plot, "job", None)
+        if job is not None: # its background run, started by this render
+            runs = job.runs
+            job.wait()
+            if job.runs > runs and job.took is not None:
+                took += job.took
+        times.append(took)
     return {"times": times}
 
 def stats(times: list, warmup: int) -> dict:
@@ -101,7 +112,11 @@ def main():
     a.block = int(round(a.fs * a.sweep / 1000))
     data = capture((a.warmup + a.blocks) * a.block + 1)
     sets = parse_sets(a.set)
-    names = [layout.resolve_type(n) for n in a.plots.split(",") if n.strip()] if a.plots else list(PLOTS.names())
+    for name, values in PLOT_DEFAULTS.items():
+        sets[name] = {**values, **sets.get(name, {})}
+    # plots that tune a radio themselves (Sweep) have nothing to time on a capture
+    names = [layout.resolve_type(n) for n in a.plots.split(",") if n.strip()] if a.plots else \
+        [n for n in PLOTS.names() if not PLOTS.get(n).NEEDS_RADIO]
     if REFERENCE not in names:
         names.insert(0, REFERENCE)
     block_s = a.block / a.fs

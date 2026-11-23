@@ -17,7 +17,6 @@ dist/
 *.egg-info/
 
 # Misc
-logs/
 .python-version
 .pytest_cache/
 
@@ -29,3 +28,9 @@ logs/
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 !*.code-workspace
+
+# Built by tools/builder.py -d (CI/CD publishes site/); generated from the code by tools/gen_docs.py
+site/
+docs/api/
+docs/llms.txt
+docs/llms-full.txt

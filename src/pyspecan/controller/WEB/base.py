@@ -10,13 +10,14 @@ import pathlib
 from fastapi import WebSocket, WebSocketDisconnect
 
 from ...model.model import Model
-from ...plots import colormap
+from ...plots import PLOTS, colormap
 from ...plots.frame import IMAGE, LINE, SCATTER, THREE_D, Frame
 from ...utils import args
 from ...view.WEB.base import View as GUI
 from ..base import Controller as _Controller
 from .api import API
 from .websocket import WebSocketManager
+from .wire import Encoder, encode_json
 
 
 def args_ctrl(parser):
@@ -34,8 +35,11 @@ class Controller(_Controller):
         super().__init__(model, view, **kwargs)
         self.view: GUI = self.view # type hints
         self.root = pathlib.Path(kwargs["root"]).resolve() if kwargs.get("root") else None
+        if self.root is not None and not kwargs.get("record_dir"):
+            self.record_dir = self.root # recordings land where the browser can open them
 
         self.ws = WebSocketManager(self)
+        self.encoder = Encoder()
         self.api = API(self)
         self.setup_routes()
 
@@ -51,11 +55,14 @@ class Controller(_Controller):
         async def websocket_endpoint(websocket: WebSocket):
             client_id = await self.ws.connect(websocket)
             try:
-                await self.ws.send(client_id, {"type": "state", "data": self.get_state()})
+                await self.ws.send(client_id, self.state_message(full=True))
                 while client_id in self.ws.connections: # a failed send drops the client
                     msg = json.loads(await websocket.receive_text())
                     if msg.get("type") == "ack":
                         self.ws.ack(client_id)
+                        continue
+                    if msg.get("type") == "visible": # the page went to / came back from the background
+                        self.ws.set_visible(client_id, bool(msg.get("value")))
                         continue
                     error = self.handle_message(msg)
                     if error:
@@ -67,21 +74,40 @@ class Controller(_Controller):
 
     # --- core hooks --- #
     def can_stream(self) -> bool:
-        return bool(self.ws.connections)
+        return self.ws.watching()
 
     def deliver(self, frames: dict[str, Frame], status: dict):
-        self.ws.publish({"type": "frame", "data": {
-            "plots": {pid: frame.to_dict() for pid, frame in frames.items()},
-            "status": status,
-        }}, frame=True)
+        """Runs serialized (under the controller lock), so the encoder's previous frame is the one published last"""
+        full, lean = self.encoder.encode(frames, status)
+        self.ws.publish(full, frame=True, lean=lean)
 
     def state_changed(self):
-        self.ws.publish({"type": "state", "data": self.get_state()})
+        self.ws.publish(self.state_message(full=False))
+
+    # parts of the state that never change while running: a browser gets them once, when it connects
+    STATIC_STATE = ("plot_types", "plot_info", "categories", "colormaps", "plot_fields")
+    _static: dict | None = None # colormaps and plot_fields, built on first use
 
     def get_state(self) -> dict:
+        """The whole state (also /api/state): with the colormaps, and the setting fields of every plot type"""
         state = super().get_state()
-        state["colormaps"] = {name: colormap.STOPS[name] for name in colormap.names()}
+        if self._static is None:
+            self._static = {
+                "colormaps": {name: colormap.STOPS[name] for name in colormap.names()},
+                "plot_fields": {name: [s.to_dict() for s in PLOTS.get(name).SETTINGS] for name in self.plot_types},
+            }
+        state.update(self._static)
         return state
+
+    def state_message(self, full: bool) -> bytes:
+        """The state as a message, deflated once for every client. Not `full`: without STATIC_STATE, and a plot's
+        "fields" left for the browser to take from plot_fields (a plot's fields are its type's)"""
+        state = self.get_state()
+        if not full:
+            for key in self.STATIC_STATE:
+                state.pop(key, None)
+            state["plots"] = {pid: {k: v for k, v in p.items() if k != "fields"} for pid, p in state["plots"].items()}
+        return encode_json({"type": "state", "data": state})
 
     # --- file browser --- #
     def _allowed(self, path: pathlib.Path) -> bool:
@@ -133,14 +159,18 @@ class Controller(_Controller):
             else:
                 return f"unknown message type {kind!r}"
         except Exception as e: # also what the radio library raises (Busy, NotController...)
-            self.log.debug("bad message %s: %s", msg, e)
+            self.log.warning("client message %s failed: %s: %s", msg, type(e).__name__, e)
             self.state_changed() # resync the client's inputs
             return f"{type(e).__name__}: {e}"
         self.state_changed()
         return None
 
+    QUIET_PLOT_OPS = ("set", "marker_set", "marker_act") # every slider drag, every marker move: logged at debug
     def plot_command(self, op: str, msg: dict):
-        self.log.trace("plot_command(%s, %s)", op, msg)
+        if op in self.QUIET_PLOT_OPS:
+            self.log.debug("plot %s %s", op, msg)
+        else:
+            self.log.info("plot %s %s", op, {k: v for k, v in msg.items() if k not in ("type", "op", "text")})
         with self.lock:
             if op == "add":
                 self.add_plot(msg["name"], msg.get("row"))

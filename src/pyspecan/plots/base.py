@@ -18,15 +18,15 @@ PLOTS: Registry = Registry("plot")
 
 # what views group the plot picker by, in this order (a plot that names none is "Other")
 CATEGORIES = ("Spectrum", "Time-frequency", "Time domain", "Measurements", "Analog demodulation", "Digital demodulation",
-              "Modulation quality", "Channel and signal analysis", "Other")
+              "Modulation quality", "Channel and signal analysis", "Decoding", "Other")
 
 @dataclass(frozen=True)
 class About:
     """What views tell about a plot (the picker's tooltip)
 
     data: the input and what is done to it. shows: what is on the axes, what each trace or color means.
-    use: things to use it for. cost: rendering a block costs about this many PSDs (dev/benchmark.py at its defaults:
-    1 MS/s, 1024 point FFT, 50 ms blocks), None to say nothing"""
+    use: things to use it for. cost: rendering a block costs about this many PSDs (tools/benchmark.py at its defaults:
+    1 MS/s, 1024 point FFT, 50 ms blocks), an analysis it runs in the background included; None to say nothing"""
     data: str
     shows: str
     use: tuple[str, ...] = ()
@@ -69,15 +69,17 @@ def plot(name: str):
         return PLOTS.register(name)(cls)
     return deco
 
-def available(features) -> list[str]:
-    """Names of the plots a view that can draw `features` is able to show"""
-    return [name for name, cls in PLOTS.items() if cls.FEATURES <= set(features)]
+def available(features, radio: bool = True) -> list[str]:
+    """Names of the plots a view that can draw `features` is able to show; `radio`: the source is a radio this program
+    can tune (plots that retune it, NEEDS_RADIO, are left out otherwise)"""
+    return [name for name, cls in PLOTS.items() if cls.FEATURES <= set(features) and (radio or not cls.NEEDS_RADIO)]
 
 class Plot:
     """Settings resolve through a hierarchy: global (`globals`, shared by every plot) -> link group
     (`link.values`, for "link" scope settings while the plot is linked) -> the plot's own values"""
     NAME = ""
     TITLE = ""
+    NEEDS_RADIO = False # it tunes a live radio itself (a sweep): not offered for files
     SETTINGS: tuple[Setting, ...] = ()
     FEATURES: frozenset = frozenset({LINE}) # drawing features the frames need, see plots.frame
     MARKERS = False                         # carries a `markers` set the user can add markers and measurements to
@@ -95,6 +97,7 @@ class Plot:
         self.globals = globals if globals is not None else default_globals(**kwargs)
         self._scope = {s.key: s.scope for s in self.SETTINGS}
         self._cfg = {}
+        kwargs = self.migrate(kwargs)
         for s in self.SETTINGS:
             self._cfg[s.key] = s.parse(kwargs.get(s.key, s.default)) # raises on a bad value
         self.reset()
@@ -125,6 +128,12 @@ class Plot:
         raise AttributeError(name)
 
     # --- settings --- #
+    @classmethod
+    def migrate(cls, settings: dict) -> dict:
+        """`settings` with the keys of an older version of the plot turned into today's (a layout saved back then
+        still loads). Returns a new dict, the default changes nothing"""
+        return settings
+
     def setting(self, key: str) -> Setting | None:
         """The descriptor of one of this plot's settings or a global one"""
         return by_key(self.SETTINGS, key) or by_key(GLOBAL_SETTINGS, key)

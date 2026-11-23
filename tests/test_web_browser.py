@@ -25,14 +25,14 @@ def _browser(p):
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    capture = tmp_path_factory.mktemp("data") / "capture.cf64"
+    capture = tmp_path_factory.mktemp("data") / "capture.cf32"
     t = np.arange(250_000) / 250_000
     (np.exp(2j*np.pi*20_000*t) + 0.1*np.random.default_rng(0).standard_normal(t.size)).astype(np.complex64).tofile(capture)
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
-    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64", "-fs", "250k", "-n", "512"],
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf32", "-fs", "250k", "-n", "512"],
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         for _ in range(100):
@@ -315,7 +315,17 @@ def test_clicking_a_found_signal_selects_it_for_analysis(page):
     xy = page.evaluate("""(id) => { const rt = runtime[id], g = rt.geom[0], r = rt.canvas.getBoundingClientRect();
         const b = rt.frame.axes[0].bands.find((b) => b.owner === '' && b.edit), f = (b.lo + b.hi) / 2, y = (b.ylo + b.yhi) / 2;
         return [r.left + g.x0 + (f - g.xmin) / (g.xmax - g.xmin) * g.w, r.top + g.y0 + (1 - (y - g.ymin) / (g.ymax - g.ymin)) * g.h, f]; }""", pid)
+    # while one box is dragged, only that box moves (the found signals share owner and settings)
+    page.mouse.move(*xy[:2]); page.mouse.down(); page.mouse.move(xy[0] + 30, xy[1], steps=3)
+    moved = page.evaluate("""(id) => { const rt = runtime[id], ax0 = rt.frame.axes[0];
+        const b = ax0.bands.find((b) => b.owner === '' && b.edit), w = b.hi - b.lo; // and another signal beside it
+        const ax = {...ax0, bands: [...ax0.bands, {...b, lo: b.lo + 3 * w, hi: b.hi + 3 * w}]}, d = dragged(rt, ax, 0);
+        return d.bands.map((x, j) => x.lo !== ax.bands[j].lo); }""", pid)
+    assert moved.count(True) == 1 and not moved[-1], moved
+    page.evaluate("(id) => { runtime[id].drag = null; }", pid) # let go without dropping it (the pointer is still down)
+    page.mouse.up()
     page.mouse.click(*xy[:2])
+    assert page.evaluate("(id) => runtime[id].drag", pid) is None # a click leaves no preview to follow the mouse
     page.wait_for_function("state.globals.settings.dsp_freq !== ''")
     assert abs(float(page.evaluate("state.globals.settings.dsp_freq")) - xy[2]) < 1.0 # the box's center: a click picks it
     assert page.evaluate("[...document.querySelectorAll('#globals input')].some((e) => e.value !== '' && Math.abs(parseFloat(e.value) - %f) < 1)" % xy[2])
@@ -394,13 +404,13 @@ def test_save_and_load_layout(page, tmp_path):
 def test_closing_pages_mid_stream_logs_no_errors(page, tmp_path):
     """Pages, and a whole browser context, going away while frames stream: the server drops them quietly.
     Uses the module's browser, playwright's sync API runs once per thread"""
-    capture = tmp_path / "capture.cf64"
+    capture = tmp_path / "capture.cf32"
     (np.exp(2j*np.pi*0.1*np.arange(2_000_000))).astype(np.complex64).tofile(capture)
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     env = dict(os.environ, PYTHONPATH=os.path.join(ROOT, "src"))
-    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf64", "-fs", "1M"],
+    proc = subprocess.Popen([sys.executable, "-m", "pyspecan", "-v", "web", "-p", str(port), "-f", str(capture), "-F", "cf32", "-fs", "1M"],
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     try:
         for _ in range(100):
